@@ -25,5 +25,19 @@ abstract class PcmOutput {
   /// silently instead of failing.
   Future<bool> start({required int sampleRate, required RenderCallback render});
 
+  /// Called from inside a user gesture.
+  ///
+  /// Browsers — iOS Safari strictly — will only let audio begin from a real
+  /// touch, and silently ignore any attempt made outside one. Since the game
+  /// opens its playfield from a tap and starts audio a moment later, that
+  /// attempt lands after the gesture has ended; this hook is how the first tap
+  /// on the playfield gets a second chance.
+  void nudge() {}
+
+  /// Delay between a sample being rendered and being heard, in milliseconds.
+  ///
+  /// It is what the judging has to be shifted by, or every tap reads late.
+  double get latencyMs => 0;
+
   Future<void> stop();
 }

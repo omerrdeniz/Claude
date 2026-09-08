@@ -149,12 +149,33 @@ void main() {
           reason: 'a stray finger must not be punished');
     });
 
-    test('a tap on the wrong beam finds nothing', () {
+    test('a tap anywhere plays the note that is due', () {
+      // Aim is not the skill being tested here — timing is. A note on one beam
+      // must answer to a tap on any of them.
       final session = sessionFor(songOf([note(0, 84), note(4, 40)]));
-      seek(session, 0);
       final rightBeam = session.chart.taps.first.beam;
-      final wrongBeam = rightBeam == 0 ? 3 : 0;
-      expect(session.tap(wrongBeam), isNull);
+      for (var beam = 0; beam < 4; beam++) {
+        if (beam == rightBeam) continue;
+        final fresh = sessionFor(songOf([note(0, 84), note(4, 40)]));
+        seek(fresh, 0);
+        final outcome = fresh.tap(beam);
+        expect(outcome?.scored, isTrue, reason: 'tapped beam $beam');
+        expect(engine.struck.single.$1, 84);
+      }
+    });
+
+    test('a run across the beams can be played without chasing it', () {
+      // Four quick notes sweeping from the bottom of the range to the top:
+      // a hand cannot cross the screen this fast, and should not have to.
+      final session = sessionFor(
+        songOf([note(0, 48), note(0.25, 60), note(0.5, 72), note(0.75, 84)]),
+      );
+      for (final beat in [0.0, 0.25, 0.5, 0.75]) {
+        seek(session, beat);
+        expect(session.tap(0)?.scored, isTrue, reason: 'at beat $beat');
+      }
+      expect(engine.struck.map((s) => s.$1), [48, 60, 72, 84]);
+      expect(session.scoreboard.combo, 4);
     });
 
     test('one note cannot be played twice', () {
@@ -346,27 +367,23 @@ void main() {
       expect(session.tap(1), isNull);
     });
 
-    test('a tap on the next beam over still finds the note', () {
-      final session = sessionFor(songOf([note(0, 60), note(4, 84)]),
-          difficulty: Difficulty.normal);
-      final beam = session.chart.taps.first.beam;
-      final neighbour = beam == 0 ? 1 : beam - 1;
-      seek(session, 0);
-      final outcome = session.tap(neighbour);
-      expect(outcome?.scored, isTrue,
-          reason: 'a thumb is blunt; a beam either side should still count');
-    });
+    test('playing slower gives the hand more time between notes', () {
+      double beatsAfterOneSecond(double speed) {
+        final session = PlaySession(
+          chart: Chart.build(songOf([note(0, 60), note(1, 62)]),
+              difficulty: Difficulty.easy),
+          audio: PianoAudio(engine: RecordingEngine()),
+          speed: speed,
+        )..start();
+        final start = session.leadInBeats / session.beatsPerSecond;
+        session.update(
+            Duration(microseconds: ((start + 1.0) * 1e6).round()));
+        return session.beat;
+      }
 
-    test('but only when its own beam has nothing waiting', () {
-      // Two notes at once on neighbouring beams: one finger must not take both.
-      final session = sessionFor(songOf([note(0, 48), note(0, 84)]),
-          difficulty: Difficulty.normal, beamCount: 4);
-      final beams = session.chart.taps.map((t) => t.beam).toList();
-      expect(beams.toSet(), hasLength(2));
-      seek(session, 0);
-      session.tap(beams.first);
-      expect(engine.struck, hasLength(1),
-          reason: 'one finger, one note');
+      // The same second of the player's time covers half as much music.
+      expect(beatsAfterOneSecond(0.5),
+          closeTo(beatsAfterOneSecond(1.0) / 2, 0.001));
     });
   });
 

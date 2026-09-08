@@ -131,19 +131,23 @@ class StagePainter extends CustomPainter {
   void _paintHitLine(Canvas canvas, Size size, StageGeometry g) {
     final y = g.hitLineY;
 
-    canvas.drawLine(
-      Offset(0, y),
-      Offset(size.width, y),
+    // A soft band rather than a blurred line: a blur filter here costs more
+    // per frame than everything else on screen put together, and on a phone
+    // browser that is the difference between flowing and stuttering.
+    final glow = Rect.fromLTWH(0, y - 22, size.width, 44);
+    canvas.drawRect(
+      glow,
       Paint()
-        ..strokeWidth = 16
-        ..maskFilter = const ui.MaskFilter.blur(BlurStyle.normal, 16)
-        ..shader = LinearGradient(
-          colors: [
+        ..shader = ui.Gradient.linear(
+          Offset(0, glow.top),
+          Offset(0, glow.bottom),
+          [
             AppTheme.accentSoft.withValues(alpha: 0.0),
-            AppTheme.accentSoft.withValues(alpha: 0.85),
+            AppTheme.accentSoft.withValues(alpha: 0.28),
             AppTheme.accentSoft.withValues(alpha: 0.0),
           ],
-        ).createShader(Rect.fromLTWH(0, y - 8, size.width, 16)),
+          const [0.0, 0.5, 1.0],
+        ),
     );
 
     canvas.drawLine(
@@ -213,12 +217,19 @@ class StagePainter extends CustomPainter {
 
       if (tap.isHold) _paintHoldTail(canvas, g, tap, progress, colour, fade);
 
+      // The halo is a gradient, not a blur, for the same reason as the line.
       canvas.drawCircle(
         centre,
-        radius * 1.9,
+        radius * 2.0,
         Paint()
-          ..color = colour.withValues(alpha: 0.28 * fade)
-          ..maskFilter = ui.MaskFilter.blur(BlurStyle.normal, radius * 0.9),
+          ..shader = RadialGradient(
+            colors: [
+              colour.withValues(alpha: 0.42 * fade),
+              colour.withValues(alpha: 0.16 * fade),
+              colour.withValues(alpha: 0.0),
+            ],
+            stops: const [0.35, 0.6, 1.0],
+          ).createShader(Rect.fromCircle(center: centre, radius: radius * 2.0)),
       );
 
       canvas.drawCircle(

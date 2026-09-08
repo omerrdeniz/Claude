@@ -42,19 +42,36 @@ class PlaySession {
     this.judge = const Judge(),
     this.latencyOffsetMs = 0,
     this.approachSeconds = 1.9,
-  }) : _chart = chart;
+    this.speed = 1.0,
+  })  : assert(speed > 0),
+        _chart = chart;
 
   Chart _chart;
   Chart get chart => _chart;
   final PianoAudio audio;
   final Judge judge;
 
-  /// Calibration for the delay between a tap and the sound reaching the ear.
-  /// A positive value means the player's taps are treated as that much earlier.
+  /// Manual calibration for the delay between a tap and the sound reaching the
+  /// ear. A positive value treats the player's taps as that much earlier.
+  ///
+  /// The device's own reported latency is added to this automatically; this is
+  /// only for what the device does not know about — the player's own hand, and
+  /// whatever the headphones add.
   final double latencyOffsetMs;
+
+  /// Everything the player's ear is behind by: what the audio path reports,
+  /// plus the manual calibration.
+  double get _totalLatencyMs => latencyOffsetMs + audio.latencyMs;
 
   /// How long a note takes to travel down the screen.
   final double approachSeconds;
+
+  /// Fraction of the written tempo to play at.
+  ///
+  /// Slowing a piece down is how anyone learns one, and it is the honest fix
+  /// for notes arriving faster than a beginner's hand: the music stays itself,
+  /// there is just more room between its notes.
+  final double speed;
 
   final Scoreboard scoreboard = Scoreboard();
 
@@ -98,7 +115,7 @@ class PlaySession {
 
   double get beat => _beat;
   bool get isRunning => _running;
-  double get beatsPerSecond => chart.song.bpm / 60;
+  double get beatsPerSecond => chart.song.bpm / 60 * speed;
 
   /// Empty stage before the first note, so it arrives travelling rather than
   /// appearing on the line.
@@ -205,7 +222,7 @@ class PlaySession {
 
     final tapTarget = chart.taps[index];
     final errorMs =
-        (_beat - tapTarget.beat) / beatsPerSecond * 1000 - latencyOffsetMs;
+        (_beat - tapTarget.beat) / beatsPerSecond * 1000 - _totalLatencyMs;
     final verdict = judge.verdictFor(errorMs);
     if (verdict == Verdict.miss) return null; // too far away to belong to it
 
@@ -228,39 +245,41 @@ class PlaySession {
     );
   }
 
-  /// The pending tap closest to now that this tap should count as.
+  /// The pending tap this touch should count as.
   ///
-  /// A finger on a phone is a blunt instrument, so a tap that finds nothing on
-  /// its own beam is allowed to reach one beam either side. Only when its own
-  /// beam is empty, though: otherwise a single finger could rake in a chord
-  /// meant for three.
+  /// Timing decides it, not aim. A beam says what pitch a note is, and that is
+  /// worth showing — but making the player also land on the right one turns a
+  /// game about *when* into a game about hand-eye coordination, and a run of
+  /// fast notes across four beams becomes a race the hand cannot win. So a tap
+  /// anywhere takes the note that is due.
+  ///
+  /// Where several notes fall together — a chord — the tapped beam breaks the
+  /// tie, so several fingers land on several notes instead of all taking the
+  /// same one.
   int? _nearestPending(int beam) {
-    return _nearestOn(beam) ??
-        _nearestOn(beam - 1, penalty: 0.5) ??
-        _nearestOn(beam + 1, penalty: 0.5);
-  }
+    final windowBeats = judge.windowMs / 1000 * beatsPerSecond;
+    const simultaneous = 0.001;
 
-  /// The closest pending tap on [beam] within the judging window, or null.
-  ///
-  /// [penalty] shrinks the window for a neighbouring beam, so the reach only
-  /// rescues taps that were nearly right anyway.
-  int? _nearestOn(int beam, {double penalty = 1.0}) {
-    if (beam < 0 || beam >= chart.beamCount) return null;
-    final windowBeats = judge.windowMs / 1000 * beatsPerSecond * penalty;
     int? best;
     var bestDistance = double.infinity;
+    var bestBeamGap = 1 << 20;
 
     for (var i = 0; i < chart.taps.length; i++) {
       final tap = chart.taps[i];
-      if (tap.beam != beam || !_isPending(tap)) continue;
+      if (tap.beat - _beat > windowBeats) break; // taps are in time order
+      if (!_isPending(tap)) continue;
+
       final distance = (tap.beat - _beat).abs();
-      if (distance > windowBeats) {
-        if (tap.beat > _beat) break; // gone past the window ahead
-        continue;
-      }
-      if (distance < bestDistance) {
-        bestDistance = distance;
+      if (distance > windowBeats) continue;
+
+      final beamGap = (tap.beam - beam).abs();
+      final closerInTime = distance < bestDistance - simultaneous;
+      final sameMoment = (distance - bestDistance).abs() <= simultaneous;
+
+      if (closerInTime || (sameMoment && beamGap < bestBeamGap)) {
         best = i;
+        bestDistance = distance;
+        bestBeamGap = beamGap;
       }
     }
     return best;
@@ -271,7 +290,6 @@ class PlaySession {
   double? _nearMiss(int beam) {
     double? closest;
     void consider(double beat, int tapBeam) {
-      if ((tapBeam - beam).abs() > 1) return;
       final delta = beat - _beat;
       if (delta.abs() > _reachBeats) return;
       if (closest == null || delta.abs() < closest!.abs()) closest = delta;

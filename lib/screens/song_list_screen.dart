@@ -22,6 +22,10 @@ class SongListScreen extends StatefulWidget {
 class _SongListScreenState extends State<SongListScreen> {
   Difficulty _difficulty = Difficulty.normal;
 
+  /// Speeds offered, as a fraction of the written tempo.
+  static const List<double> _speeds = [0.6, 0.8, 1.0];
+  double _speed = 0.8;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,9 +51,19 @@ class _SongListScreenState extends State<SongListScreen> {
               selected: _difficulty,
               onChanged: (value) => setState(() => _difficulty = value),
             ),
+            const SizedBox(height: 20),
+            _SpeedPicker(
+              speeds: _speeds,
+              selected: _speed,
+              onChanged: (value) => setState(() => _speed = value),
+            ),
             const SizedBox(height: 24),
             for (final song in SongLibrary.all)
-              _SongTile(song: song, difficulty: _difficulty),
+              _SongTile(
+                song: song,
+                difficulty: _difficulty,
+                speed: _speed,
+              ),
           ],
         ),
       ),
@@ -87,6 +101,53 @@ class _DifficultyPicker extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           selected.description,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+/// Chooses how fast the song runs.
+///
+/// Slowing a piece down is how anyone learns one; the game should offer it
+/// before a beginner concludes they simply cannot play.
+class _SpeedPicker extends StatelessWidget {
+  const _SpeedPicker({
+    required this.speeds,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<double> speeds;
+  final double selected;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            for (final speed in speeds)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _Chip(
+                    label: speed == 1.0 ? 'Tam hız' : '%\${(speed * 100).round()}',
+                    selected: speed == selected,
+                    onTap: () => onChanged(speed),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          selected == 1.0
+              ? 'Şarkının kendi temposu'
+              : 'Yavaşlatılmış — notalar arasında daha çok zaman',
           style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
         ),
       ],
@@ -140,15 +201,21 @@ class _Chip extends StatelessWidget {
 }
 
 class _SongTile extends StatelessWidget {
-  const _SongTile({required this.song, required this.difficulty});
+  const _SongTile({
+    required this.song,
+    required this.difficulty,
+    required this.speed,
+  });
 
   final Song song;
   final Difficulty difficulty;
+  final double speed;
 
   @override
   Widget build(BuildContext context) {
-    final minutes = song.duration.inSeconds ~/ 60;
-    final seconds = song.duration.inSeconds % 60;
+    final length = song.duration.inSeconds ~/ speed;
+    final minutes = length ~/ 60;
+    final seconds = length % 60;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),

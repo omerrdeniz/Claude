@@ -65,6 +65,26 @@ class WebPcmOutput implements PcmOutput {
   /// The context's own sample rate, which the synthesiser must be built at.
   int? get sampleRate => _context?.sampleRate.round();
 
+  @override
+  void nudge() {
+    final context = _context;
+    if (context == null) return;
+    // Safari hands back a suspended context unless it is resumed from inside a
+    // touch handler, and says nothing about it. Trying again on every tap
+    // costs nothing and is the only thing that reliably works.
+    if (context.state != 'running') context.resume();
+  }
+
+  @override
+  double get latencyMs {
+    final context = _context;
+    if (context == null) return 0;
+    // What the player hears is a block behind what was rendered, plus whatever
+    // the browser adds on the way to the speaker.
+    final base = context.baseLatency * 1000;
+    return base + _blockFrames / context.sampleRate * 1000;
+  }
+
   void _onAudioProcess(web.AudioProcessingEvent event) {
     final render = _render;
     if (render == null) return;

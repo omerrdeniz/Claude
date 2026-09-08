@@ -61,6 +61,16 @@ class NativePcmOutput implements PcmOutput {
   }
 
   @override
+  void nudge() {
+    // Native platforms have no gesture requirement; the queue may simply have
+    // drained while paused, in which case this restarts the pull.
+    if (_running) FlutterPcmSound.start();
+  }
+
+  @override
+  double get latencyMs => _blockFrames / 44100 * 1000;
+
+  @override
   Future<void> stop() async {
     if (!_running) return;
     _running = false;

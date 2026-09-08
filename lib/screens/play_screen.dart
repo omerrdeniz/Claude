@@ -17,11 +17,15 @@ class PlayScreen extends StatefulWidget {
     required this.song,
     this.beamCount,
     this.difficulty = Difficulty.normal,
+    this.speed = 1.0,
     this.approachSeconds = 1.9,
   });
 
   final Song song;
   final Difficulty difficulty;
+
+  /// Fraction of the written tempo to play at.
+  final double speed;
 
   /// Fixed number of beams, or null to let the screen decide from its width.
   final int? beamCount;
@@ -63,6 +67,7 @@ class _PlayScreenState extends State<PlayScreen>
           beamCount: _beamCount, difficulty: widget.difficulty),
       audio: _audio,
       approachSeconds: widget.approachSeconds,
+      speed: widget.speed,
     )..onMiss = (_) => setState(() {});
     _audio.start();
     _session.start();
@@ -100,6 +105,10 @@ class _PlayScreenState extends State<PlayScreen>
   }
 
   void _onTapDown(Offset position, Size size) {
+    // The first touch on the playfield is the game's real chance to start
+    // audio: a browser will only allow it from inside a gesture.
+    _audio.nudge();
+
     // At the hit line the beams are evenly spaced across the full width, so
     // the whole column belongs to its beam — the player aims at a lane, not at
     // the note itself.

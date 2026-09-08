@@ -8,6 +8,12 @@ class _SilentOutput implements PcmOutput {
   bool get isSupported => false;
 
   @override
+  void nudge() {}
+
+  @override
+  double get latencyMs => 0;
+
+  @override
   Future<bool> start({required int sampleRate, required RenderCallback render}) async =>
       false;
 

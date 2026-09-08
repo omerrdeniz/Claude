@@ -35,6 +35,19 @@ class PianoAudio {
     return _running;
   }
 
+  /// Give audio a chance to start from inside a user gesture — see
+  /// [PcmOutput.nudge].
+  void nudge() {
+    if (!_running) {
+      start();
+      return;
+    }
+    _output.nudge();
+  }
+
+  /// How far behind the player's ear is, in milliseconds.
+  double get latencyMs => _running ? _output.latencyMs : 0;
+
   void noteOn(int midi, {double velocity = 0.8}) =>
       engine.noteOn(midi, velocity: velocity);
 
