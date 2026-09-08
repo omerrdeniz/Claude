@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_screen.dart';
+import 'screens/sound_check_screen.dart';
 import 'theme/app_theme.dart';
 
 /// Root widget. Kept deliberately thin: it wires the theme and the first
@@ -14,7 +14,7 @@ class PianoFlowApp extends StatelessWidget {
       title: 'Piano Flow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
-      home: const HomeScreen(),
+      home: const SoundCheckScreen(),
     );
   }
 }
