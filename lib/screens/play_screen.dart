@@ -14,12 +14,14 @@ class PlayScreen extends StatefulWidget {
   const PlayScreen({
     super.key,
     required this.song,
-    this.beamCount = Chart.defaultBeamCount,
+    this.beamCount,
     this.approachSeconds = 1.9,
   });
 
   final Song song;
-  final int beamCount;
+
+  /// Fixed number of beams, or null to let the screen decide from its width.
+  final int? beamCount;
 
   /// How long a note takes to travel from the top of the screen to the line.
   ///
@@ -41,6 +43,10 @@ class _PlayScreenState extends State<PlayScreen>
   /// Beams still glowing from a recent hit, and how fresh each one is.
   final Map<int, double> _litBeams = {};
 
+  /// How many beams the current layout uses. Set before the first build from
+  /// the widget's own setting, then kept in step with the screen width.
+  int _beamCount = Chart.defaultBeamCount;
+
   TapOutcome? _lastOutcome;
   Duration _lastOutcomeAt = Duration.zero;
   Duration _now = Duration.zero;
@@ -48,8 +54,9 @@ class _PlayScreenState extends State<PlayScreen>
   @override
   void initState() {
     super.initState();
+    _beamCount = widget.beamCount ?? Chart.defaultBeamCount;
     _session = PlaySession(
-      chart: Chart.build(widget.song, beamCount: widget.beamCount),
+      chart: Chart.build(widget.song, beamCount: _beamCount),
       audio: _audio,
       approachSeconds: widget.approachSeconds,
     )..onMiss = (_) => setState(() {});
@@ -73,13 +80,24 @@ class _PlayScreenState extends State<PlayScreen>
     _litBeams.removeWhere((_, value) => value <= 0);
   }
 
+  /// Follow the screen: turning the device sideways makes room for more
+  /// beams, which is the whole point of playing in landscape.
+  void _matchLayout(Size size) {
+    if (widget.beamCount != null) return;
+    final wanted = Chart.beamsForWidth(size.width);
+    if (wanted == _beamCount) return;
+    _beamCount = wanted;
+    _session.rebindChart(Chart.build(widget.song, beamCount: wanted));
+    _litBeams.clear();
+  }
+
   void _onTapDown(Offset position, Size size) {
     // At the hit line the beams are evenly spaced across the full width, so
     // the whole column belongs to its beam — the player aims at a lane, not at
     // the note itself.
-    final beam = (position.dx / (size.width / widget.beamCount))
+    final beam = (position.dx / (size.width / _beamCount))
         .floor()
-        .clamp(0, widget.beamCount - 1);
+        .clamp(0, _beamCount - 1);
 
     final outcome = _session.tap(beam);
     if (outcome == null) return;
@@ -125,6 +143,7 @@ class _PlayScreenState extends State<PlayScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
+          _matchLayout(size);
           return Listener(
             behavior: HitTestBehavior.opaque,
             onPointerDown: (event) => _onTapDown(event.localPosition, size),

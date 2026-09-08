@@ -76,7 +76,7 @@ class StagePainter extends CustomPainter {
     final bottomProgress = size.height / g.hitLineY;
 
     for (var beam = 0; beam < chart.beamCount; beam++) {
-      final colour = AppTheme.beamColor(beam);
+      final colour = AppTheme.beamColor(beam, chart.beamCount);
       final lit = litBeams[beam] ?? 0.0;
 
       final topWidth = g.beamWidthAt(0) * 0.5;
@@ -167,7 +167,7 @@ class StagePainter extends CustomPainter {
     for (var beam = 0; beam < chart.beamCount; beam++) {
       final centre = Offset(g.xAt(beam, 1.0), y);
       final lit = litBeams[beam] ?? 0.0;
-      final colour = AppTheme.beamColor(beam);
+      final colour = AppTheme.beamColor(beam, chart.beamCount);
 
       canvas.drawCircle(
         centre,
@@ -200,7 +200,7 @@ class StagePainter extends CustomPainter {
           StageGeometry.progressFor(tap.beat - beat, windowInBeats);
       if (progress < -0.05) continue;
 
-      final colour = AppTheme.beamColor(tap.beam);
+      final colour = AppTheme.beamColor(tap.beam, chart.beamCount);
       final centre = g.positionAt(tap.beam, progress);
       final radius = g.noteRadiusAt(progress);
 

@@ -59,7 +59,10 @@ class StageGeometry {
   /// once past the line, so a note that has had its moment stops looking like
   /// one still waiting to be played.
   double noteRadiusAt(double progress) {
-    final maxRadius = (beamSpacing * 0.3).clamp(10.0, 34.0);
+    // Bounded by both dimensions: a wide, short screen has room across but not
+    // down, and notes sized only by beam width would collide as they travel.
+    final maxRadius =
+        (beamSpacing * 0.3).clamp(10.0, 34.0).clamp(10.0, size.height * 0.05);
     if (progress <= 1) {
       return lerpDouble(maxRadius * 0.35, maxRadius, progress.clamp(0.0, 1.0))!;
     }

@@ -6,21 +6,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_flow/data/song_library.dart';
 import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/song.dart';
+import 'package:piano_flow/game/stage_geometry.dart';
 import 'package:piano_flow/render/stage_painter.dart';
+import 'package:piano_flow/theme/app_theme.dart';
 
 const Size phone = Size(390, 844);
+const Size phoneLandscape = Size(844, 390);
 
 /// Paint one frame straight onto a canvas — no widget tree, no clock.
 ui.Picture paintFrame(Song song, double beat,
-    {double window = 4, Map<int, double> litBeams = const {}}) {
+    {double window = 4,
+    Map<int, double> litBeams = const {},
+    Size size = phone}) {
   final recorder = ui.PictureRecorder();
-  final canvas = Canvas(recorder, Offset.zero & phone);
+  final canvas = Canvas(recorder, Offset.zero & size);
   StagePainter(
-    chart: Chart.build(song),
+    chart: Chart.build(song, beamCount: Chart.beamsForWidth(size.width)),
     beat: beat,
     windowInBeats: window,
     litBeams: litBeams,
-  ).paint(canvas, phone);
+  ).paint(canvas, size);
   return recorder.endRecording();
 }
 
@@ -28,9 +33,9 @@ ui.Picture paintFrame(Song song, double beat,
 /// looked at. There is no device here to look at it on, so it is rendered to
 /// file the same way the synthesiser is rendered to WAV.
 Future<int> savePng(Song song, double beat, String name,
-    {Map<int, double> litBeams = const {}}) async {
-  final picture = paintFrame(song, beat, litBeams: litBeams);
-  final image = await picture.toImage(phone.width.toInt(), phone.height.toInt());
+    {Map<int, double> litBeams = const {}, Size size = phone}) async {
+  final picture = paintFrame(song, beat, litBeams: litBeams, size: size);
+  final image = await picture.toImage(size.width.toInt(), size.height.toInt());
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   final file = File('build/screens/$name.png');
   file.parent.createSync(recursive: true);
@@ -39,6 +44,47 @@ Future<int> savePng(Song song, double beat, String name,
 }
 
 void main() {
+  test('no two beams share a colour, whatever the layout', () {
+    for (final count in [3, 4, 5, 6]) {
+      final colours = [
+        for (var beam = 0; beam < count; beam++)
+          AppTheme.beamColor(beam, count).toARGB32()
+      ];
+      expect(colours.toSet(), hasLength(count),
+          reason: 'two beams the same colour with $count beams');
+    }
+  });
+
+  test('the outer beams keep the extreme hues at any beam count', () {
+    for (final count in [3, 4, 5, 6]) {
+      expect(AppTheme.beamColor(0, count), AppTheme.beamColors.first);
+      expect(AppTheme.beamColor(count - 1, count), AppTheme.beamColors.last);
+    }
+  });
+
+  test('notes stay clear of each other on a short screen', () {
+    const landscape =
+        StageGeometry(size: phoneLandscape, beamCount: 6);
+    // A note must not be so large that consecutive ones overlap vertically.
+    expect(landscape.noteRadiusAt(1.0) * 2,
+        lessThan(phoneLandscape.height * 0.15));
+  });
+
+  test('turning sideways makes room for more beams', () {
+    expect(Chart.beamsForWidth(phone.width), 4);
+    expect(Chart.beamsForWidth(phoneLandscape.width), 6);
+    expect(Chart.beamsForWidth(320), 3,
+        reason: 'the smallest phones give up a beam to keep them reachable');
+    expect(Chart.beamsForWidth(2000), lessThanOrEqualTo(6),
+        reason: 'a tablet must not sprout unreachable beams');
+  });
+
+  test('the playfield paints in landscape too', () {
+    expect(
+        () => paintFrame(SongLibrary.odeToJoy, 6, size: phoneLandscape),
+        returnsNormally);
+  });
+
   test('a beam lit by a hit still paints', () {
     expect(() => paintFrame(SongLibrary.odeToJoy, 6.0, litBeams: {0: 1.0, 3: 0.2}),
         returnsNormally);
@@ -68,6 +114,13 @@ void main() {
       // A beam still glowing from a hit a moment ago.
       'vurus-ani': await savePng(SongLibrary.odeToJoy, 6.05, 'vurus-ani',
           litBeams: {2: 0.8}),
+      // Sideways: more beams, so the hands can divide the keyboard.
+      'yatay-ode-to-joy': await savePng(
+          SongLibrary.odeToJoy, 6.0, 'yatay-ode-to-joy',
+          size: phoneLandscape),
+      'yatay-prelude': await savePng(
+          SongLibrary.preludeInC, 5.0, 'yatay-prelude',
+          size: phoneLandscape),
     };
     for (final entry in sizes.entries) {
       // A stage drawn with nothing on it compresses to almost nothing.

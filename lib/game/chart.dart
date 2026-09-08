@@ -51,6 +51,20 @@ class Chart {
 
   static const int defaultBeamCount = 4;
 
+  /// How many beams fit on a screen of a given width.
+  ///
+  /// This is what makes the difference between the two orientations a
+  /// gameplay one rather than a cosmetic one. Portrait leaves room for four
+  /// beams, which one thumb can cover. Landscape fits six: the low ones fall
+  /// under the left thumb and the high ones under the right, which is how a
+  /// pianist's hands divide a keyboard.
+  ///
+  /// The divisor is set so a portrait phone lands on four beams — about 97
+  /// logical pixels each, twice the minimum comfortable touch target — and a
+  /// sideways one on six. Six is the ceiling: past that a thumb cannot reach
+  /// across without the hand leaving the phone.
+  static int beamsForWidth(double width) => (width / 97).round().clamp(3, 6);
+
   static Chart build(Song song, {int beamCount = defaultBeamCount}) {
     assert(beamCount > 0);
     final chords = song.chordsOf(song.melody);

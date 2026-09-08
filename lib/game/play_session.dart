@@ -31,14 +31,16 @@ class TapOutcome {
 /// pitch decision entirely.
 class PlaySession {
   PlaySession({
-    required this.chart,
+    required Chart chart,
     required this.audio,
     this.judge = const Judge(),
     this.latencyOffsetMs = 0,
     this.approachSeconds = 1.9,
-  }) : _pending = List.filled(chart.taps.length, true);
+  })  : _chart = chart,
+        _pending = List.filled(chart.taps.length, true);
 
-  final Chart chart;
+  Chart _chart;
+  Chart get chart => _chart;
   final PianoAudio audio;
   final Judge judge;
 
@@ -204,6 +206,19 @@ class PlaySession {
       }
     }
     return best;
+  }
+
+  /// Lay the same performance out over a different number of beams.
+  ///
+  /// Rotating the device mid-song changes how many beams fit, but not the
+  /// music: the taps are the same, in the same order, and only which beam each
+  /// one travels down changes. Swapping the chart rather than rebuilding the
+  /// session keeps the score, the streak and every already-played note intact.
+  void rebindChart(Chart replacement) {
+    assert(replacement.taps.length == _chart.taps.length,
+        'a rebind must describe the same performance');
+    assert(replacement.song.id == _chart.song.id);
+    _chart = replacement;
   }
 
   /// Told when a note goes by unplayed, so the screen can react.
