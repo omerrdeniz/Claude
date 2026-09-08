@@ -27,3 +27,8 @@ lib/
   theme/              renk ve tipografi
 test/                 testler
 ```
+
+## Ayrıca bu depoda
+
+- [`cs2/`](cs2/README.md) — Three.js ile yazılmış, tarayıcıda çalışan Counter-Strike
+  tarzı FPS (bomba senaryosu, botlar, ekonomi). Flutter projesinden bağımsızdır.
