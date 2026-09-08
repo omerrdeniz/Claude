@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../audio/piano_audio.dart';
 import '../game/chart.dart';
+import '../game/play_session.dart';
 import '../music/song.dart';
 import '../render/stage_painter.dart';
 import '../theme/app_theme.dart';
+import '../widgets/score_hud.dart';
 
-/// The playfield.
-///
-/// At this stage it only shows the song flowing past: no tapping, no sound.
-/// That is on purpose — the motion has to read correctly on its own before
-/// anything is judged against it.
+/// The playfield: notes flow toward the line, the player taps, the song plays.
 class PlayScreen extends StatefulWidget {
   const PlayScreen({
     super.key,
@@ -35,103 +34,171 @@ class PlayScreen extends StatefulWidget {
 
 class _PlayScreenState extends State<PlayScreen>
     with SingleTickerProviderStateMixin {
-  late final Chart _chart = Chart.build(widget.song, beamCount: widget.beamCount);
+  late final PianoAudio _audio = PianoAudio();
+  late final PlaySession _session;
   late final Ticker _ticker = createTicker(_onTick);
 
-  Duration _elapsed = Duration.zero;
-  bool _running = true;
+  /// Beams still glowing from a recent hit, and how fresh each one is.
+  final Map<int, double> _litBeams = {};
 
-  /// Beats per second at the song's written tempo.
-  double get _beatsPerSecond => widget.song.bpm / 60;
-
-  double get _beat =>
-      _elapsed.inMicroseconds / 1e6 * _beatsPerSecond - _leadInBeats;
-
-  /// A moment of empty stage before the first note, so it arrives travelling
-  /// rather than appearing on the line.
-  double get _leadInBeats => widget.approachSeconds * _beatsPerSecond;
-
-  double get _windowInBeats => widget.approachSeconds * _beatsPerSecond;
+  TapOutcome? _lastOutcome;
+  Duration _lastOutcomeAt = Duration.zero;
+  Duration _now = Duration.zero;
 
   @override
   void initState() {
     super.initState();
+    _session = PlaySession(
+      chart: Chart.build(widget.song, beamCount: widget.beamCount),
+      audio: _audio,
+      approachSeconds: widget.approachSeconds,
+    )..onMiss = (_) => setState(() {});
+    _audio.start();
+    _session.start();
     _ticker.start();
   }
 
   void _onTick(Duration elapsed) {
-    setState(() => _elapsed = elapsed);
-    if (_beat > _chart.lengthInBeats + 2) {
-      _ticker.stop();
-      _running = false;
-    }
+    setState(() {
+      _now = elapsed;
+      _session.update(elapsed);
+      _fadeBeamGlow();
+    });
+    if (_session.isFinished) _ticker.stop();
+  }
+
+  /// A hit lights its beam, which then dies away over a moment.
+  void _fadeBeamGlow() {
+    _litBeams.updateAll((_, value) => value - 0.06);
+    _litBeams.removeWhere((_, value) => value <= 0);
+  }
+
+  void _onTapDown(Offset position, Size size) {
+    // At the hit line the beams are evenly spaced across the full width, so
+    // the whole column belongs to its beam — the player aims at a lane, not at
+    // the note itself.
+    final beam = (position.dx / (size.width / widget.beamCount))
+        .floor()
+        .clamp(0, widget.beamCount - 1);
+
+    final outcome = _session.tap(beam);
+    if (outcome == null) return;
+    setState(() {
+      _litBeams[beam] = 1.0;
+      _lastOutcome = outcome;
+      _lastOutcomeAt = _now;
+    });
+  }
+
+  void _togglePause() {
+    setState(() {
+      if (_session.isRunning) {
+        _session.pause();
+        _audio.engine.allNotesOff();
+      } else {
+        _session.start();
+      }
+    });
+  }
+
+  void _restart() {
+    setState(() {
+      _session.restart();
+      _lastOutcome = null;
+      _litBeams.clear();
+    });
+    if (!_ticker.isActive) _ticker.start();
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    _session.stop();
+    _audio.dispose();
     super.dispose();
-  }
-
-  void _toggle() {
-    setState(() {
-      _running = !_running;
-      _running ? _ticker.start() : _ticker.stop();
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          RepaintBoundary(
-            child: CustomPaint(
-              painter: StagePainter(
-                chart: _chart,
-                beat: _beat,
-                windowInBeats: _windowInBeats,
-              ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = Size(constraints.maxWidth, constraints.maxHeight);
+          return Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (event) => _onTapDown(event.localPosition, size),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                RepaintBoundary(
+                  child: CustomPaint(
+                    painter: StagePainter(
+                      chart: _session.chart,
+                      beat: _session.beat,
+                      windowInBeats: _session.windowInBeats,
+                      litBeams: Map.of(_litBeams),
+                    ),
+                  ),
+                ),
+                ScoreHud(
+                  scoreboard: _session.scoreboard,
+                  outcome: _lastOutcome,
+                  // The verdict fades on its own so it never covers the next
+                  // note the player has to read.
+                  outcomeAge: (_now - _lastOutcomeAt).inMilliseconds / 700,
+                  hitLineFraction: 0.68,
+                ),
+                _controls(),
+              ],
             ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _controls() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.song.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        widget.song.composer,
-                        style: const TextStyle(
-                            fontSize: 13, color: AppTheme.textMuted),
-                      ),
-                    ],
+                  Text(
+                    widget.song.title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
-                  IconButton(
-                    onPressed: _toggle,
-                    icon: Icon(_running ? Icons.pause : Icons.play_arrow),
-                    color: AppTheme.textMuted,
-                    tooltip: _running ? 'Duraklat' : 'Devam',
+                  Text(
+                    widget.song.composer,
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textMuted),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            IconButton(
+              onPressed: _restart,
+              icon: const Icon(Icons.refresh),
+              color: AppTheme.textMuted,
+              tooltip: 'Baştan',
+            ),
+            IconButton(
+              onPressed: _togglePause,
+              icon: Icon(_session.isRunning ? Icons.pause : Icons.play_arrow),
+              color: AppTheme.textMuted,
+              tooltip: _session.isRunning ? 'Duraklat' : 'Devam',
+            ),
+          ],
+        ),
       ),
     );
   }
