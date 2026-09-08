@@ -2,6 +2,12 @@ import 'dart:ui';
 
 /// Where everything sits on the playfield.
 ///
+/// Position is continuous, not divided into lanes. A note's place across the
+/// screen comes straight from its pitch, so a rising line climbs smoothly to
+/// the right instead of jumping between columns — and since a tap counts
+/// wherever it lands, a lane boundary would be drawing a rule the game does
+/// not actually enforce.
+///
 /// Kept apart from the painting so the layout can be reasoned about and tested
 /// on its own — a note that lands on the wrong pixel is a gameplay bug, not a
 /// cosmetic one.
@@ -44,13 +50,25 @@ class StageGeometry {
   double yAt(double progress) => hitLineY * progress;
 
   /// Horizontal centre of [beam] at [progress].
-  double xAt(int beam, double progress) {
-    final offsetFromCentre = (beam + 0.5 - beamCount / 2) * beamSpacing;
-    return size.width / 2 + offsetFromCentre * spreadAt(progress);
+  double xAt(int beam, double progress) => xAtPosition(
+      beamCount <= 1 ? 0.5 : (beam + 0.5) / beamCount, progress);
+
+  /// Horizontal position of anything at [across] (0 far left, 1 far right).
+  ///
+  /// The margin keeps the outermost notes clear of the screen edge, where a
+  /// glow would be clipped and a finger has nothing to aim at.
+  double xAtPosition(double across, double progress) {
+    const margin = 0.08;
+    final placed = margin + across.clamp(0.0, 1.0) * (1 - margin * 2);
+    return size.width / 2 +
+        (placed - 0.5) * size.width * spreadAt(progress);
   }
 
   Offset positionAt(int beam, double progress) =>
       Offset(xAt(beam, progress), yAt(progress));
+
+  Offset positionAtPosition(double across, double progress) =>
+      Offset(xAtPosition(across, progress), yAt(progress));
 
   /// Width of a beam at [progress].
   double beamWidthAt(double progress) => beamSpacing * spreadAt(progress);

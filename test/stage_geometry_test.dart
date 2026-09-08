@@ -11,15 +11,31 @@ void main() {
     expect(g.hitLineY, closeTo(844 * 0.68, 0.01));
   });
 
-  test('beams are evenly spaced at the line and fill the width', () {
-    final centres = [for (var i = 0; i < 4; i++) g.xAt(i, 1.0)];
-    expect(centres, orderedEquals([...centres]..sort()));
+  test('pitch maps evenly across the screen', () {
+    final places = [for (var i = 0; i <= 10; i++) g.xAtPosition(i / 10, 1.0)];
+    expect(places, orderedEquals([...places]..sort()),
+        reason: 'higher pitches must sit further right');
     final gaps = [
-      for (var i = 1; i < centres.length; i++) centres[i] - centres[i - 1]
+      for (var i = 1; i < places.length; i++) places[i] - places[i - 1]
     ];
     for (final gap in gaps) {
-      expect(gap, closeTo(size.width / 4, 0.01));
+      expect(gap, closeTo(gaps.first, 0.01), reason: 'no jumps between pitches');
     }
+  });
+
+  test('the outermost notes stay clear of the screen edge', () {
+    // A note at the very edge would have its glow clipped and sit under the
+    // thumb holding the phone.
+    expect(g.xAtPosition(0, 1.0), greaterThan(size.width * 0.04));
+    expect(g.xAtPosition(1, 1.0), lessThan(size.width * 0.96));
+  });
+
+  test('neighbouring pitches sit next to each other, not in columns', () {
+    // Two pitches a hair apart must land a hair apart on screen.
+    final a = g.xAtPosition(0.50, 1.0);
+    final b = g.xAtPosition(0.51, 1.0);
+    expect((b - a).abs(), lessThan(size.width * 0.02));
+    expect(b, greaterThan(a));
   });
 
   test('beams converge toward the top, which is what makes it look deep', () {

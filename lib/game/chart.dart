@@ -36,8 +36,12 @@ extension DifficultyLabel on Difficulty {
 
 /// One thing the player taps: a single note, or notes that share a beam.
 class Tap {
-  Tap({required this.beat, required this.notes, required this.beam})
-      : assert(notes.isNotEmpty);
+  Tap({
+    required this.beat,
+    required this.notes,
+    required this.beam,
+    required this.across,
+  }) : assert(notes.isNotEmpty);
 
   /// When it should be played, in beats from the start of the song.
   final double beat;
@@ -45,8 +49,15 @@ class Tap {
   /// The notes that sound.
   final List<Note> notes;
 
-  /// Which beam it travels down.
+  /// Which beam it travels down. Beams still exist as a way of grouping the
+  /// notes of a chord onto separate fingers; they are no longer somewhere the
+  /// player has to aim.
   final int beam;
+
+  /// Where it sits across the screen, 0 at the lowest pitch in the song and 1
+  /// at the highest. Continuous, so neighbouring pitches sit side by side
+  /// instead of snapping into columns.
+  final double across;
 
   /// The longest note in the tap — how long the beam should stay lit.
   double get duration =>
@@ -127,9 +138,13 @@ class Chart {
     }
     final span = (high - low).toDouble();
 
+    /// Where a pitch sits across the screen, 0 to 1.
+    double acrossOf(double pitch) =>
+        span <= 0 ? 0.5 : ((pitch - low) / span).clamp(0.0, 1.0);
+
     int beamOf(double pitch) {
       if (span <= 0) return beamCount ~/ 2; // one pitch: centre it
-      return ((pitch - low) / span * beamCount).floor().clamp(0, beamCount - 1);
+      return (acrossOf(pitch) * beamCount).floor().clamp(0, beamCount - 1);
     }
 
     final taps = <Tap>[];
@@ -138,7 +153,12 @@ class Chart {
         // One finger for the whole chord.
         final pitch =
             chord.map((n) => n.midi).reduce((a, b) => a + b) / chord.length;
-        taps.add(Tap(beat: chord.first.beat, notes: chord, beam: beamOf(pitch)));
+        taps.add(Tap(
+          beat: chord.first.beat,
+          notes: chord,
+          beam: beamOf(pitch),
+          across: acrossOf(pitch),
+        ));
         continue;
       }
 
@@ -149,8 +169,14 @@ class Chart {
         (byBeam[beamOf(note.midi.toDouble())] ??= []).add(note);
       }
       for (final entry in byBeam.entries) {
+        final pitch = entry.value.map((n) => n.midi).reduce((a, b) => a + b) /
+            entry.value.length;
         taps.add(Tap(
-            beat: chord.first.beat, notes: entry.value, beam: entry.key));
+          beat: chord.first.beat,
+          notes: entry.value,
+          beam: entry.key,
+          across: acrossOf(pitch),
+        ));
       }
     }
     taps.sort((a, b) => a.beat != b.beat

@@ -12,30 +12,40 @@ abstract final class AppTheme {
   static const Color textPrimary = Color(0xFFF2F2F7);
   static const Color textMuted = Color(0xFF9A9AB0);
 
-  /// One hue per beam, low to high — a cool-to-warm ramp, so pitch reads as
-  /// colour as well as position and the player can follow a line without
-  /// looking straight at it.
+  /// Pitch as colour, lowest to highest.
   ///
-  /// There are six because six is the most beams any layout uses. Repeating a
-  /// hue would put two different pitches in the same colour and quietly undo
-  /// the whole point of colouring them.
+  /// The stops climb the colour wheel in one direction — blue through violet
+  /// and magenta to a warm pink — so blending between any two of them stays
+  /// vivid. A ramp that crosses the wheel the other way passes through olive
+  /// on its way from teal to amber, and a note the colour of mud reads as a
+  /// mistake rather than a pitch.
   static const List<Color> beamColors = [
+    Color(0xFF4C6BFF), // blue
     Color(0xFF7B5CFF), // violet
-    Color(0xFF5B7CFF), // indigo
-    Color(0xFF3FA9FF), // blue
-    Color(0xFF2ED3C6), // teal
-    Color(0xFFFFB25C), // amber
-    Color(0xFFFF6BB5), // pink
+    Color(0xFFA855F7), // purple
+    Color(0xFFD94FB0), // magenta
+    Color(0xFFFF5C8A), // pink
+    Color(0xFFFF8A6B), // coral
   ];
 
-  /// The colour of [beam] out of [beamCount], spread across the ramp so the
-  /// outer beams keep the extreme hues however many there are.
-  static Color beamColor(int beam, [int beamCount = 4]) {
-    if (beamCount <= 1) return beamColors[beamColors.length ~/ 2];
-    final position = beam.clamp(0, beamCount - 1) / (beamCount - 1);
-    final index = (position * (beamColors.length - 1)).round();
-    return beamColors[index];
+  /// The colour at [across] of the pitch range, 0 lowest and 1 highest.
+  ///
+  /// Blended through HSV rather than RGB: mixing two saturated colours by
+  /// their channels drains the life out of whatever sits between them.
+  static Color colorAcross(double across) {
+    final position = across.clamp(0.0, 1.0) * (beamColors.length - 1);
+    final index = position.floor().clamp(0, beamColors.length - 2);
+    return HSVColor.lerp(
+      HSVColor.fromColor(beamColors[index]),
+      HSVColor.fromColor(beamColors[index + 1]),
+      position - index,
+    )!
+        .toColor();
   }
+
+  /// The colour of [beam] out of [beamCount].
+  static Color beamColor(int beam, [int beamCount = 4]) => colorAcross(
+      beamCount <= 1 ? 0.5 : beam.clamp(0, beamCount - 1) / (beamCount - 1));
 
   /// Bundled with the app, so text renders identically everywhere and needs
   /// no network — the web build otherwise fetches its font from a CDN.

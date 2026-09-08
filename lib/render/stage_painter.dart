@@ -70,61 +70,38 @@ class StagePainter extends CustomPainter {
     );
   }
 
+  /// Rays fanning out from a point above the screen.
+  ///
+  /// They are scenery, not lanes: nothing has to be tapped on one, and none of
+  /// them is a boundary. They exist to give the notes somewhere to come *from*
+  /// — depth the eye can read — and to tint the stage by register, cool at the
+  /// bottom of the keyboard and warm at the top.
   void _paintBeams(Canvas canvas, Size size, StageGeometry g) {
-    // Beams run past the hit line to the bottom of the screen; stopping them
-    // at the line would make it look like a wall.
+    const rays = 9;
     final bottomProgress = size.height / g.hitLineY;
 
-    for (var beam = 0; beam < chart.beamCount; beam++) {
-      final colour = AppTheme.beamColor(beam, chart.beamCount);
-      final lit = litBeams[beam] ?? 0.0;
+    for (var i = 0; i < rays; i++) {
+      final across = i / (rays - 1);
+      final colour = AppTheme.colorAcross(across);
+      final topX = g.xAtPosition(across, 0);
+      final bottomX = g.xAtPosition(across, bottomProgress);
 
-      final topWidth = g.beamWidthAt(0) * 0.5;
-      final bottomWidth = g.beamWidthAt(bottomProgress) * 0.5;
-      final topX = g.xAt(beam, 0);
-      final bottomX = g.xAt(beam, bottomProgress);
-
-      final path = Path()
-        ..moveTo(topX - topWidth, 0)
-        ..lineTo(topX + topWidth, 0)
-        ..lineTo(bottomX + bottomWidth, size.height)
-        ..lineTo(bottomX - bottomWidth, size.height)
-        ..close();
-
-      canvas.drawPath(
-        path,
+      canvas.drawLine(
+        Offset(topX, 0),
+        Offset(bottomX, size.height),
         Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              colour.withValues(alpha: 0.02),
-              colour.withValues(alpha: 0.10 + lit * 0.28),
-              colour.withValues(alpha: 0.03),
+          ..strokeWidth = 1.1
+          ..shader = ui.Gradient.linear(
+            Offset(topX, 0),
+            Offset(bottomX, size.height),
+            [
+              colour.withValues(alpha: 0.0),
+              colour.withValues(alpha: 0.22),
+              colour.withValues(alpha: 0.04),
             ],
-            stops: const [0.0, 0.68, 1.0],
-          ).createShader(Offset.zero & size),
+            const [0.0, 0.68, 1.0],
+          ),
       );
-
-      // Edges catch the light, which is what makes it read as a beam and not
-      // a flat stripe.
-      final edge = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            colour.withValues(alpha: 0.0),
-            colour.withValues(alpha: 0.35 + lit * 0.5),
-            colour.withValues(alpha: 0.05),
-          ],
-          stops: const [0.0, 0.68, 1.0],
-        ).createShader(Offset.zero & size);
-      canvas.drawLine(Offset(topX - topWidth, 0),
-          Offset(bottomX - bottomWidth, size.height), edge);
-      canvas.drawLine(Offset(topX + topWidth, 0),
-          Offset(bottomX + bottomWidth, size.height), edge);
     }
   }
 
@@ -165,32 +142,24 @@ class StagePainter extends CustomPainter {
         ).createShader(Rect.fromLTWH(0, y - 2, size.width, 4)),
     );
 
-    // A ring on each beam, marking where that beam's notes land. The line
-    // says when; these say where.
-    final targetRadius = g.noteRadiusAt(1.0);
-    for (var beam = 0; beam < chart.beamCount; beam++) {
-      final centre = Offset(g.xAt(beam, 1.0), y);
-      final lit = litBeams[beam] ?? 0.0;
-      final colour = AppTheme.beamColor(beam, chart.beamCount);
-
-      canvas.drawCircle(
-        centre,
-        targetRadius * 1.18,
+    // A hit anywhere brightens the whole line, since anywhere is where it
+    // counts. Per-lane markers would say aim here, which is no longer true.
+    final flash = litBeams.values.fold(0.0, (max, v) => v > max ? v : max);
+    if (flash > 0) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, y - 30, size.width, 60),
         Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = colour.withValues(alpha: 0.30 + lit * 0.6),
+          ..shader = ui.Gradient.linear(
+            Offset(0, y - 30),
+            Offset(0, y + 30),
+            [
+              Colors.white.withValues(alpha: 0.0),
+              Colors.white.withValues(alpha: 0.20 * flash),
+              Colors.white.withValues(alpha: 0.0),
+            ],
+            const [0.0, 0.5, 1.0],
+          ),
       );
-      if (lit > 0) {
-        canvas.drawCircle(
-          centre,
-          targetRadius * (1.2 + (1 - lit) * 1.6),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 3 * lit
-            ..color = colour.withValues(alpha: 0.5 * lit),
-        );
-      }
     }
   }
 
@@ -204,8 +173,8 @@ class StagePainter extends CustomPainter {
           StageGeometry.progressFor(tap.beat - beat, windowInBeats);
       if (progress < -0.05) continue;
 
-      final colour = AppTheme.beamColor(tap.beam, chart.beamCount);
-      final centre = g.positionAt(tap.beam, progress);
+      final colour = AppTheme.colorAcross(tap.across);
+      final centre = g.positionAtPosition(tap.across, progress);
       final radius = g.noteRadiusAt(progress);
 
       // Distant notes are dimmer; ones past the line drop away quickly, so
