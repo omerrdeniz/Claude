@@ -99,13 +99,22 @@ class ScoreHud extends StatelessWidget {
 
   Widget _verdict(BuildContext context) {
     final fade = (1 - outcomeAge).clamp(0.0, 1.0);
-    final verdict = outcome!.verdict;
-    final colour = switch (verdict) {
-      Verdict.perfect => AppTheme.accentSoft,
-      Verdict.great => const Color(0xFF2ED3C6),
-      Verdict.good => AppTheme.textMuted,
-      Verdict.miss => const Color(0xFFFF6B6B),
-    };
+    final result = outcome!;
+    final verdict = result.verdict;
+
+    // A tap that reached for a note and fell outside the window is told so.
+    // Silence would read as a broken control rather than a mistimed one.
+    final label = result.scored
+        ? verdict.label
+        : (result.errorMs < 0 ? 'Çok erken' : 'Çok geç');
+    final colour = !result.scored
+        ? AppTheme.textMuted
+        : switch (verdict) {
+            Verdict.perfect => AppTheme.accentSoft,
+            Verdict.great => const Color(0xFF2ED3C6),
+            Verdict.good => AppTheme.textMuted,
+            Verdict.miss => const Color(0xFFFF6B6B),
+          };
 
     return Align(
       // Below the line, where the notes have already gone.
@@ -116,7 +125,7 @@ class ScoreHud extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              verdict.label,
+              label,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -126,7 +135,9 @@ class ScoreHud extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              _timingHint(outcome!.errorMs),
+              result.scored
+                  ? _timingHint(result.errorMs)
+                  : (result.errorMs < 0 ? 'nota henüz gelmedi' : 'nota geçti'),
               style: TextStyle(
                 fontSize: 11,
                 color: AppTheme.textMuted.withValues(alpha: 0.8),

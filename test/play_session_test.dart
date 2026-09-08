@@ -39,12 +39,16 @@ void main() {
   late RecordingEngine engine;
   late PianoAudio audio;
 
+  /// Most of these tests are about the session rather than the chart, so they
+  /// use the level that keeps one tap per moment.
   PlaySession sessionFor(Song song,
-      {double approachSeconds = 2.0, int beamCount = 4}) {
+      {double approachSeconds = 2.0,
+      int beamCount = 4,
+      Difficulty difficulty = Difficulty.easy}) {
     engine = RecordingEngine();
     audio = PianoAudio(engine: engine);
     final session = PlaySession(
-      chart: Chart.build(song, beamCount: beamCount),
+      chart: Chart.build(song, beamCount: beamCount, difficulty: difficulty),
       audio: audio,
       approachSeconds: approachSeconds,
     );
@@ -118,7 +122,7 @@ void main() {
 
     test('being early or late still sounds the note, just scores less', () {
       final session = sessionFor(songOf([note(0, 60)]));
-      seek(session, 0.24); // 120ms late at this tempo
+      seek(session, 0.36); // 180ms late at this tempo
       final outcome = session.tap(session.chart.taps.first.beam);
       expect(outcome!.verdict, Verdict.good);
       expect(engine.struck, hasLength(1), reason: 'the music must not break');
@@ -131,7 +135,7 @@ void main() {
       final firm = engine.struck.single.$2;
 
       final late = sessionFor(songOf([note(0, 60)]));
-      seek(late, 0.28);
+      seek(late, 0.36);
       late.tap(late.chart.taps.first.beam);
       expect(engine.struck.single.$2, lessThan(firm));
     });
@@ -260,6 +264,109 @@ void main() {
       expect(engine.released, isEmpty, reason: 'still ringing');
       seek(session, 1.2);
       expect(engine.released, contains(60));
+    });
+  });
+
+  group('turning the device', () {
+    test('re-laying the song out keeps the score and the streak', () {
+      final session = sessionFor(songOf([note(0, 60), note(1, 64)]),
+          difficulty: Difficulty.normal);
+      seek(session, 0);
+      session.tap(session.chart.taps.first.beam);
+      final scoreBefore = session.scoreboard.score;
+
+      // Sideways: more beams, so the notes group differently.
+      session.rebindChart(Chart.build(session.chart.song,
+          beamCount: 6, difficulty: Difficulty.normal));
+
+      expect(session.scoreboard.score, scoreBefore);
+      expect(session.scoreboard.combo, 1);
+      expect(session.chart.beamCount, 6);
+    });
+
+    test('a note already played cannot be played again after re-laying', () {
+      final session = sessionFor(songOf([note(0, 60)]),
+          difficulty: Difficulty.normal);
+      seek(session, 0);
+      expect(session.tap(session.chart.taps.first.beam), isNotNull);
+
+      session.rebindChart(Chart.build(session.chart.song,
+          beamCount: 6, difficulty: Difficulty.normal));
+      for (final tap in session.chart.taps) {
+        expect(session.tap(tap.beam)?.scored ?? false, isFalse,
+            reason: 'the note was already played');
+      }
+      expect(engine.struck, hasLength(1));
+    });
+
+    test('a chord regroups when the beam count changes', () {
+      // Three notes far enough apart to sit on separate beams either way.
+      final song = songOf([note(0, 48), note(0, 60), note(0, 72)]);
+      final narrow = Chart.build(song, beamCount: 3, difficulty: Difficulty.normal);
+      final wide = Chart.build(song, beamCount: 6, difficulty: Difficulty.normal);
+      expect(narrow.taps.length, 3);
+      expect(wide.taps.length, 3);
+      expect(narrow.taps.map((t) => t.beam).toList(),
+          isNot(wide.taps.map((t) => t.beam).toList()));
+    });
+  });
+
+  group('reaching for a note', () {
+    test('tapping too early says so, and costs nothing', () {
+      final session = sessionFor(songOf([note(2, 60)]));
+      // Half a beat before the note is due: past the window, but plainly
+      // aimed at it.
+      seek(session, 1.3);
+      final outcome = session.tap(session.chart.taps.first.beam);
+      expect(outcome, isNotNull, reason: 'silence reads as a broken control');
+      expect(outcome!.scored, isFalse);
+      expect(outcome.errorMs, lessThan(0), reason: 'early');
+      expect(session.scoreboard.notesPlayed, 0, reason: 'no penalty');
+      expect(engine.struck, isEmpty);
+    });
+
+    test('tapping just after a note has gone says that too', () {
+      final session = sessionFor(songOf([note(0, 60)]));
+      seek(session, 0.7); // the note has been missed by now
+      expect(session.scoreboard.counts[Verdict.miss], 1);
+
+      final outcome = session.tap(session.chart.taps.first.beam);
+      expect(outcome, isNotNull);
+      expect(outcome!.scored, isFalse);
+      expect(outcome.errorMs, greaterThan(0), reason: 'late');
+      // The miss was already counted when the note went by; the late tap must
+      // not be counted a second time.
+      expect(session.scoreboard.counts[Verdict.miss], 1);
+    });
+
+    test('a tap in empty space is ignored entirely', () {
+      final session = sessionFor(songOf([note(20, 60)]));
+      seek(session, 0);
+      expect(session.tap(0), isNull);
+      expect(session.tap(1), isNull);
+    });
+
+    test('a tap on the next beam over still finds the note', () {
+      final session = sessionFor(songOf([note(0, 60), note(4, 84)]),
+          difficulty: Difficulty.normal);
+      final beam = session.chart.taps.first.beam;
+      final neighbour = beam == 0 ? 1 : beam - 1;
+      seek(session, 0);
+      final outcome = session.tap(neighbour);
+      expect(outcome?.scored, isTrue,
+          reason: 'a thumb is blunt; a beam either side should still count');
+    });
+
+    test('but only when its own beam has nothing waiting', () {
+      // Two notes at once on neighbouring beams: one finger must not take both.
+      final session = sessionFor(songOf([note(0, 48), note(0, 84)]),
+          difficulty: Difficulty.normal, beamCount: 4);
+      final beams = session.chart.taps.map((t) => t.beam).toList();
+      expect(beams.toSet(), hasLength(2));
+      seek(session, 0);
+      session.tap(beams.first);
+      expect(engine.struck, hasLength(1),
+          reason: 'one finger, one note');
     });
   });
 

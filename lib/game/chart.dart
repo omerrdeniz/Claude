@@ -1,7 +1,40 @@
 import '../music/note.dart';
 import '../music/song.dart';
 
-/// One thing the player taps: a single note, or a chord struck together.
+/// How much of the song the player is responsible for.
+///
+/// The game this one takes after is at its best when a passage needs two,
+/// three, even four fingers at once — that is the moment it stops feeling like
+/// tapping and starts feeling like playing. The levels here are graded by how
+/// much of the harmony is handed to the player rather than played for them.
+enum Difficulty {
+  /// Melody only, and a chord arrives under a single finger. For a first go.
+  easy,
+
+  /// Melody, with the harmony that falls on the same moments folded in. The
+  /// rhythm is unchanged — the same taps as easy — but chords now need several
+  /// fingers at once.
+  normal,
+
+  /// Everything. The accompaniment is the player's too, nothing plays itself.
+  hard,
+}
+
+extension DifficultyLabel on Difficulty {
+  String get label => switch (this) {
+        Difficulty.easy => 'Kolay',
+        Difficulty.normal => 'Normal',
+        Difficulty.hard => 'Zor',
+      };
+
+  String get description => switch (this) {
+        Difficulty.easy => 'Tek parmak, sade ezgi',
+        Difficulty.normal => 'Akorlar çok parmakla',
+        Difficulty.hard => 'Her nota senden',
+      };
+}
+
+/// One thing the player taps: a single note, or notes that share a beam.
 class Tap {
   Tap({required this.beat, required this.notes, required this.beam})
       : assert(notes.isNotEmpty);
@@ -9,7 +42,7 @@ class Tap {
   /// When it should be played, in beats from the start of the song.
   final double beat;
 
-  /// The notes that sound. More than one means a chord under one finger.
+  /// The notes that sound.
   final List<Note> notes;
 
   /// Which beam it travels down.
@@ -31,23 +64,32 @@ class Tap {
       'Tap(${beat.toStringAsFixed(2)}, beam $beam, ${notes.length} note(s))';
 }
 
-/// A song laid out for play: the melody grouped into taps, each assigned to a
-/// beam by pitch.
+/// A song laid out for play: what the player taps, and what plays itself.
 ///
 /// Beams are the game's one real spatial cue. Putting them in pitch order —
 /// low on the left, high on the right, like a keyboard — means a rising line
 /// sweeps right, and the player reads the shape of the music before reading
-/// any individual note.
+/// any individual note. It also means the notes of a chord land on different
+/// beams, which is what makes a chord a two- or three-finger gesture.
 class Chart {
   Chart({
     required this.song,
     required this.beamCount,
+    required this.difficulty,
     required List<Tap> taps,
-  }) : taps = List.unmodifiable(taps);
+    required List<Note> autoNotes,
+  })  : taps = List.unmodifiable(taps),
+        autoNotes = List.unmodifiable(autoNotes);
 
   final Song song;
   final int beamCount;
+  final Difficulty difficulty;
+
+  /// What the player plays, in time order.
   final List<Tap> taps;
+
+  /// What the game plays on the player's behalf, in time order.
+  final List<Note> autoNotes;
 
   static const int defaultBeamCount = 4;
 
@@ -65,32 +107,93 @@ class Chart {
   /// across without the hand leaving the phone.
   static int beamsForWidth(double width) => (width / 97).round().clamp(3, 6);
 
-  static Chart build(Song song, {int beamCount = defaultBeamCount}) {
+  static Chart build(
+    Song song, {
+    int beamCount = defaultBeamCount,
+    Difficulty difficulty = Difficulty.normal,
+  }) {
     assert(beamCount > 0);
-    final chords = song.chordsOf(song.melody);
 
-    // Spread beams across the range this song actually uses, not the whole
-    // keyboard, so every beam earns its place however narrow the tune is.
+    final (played, auto) = _divideVoices(song, difficulty);
+    final chords = song.chordsOf(played);
+
+    // Beams span the range the player actually covers, so every beam earns its
+    // place however narrow the part is.
     var low = 127;
     var high = 0;
-    for (final chord in chords) {
-      for (final note in chord) {
-        if (note.midi < low) low = note.midi;
-        if (note.midi > high) high = note.midi;
-      }
+    for (final note in played) {
+      if (note.midi < low) low = note.midi;
+      if (note.midi > high) high = note.midi;
     }
     final span = (high - low).toDouble();
 
+    int beamOf(double pitch) {
+      if (span <= 0) return beamCount ~/ 2; // one pitch: centre it
+      return ((pitch - low) / span * beamCount).floor().clamp(0, beamCount - 1);
+    }
+
     final taps = <Tap>[];
     for (final chord in chords) {
-      final pitch = chord.map((n) => n.midi).reduce((a, b) => a + b) / chord.length;
-      // A song on one pitch has no spread to divide; centre it.
-      final position = span <= 0 ? 0.5 : (pitch - low) / span;
-      final beam =
-          (position * beamCount).floor().clamp(0, beamCount - 1);
-      taps.add(Tap(beat: chord.first.beat, notes: chord, beam: beam));
+      if (difficulty == Difficulty.easy) {
+        // One finger for the whole chord.
+        final pitch =
+            chord.map((n) => n.midi).reduce((a, b) => a + b) / chord.length;
+        taps.add(Tap(beat: chord.first.beat, notes: chord, beam: beamOf(pitch)));
+        continue;
+      }
+
+      // Each note takes the beam its pitch belongs to; notes that land on the
+      // same beam stay under one finger.
+      final byBeam = <int, List<Note>>{};
+      for (final note in chord) {
+        (byBeam[beamOf(note.midi.toDouble())] ??= []).add(note);
+      }
+      for (final entry in byBeam.entries) {
+        taps.add(Tap(
+            beat: chord.first.beat, notes: entry.value, beam: entry.key));
+      }
     }
-    return Chart(song: song, beamCount: beamCount, taps: taps);
+    taps.sort((a, b) => a.beat != b.beat
+        ? a.beat.compareTo(b.beat)
+        : a.beam.compareTo(b.beam));
+
+    return Chart(
+      song: song,
+      beamCount: beamCount,
+      difficulty: difficulty,
+      taps: taps,
+      autoNotes: auto,
+    );
+  }
+
+  /// Split the song into what the player plays and what plays itself.
+  static (List<Note>, List<Note>) _divideVoices(
+      Song song, Difficulty difficulty) {
+    final melody = song.melody.toList();
+    final accompaniment = song.accompaniment.toList();
+
+    switch (difficulty) {
+      case Difficulty.easy:
+        return (melody, accompaniment);
+
+      case Difficulty.hard:
+        return ([...melody, ...accompaniment], const []);
+
+      case Difficulty.normal:
+        // Harmony that lands on a melody onset joins the player's hand. The
+        // rhythm does not change — the same moments, fuller chords — so the
+        // step up from easy is in the fingers, not in the speed.
+        final onsets = melody.map((n) => n.beat).toSet();
+        final joined = <Note>[];
+        final auto = <Note>[];
+        for (final note in accompaniment) {
+          (onsets.any((beat) => (beat - note.beat).abs() <= 0.03)
+                  ? joined
+                  : auto)
+              .add(note);
+        }
+        return ([...melody, ...joined], auto);
+    }
   }
 
   /// Taps close enough to the hit line to be on screen.
@@ -107,7 +210,7 @@ class Chart {
 
   /// Notes the game plays on the player's behalf, between two moments.
   Iterable<Note> accompanimentBetween(double fromBeat, double toBeat) =>
-      song.accompaniment.where((n) => n.beat >= fromBeat && n.beat < toBeat);
+      autoNotes.where((n) => n.beat >= fromBeat && n.beat < toBeat);
 
   double get lengthInBeats => song.lengthInBeats;
 }

@@ -16,7 +16,7 @@ void main() {
   testWidgets('shows the song being played', (tester) async {
     await tester.pumpWidget(MaterialApp(home: PlayScreen(song: SongLibrary.furElise)));
     expect(find.text('Für Elise'), findsOneWidget);
-    expect(find.text('Ludwig van Beethoven'), findsOneWidget);
+    expect(find.textContaining('Ludwig van Beethoven'), findsOneWidget);
     expect(find.text('0'), findsOneWidget, reason: 'the score starts at zero');
     await play(tester, const Duration(seconds: 1));
   });

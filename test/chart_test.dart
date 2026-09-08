@@ -24,18 +24,29 @@ void main() {
       expect(chart.taps.first.notes.single.midi, 60);
     });
 
-    test('a chord becomes a single tap carrying every note', () {
+    test('a chord becomes one tap per finger, by pitch', () {
       final chart = Chart.build(
-          songOf([note(0, 60), note(0, 64), note(0, 67), note(1, 72)]));
-      expect(chart.taps, hasLength(2));
-      expect(chart.taps.first.notes, hasLength(3));
+          songOf([note(0, 60), note(0, 64), note(0, 67), note(1, 72)]),
+          beamCount: 4);
+      final atZero = chart.taps.where((t) => t.beat == 0).toList();
+      expect(atZero.length, greaterThan(1));
+      expect(atZero.expand((t) => t.notes).map((n) => n.midi).toList()..sort(),
+          [60, 64, 67]);
     });
 
-    test('the accompaniment is not something the player taps', () {
-      final chart = Chart.build(songOf([
-        note(0, 72),
-        note(0, 40, hand: Hand.left),
-      ]));
+    test('on easy that same chord is one finger', () {
+      final chart = Chart.build(
+          songOf([note(0, 60), note(0, 64), note(0, 67)]),
+          difficulty: Difficulty.easy);
+      expect(chart.taps, hasLength(1));
+      expect(chart.taps.single.notes, hasLength(3));
+    });
+
+    test('on easy the accompaniment is not something the player taps', () {
+      final chart = Chart.build(
+        songOf([note(0, 72), note(0, 40, hand: Hand.left)]),
+        difficulty: Difficulty.easy,
+      );
       expect(chart.taps, hasLength(1));
       expect(chart.taps.single.notes.single.midi, 72);
     });
@@ -47,6 +58,89 @@ void main() {
         expect(tap.beat, greaterThanOrEqualTo(previous));
         previous = tap.beat;
       }
+    });
+  });
+
+  group('difficulty', () {
+    // A melody note with a triad underneath it, struck together.
+    final withChord = songOf([
+      note(0, 72),
+      note(0, 48, hand: Hand.left),
+      note(0, 52, hand: Hand.left),
+      note(0, 55, hand: Hand.left),
+      note(2, 41, hand: Hand.left), // off on its own, between melody notes
+    ]);
+
+    test('easy hands the player one finger and plays the rest', () {
+      final chart = Chart.build(withChord, difficulty: Difficulty.easy);
+      expect(chart.taps, hasLength(1));
+      expect(chart.taps.single.notes.single.midi, 72);
+      expect(chart.autoNotes, hasLength(4), reason: 'all harmony plays itself');
+    });
+
+    test('normal folds the harmony under the melody into several fingers', () {
+      final chart = Chart.build(withChord, difficulty: Difficulty.normal);
+      // Four notes at one moment, spread across beams: a chord to be pressed.
+      final atZero = chart.taps.where((t) => t.beat == 0);
+      expect(atZero.length, greaterThan(1),
+          reason: 'a chord must need more than one finger');
+      expect(atZero.map((t) => t.beam).toSet(), hasLength(atZero.length),
+          reason: 'each finger gets its own beam');
+      // The bass note that falls between melody notes still plays itself, so
+      // the rhythm the player taps is unchanged.
+      expect(chart.autoNotes.map((n) => n.midi), [41]);
+    });
+
+    test('hard leaves nothing playing by itself', () {
+      final chart = Chart.build(withChord, difficulty: Difficulty.hard);
+      expect(chart.autoNotes, isEmpty);
+      expect(
+        chart.taps.expand((t) => t.notes).map((n) => n.midi).toSet(),
+        {72, 48, 52, 55, 41},
+      );
+    });
+
+    test('a note is never both played and auto-played', () {
+      for (final difficulty in Difficulty.values) {
+        for (final song in SongLibrary.all) {
+          final chart = Chart.build(song, difficulty: difficulty);
+          final tapped = chart.taps.expand((t) => t.notes).length;
+          expect(tapped + chart.autoNotes.length, song.notes.length,
+              reason: '${song.title} on ${difficulty.label}');
+        }
+      }
+    });
+
+    test('the harder it gets, the more the player plays', () {
+      int played(Song song, Difficulty d) =>
+          Chart.build(song, difficulty: d).taps.expand((t) => t.notes).length;
+
+      for (final song in SongLibrary.all) {
+        expect(played(song, Difficulty.normal),
+            greaterThanOrEqualTo(played(song, Difficulty.easy)),
+            reason: song.title);
+        expect(played(song, Difficulty.hard),
+            greaterThanOrEqualTo(played(song, Difficulty.normal)),
+            reason: song.title);
+      }
+
+      // In a song whose harmony moves between the melody notes, hard is a real
+      // step up. Where the harmony only ever lands with the melody — as in a
+      // hymn-like setting — normal already hands the player everything, and
+      // that is the right answer rather than a missing level.
+      expect(played(SongLibrary.preludeInC, Difficulty.hard),
+          greaterThan(played(SongLibrary.preludeInC, Difficulty.normal)));
+    });
+
+    test('real songs give the player chords to press', () {
+      final chart = Chart.build(SongLibrary.odeToJoy,
+          beamCount: 4, difficulty: Difficulty.normal);
+      final byBeat = <double, int>{};
+      for (final tap in chart.taps) {
+        byBeat[tap.beat] = (byBeat[tap.beat] ?? 0) + 1;
+      }
+      expect(byBeat.values.any((fingers) => fingers >= 2), isTrue,
+          reason: 'no moment in the song needs more than one finger');
     });
   });
 
@@ -128,10 +222,11 @@ void main() {
     });
 
     test('a tap lasts as long as its longest note', () {
-      final chart = Chart.build(songOf([
-        note(0, 60, duration: 0.5),
-        note(0, 64, duration: 2.0),
-      ]));
+      // Easy keeps the chord under one finger, so one tap carries both.
+      final chart = Chart.build(
+        songOf([note(0, 60, duration: 0.5), note(0, 64, duration: 2.0)]),
+        difficulty: Difficulty.easy,
+      );
       expect(chart.taps.single.duration, 2.0);
     });
   });

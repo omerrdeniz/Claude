@@ -17,18 +17,26 @@ void main() {
     });
 
     test('each window gives its own verdict', () {
-      expect(judge.verdictFor(49), Verdict.perfect);
-      expect(judge.verdictFor(51), Verdict.great);
-      expect(judge.verdictFor(99), Verdict.great);
-      expect(judge.verdictFor(101), Verdict.good);
-      expect(judge.verdictFor(169), Verdict.good);
-      expect(judge.verdictFor(171), Verdict.miss);
+      // Written against the judge's own settings rather than fixed numbers, so
+      // tuning the feel of the game does not break the test of its logic.
+      expect(judge.verdictFor(judge.perfectMs - 1), Verdict.perfect);
+      expect(judge.verdictFor(judge.perfectMs + 1), Verdict.great);
+      expect(judge.verdictFor(judge.greatMs - 1), Verdict.great);
+      expect(judge.verdictFor(judge.greatMs + 1), Verdict.good);
+      expect(judge.verdictFor(judge.goodMs - 1), Verdict.good);
+      expect(judge.verdictFor(judge.goodMs + 1), Verdict.miss);
+    });
+
+    test('the windows are wide enough to feel fair on a phone', () {
+      // A tap that lands within a fifth of a second of the beat must count for
+      // something: below this the control reads as broken rather than strict.
+      expect(judge.goodMs, greaterThanOrEqualTo(200));
     });
 
     test('quality falls off from dead on to the edge of the window', () {
       expect(judge.quality(0), 1.0);
       expect(judge.quality(judge.goodMs), 0.0);
-      expect(judge.quality(85), closeTo(0.5, 0.01));
+      expect(judge.quality(judge.goodMs / 2), closeTo(0.5, 0.01));
       expect(judge.quality(9999), 0.0, reason: 'never negative');
     });
   });

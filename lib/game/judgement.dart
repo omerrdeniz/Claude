@@ -23,12 +23,13 @@ extension VerdictLabel on Verdict {
 /// The windows are generous by rhythm-game standards, and deliberately so.
 /// This game never plays a wrong note — the player only controls *when* — so
 /// the punishment for being slightly off should be a smaller number, not a
-/// broken performance.
+/// broken performance. A tap that finds nothing at all feels broken rather
+/// than strict, which is worth more than the precision it costs.
 class Judge {
   const Judge({
-    this.perfectMs = 50,
-    this.greatMs = 100,
-    this.goodMs = 170,
+    this.perfectMs = 55,
+    this.greatMs = 115,
+    this.goodMs = 210,
   })  : assert(perfectMs < greatMs),
         assert(greatMs < goodMs);
 

@@ -16,10 +16,12 @@ class PlayScreen extends StatefulWidget {
     super.key,
     required this.song,
     this.beamCount,
+    this.difficulty = Difficulty.normal,
     this.approachSeconds = 1.9,
   });
 
   final Song song;
+  final Difficulty difficulty;
 
   /// Fixed number of beams, or null to let the screen decide from its width.
   final int? beamCount;
@@ -57,7 +59,8 @@ class _PlayScreenState extends State<PlayScreen>
     super.initState();
     _beamCount = widget.beamCount ?? Chart.defaultBeamCount;
     _session = PlaySession(
-      chart: Chart.build(widget.song, beamCount: _beamCount),
+      chart: Chart.build(widget.song,
+          beamCount: _beamCount, difficulty: widget.difficulty),
       audio: _audio,
       approachSeconds: widget.approachSeconds,
     )..onMiss = (_) => setState(() {});
@@ -91,7 +94,8 @@ class _PlayScreenState extends State<PlayScreen>
     final wanted = Chart.beamsForWidth(size.width);
     if (wanted == _beamCount) return;
     _beamCount = wanted;
-    _session.rebindChart(Chart.build(widget.song, beamCount: wanted));
+    _session.rebindChart(Chart.build(widget.song,
+        beamCount: wanted, difficulty: widget.difficulty));
     _litBeams.clear();
   }
 
@@ -106,7 +110,9 @@ class _PlayScreenState extends State<PlayScreen>
     final outcome = _session.tap(beam);
     if (outcome == null) return;
     setState(() {
-      _litBeams[beam] = 1.0;
+      // A near miss reports itself but does not light the beam: nothing
+      // sounded, so nothing should look as though it did.
+      if (outcome.scored) _litBeams[beam] = 1.0;
       _lastOutcome = outcome;
       _lastOutcomeAt = _now;
     });
@@ -208,7 +214,7 @@ class _PlayScreenState extends State<PlayScreen>
                     ),
                   ),
                   Text(
-                    widget.song.composer,
+                    '${widget.song.composer} · ${widget.difficulty.label}',
                     style: const TextStyle(
                         fontSize: 12, color: AppTheme.textMuted),
                   ),
