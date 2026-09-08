@@ -12,6 +12,18 @@ abstract final class AppTheme {
   static const Color textPrimary = Color(0xFFF2F2F7);
   static const Color textMuted = Color(0xFF9A9AB0);
 
+  /// One hue per beam, low to high. Pitch reads as colour as well as
+  /// position, which is what lets the player follow a line without
+  /// looking straight at it.
+  static const List<Color> beamColors = [
+    Color(0xFF7B5CFF), // violet
+    Color(0xFF4C8DFF), // blue
+    Color(0xFF2ED3C6), // teal
+    Color(0xFFFF6BB5), // pink
+  ];
+
+  static Color beamColor(int beam) => beamColors[beam % beamColors.length];
+
   static ThemeData get dark {
     final base = ThemeData.dark(useMaterial3: true);
     return base.copyWith(
