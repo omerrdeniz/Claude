@@ -4,6 +4,8 @@ import 'package:piano_flow/app.dart';
 void main() {
   testWidgets('app boots and shows its name', (tester) async {
     await tester.pumpWidget(const PianoFlowApp());
+    expect(find.text('Piano Flow'), findsOneWidget);
     expect(find.text('Für Elise'), findsOneWidget);
+    expect(find.text('Neşeye Övgü'), findsOneWidget);
   });
 }

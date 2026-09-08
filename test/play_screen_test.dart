@@ -74,6 +74,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the song ends on a result, not an empty stage', (tester) async {
+    await tester.pumpWidget(
+        MaterialApp(home: PlayScreen(song: SongLibrary.preludeInC)));
+    await play(tester, const Duration(seconds: 20), frames: 130);
+    expect(find.text('Tekrar çal'), findsOneWidget);
+    expect(find.text('İsabet'), findsOneWidget);
+  });
+
   testWidgets('leaving the screen shuts the game down cleanly', (tester) async {
     await tester.pumpWidget(MaterialApp(home: PlayScreen(song: SongLibrary.furElise)));
     await play(tester, const Duration(seconds: 2));

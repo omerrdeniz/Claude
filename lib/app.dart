@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'data/song_library.dart';
-import 'screens/play_screen.dart';
+import 'screens/song_list_screen.dart';
 import 'theme/app_theme.dart';
 
 /// Root widget. Kept deliberately thin: it wires the theme and the first
@@ -15,7 +14,7 @@ class PianoFlowApp extends StatelessWidget {
       title: 'Piano Flow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
-      home: PlayScreen(song: SongLibrary.furElise),
+      home: const SongListScreen(),
     );
   }
 }

@@ -35,6 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   flutter_pcm_sound: ^3.3.3
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
@@ -57,6 +58,14 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  fonts:
+    # Bundled rather than fetched: the app must look the same offline, and on
+    # the web the default is downloaded from a font CDN. Inter is SIL OFL 1.1
+    # (assets/fonts/Inter-OFL.txt) and covers Turkish.
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

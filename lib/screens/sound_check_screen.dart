@@ -88,7 +88,7 @@ class _SoundCheckScreenState extends State<SoundCheckScreen> {
   String get _statusText {
     if (!_checked) return 'ses açılıyor…';
     if (!_audioReady) {
-      return PianoAudio.isSupported
+      return _audio.isSupported
           ? 'ses açılamadı — cihaz sesi reddetti'
           : 'bu platformda ses yok (iOS, Android ve macOS destekleniyor)';
     }

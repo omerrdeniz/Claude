@@ -37,9 +37,14 @@ abstract final class AppTheme {
     return beamColors[index];
   }
 
+  /// Bundled with the app, so text renders identically everywhere and needs
+  /// no network — the web build otherwise fetches its font from a CDN.
+  static const String fontFamily = 'Inter';
+
   static ThemeData get dark {
     final base = ThemeData.dark(useMaterial3: true);
     return base.copyWith(
+      primaryTextTheme: base.primaryTextTheme.apply(fontFamily: fontFamily),
       scaffoldBackgroundColor: background,
       colorScheme: base.colorScheme.copyWith(
         primary: accent,
@@ -47,6 +52,7 @@ abstract final class AppTheme {
         surface: surface,
       ),
       textTheme: base.textTheme.apply(
+        fontFamily: fontFamily,
         bodyColor: textPrimary,
         displayColor: textPrimary,
       ),

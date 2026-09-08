@@ -7,6 +7,7 @@ import '../game/play_session.dart';
 import '../music/song.dart';
 import '../render/stage_painter.dart';
 import '../theme/app_theme.dart';
+import '../widgets/result_panel.dart';
 import '../widgets/score_hud.dart';
 
 /// The playfield: notes flow toward the line, the player taps, the song plays.
@@ -71,7 +72,10 @@ class _PlayScreenState extends State<PlayScreen>
       _session.update(elapsed);
       _fadeBeamGlow();
     });
-    if (_session.isFinished) _ticker.stop();
+    if (_session.isFinished) {
+      _ticker.stop();
+      _session.pause();
+    }
   }
 
   /// A hit lights its beam, which then dies away over a moment.
@@ -169,6 +173,13 @@ class _PlayScreenState extends State<PlayScreen>
                   hitLineFraction: 0.68,
                 ),
                 _controls(),
+                if (_session.isFinished)
+                  ResultPanel(
+                    scoreboard: _session.scoreboard,
+                    songTitle: widget.song.title,
+                    onReplay: _restart,
+                    onBack: () => Navigator.of(context).maybePop(),
+                  ),
               ],
             ),
           );
