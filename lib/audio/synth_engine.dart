@@ -31,6 +31,13 @@ class SynthEngine {
   final int maxVoices;
 
   static const int _tableSize = 2048;
+
+  /// Where the cubic saturator x - x³/3 flattens out, at x = 1.
+  static const double _saturationCeiling = 2.0 / 3.0;
+
+  /// Restores the level the saturator takes off, less ~0.3 dB of headroom so
+  /// even a saturated passage stays off full scale.
+  static const double _makeupGain = 32767.0 / _saturationCeiling * 0.97;
   static final Float32List _sine = Float32List(_tableSize);
 
   late final List<_Voice> _voices;
@@ -87,15 +94,20 @@ class SynthEngine {
     for (var i = 0; i < frames; i++) {
       // Soft clip: a cubic saturator, so a dense chord compresses instead of
       // tearing. Cheaper than tanh and indistinguishable here.
+      //
+      // The curve flattens out at _saturationCeiling, so that is what a loud
+      // input has to be pinned to — clamping to 1.0 instead would let the
+      // makeup gain below drive it straight into the rail, which is the
+      // hard clipping this saturator exists to avoid.
       var x = mix[i] * masterGain;
       if (x > 1.0) {
-        x = 1.0;
+        x = _saturationCeiling;
       } else if (x < -1.0) {
-        x = -1.0;
+        x = -_saturationCeiling;
       } else {
         x = x - (x * x * x) / 3.0;
       }
-      out[i] = (x * 32767.0 * 1.5).round().clamp(-32768, 32767);
+      out[i] = (x * _makeupGain).round().clamp(-32768, 32767);
     }
   }
 

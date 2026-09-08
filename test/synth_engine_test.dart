@@ -62,6 +62,22 @@ void main() {
     }
   });
 
+  test('a dense chord saturates instead of clipping', () {
+    // Ten loud notes at once is well past unity gain. The soft clipper should
+    // round the peaks off short of full scale; slamming into the rail would be
+    // audible as tearing.
+    for (var n = 48; n < 58; n++) {
+      engine.noteOn(n, velocity: 1.0);
+    }
+    final buf = renderFrames(engine, 16384);
+    var atRail = 0;
+    for (final s in buf) {
+      if (s.abs() >= 32767) atRail++;
+    }
+    expect(atRail, 0, reason: 'no sample should reach full scale');
+    expect(rms(buf), greaterThan(1000), reason: 'and it should still be loud');
+  });
+
   test('A4 sounds at 440 Hz, not at neighbouring pitches', () {
     engine.noteOn(69);
     final buf = renderFrames(engine, 16384);
