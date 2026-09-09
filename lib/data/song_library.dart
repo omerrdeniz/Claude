@@ -22,7 +22,8 @@ import 'scores.g.dart' as scores;
 /// Tempos are the ones the pieces are actually played at. The game plays a
 /// song at the speed it is written at; there is no speed control.
 abstract final class SongLibrary {
-  static List<Song> get all => [odeToJoy, furElise, preludeInC];
+  static List<Song> get all =>
+      [odeToJoy, furElise, preludeInC, nocturneOp9No2];
 
   static Song? byId(String id) {
     for (final song in all) {
@@ -119,5 +120,30 @@ abstract final class SongLibrary {
         beatsPerBar: 4,
         source: 'Kamu malı (BWV 846, 1722). Mutopia Project baskısı '
             '(Tobias Erbsland), tam eser.',
+      );
+
+  /// Chopin's first well-known nocturne, whole, cadenza and all.
+  ///
+  /// In 12/8 and counted in eighths, which is what the edition marks the
+  /// tempo against: Andante, eighth = 132. The left hand is a wide rocking
+  /// accompaniment three notes thick on nearly every eighth, so it is set
+  /// quieter than the other pieces — otherwise it sits on top of the melody
+  /// it is supposed to be under.
+  ///
+  /// The music is Chopin's and long out of copyright, but unlike the other
+  /// two this engraving is not in the public domain: it is CC BY-SA 3.0, so
+  /// the typesetter has to be credited and anything derived from it — this
+  /// note data included — carries the same licence.
+  static Song get nocturneOp9No2 => ScoreImport.read(
+        scores.nocturneOp9No2,
+        id: 'nocturne-op9-no2',
+        title: 'Nokturn, Mi Bemol Majör',
+        composer: 'Frédéric Chopin',
+        bpm: 132,
+        beatsPerBar: 12,
+        beatsPerQuarter: 2,
+        leftVelocity: 0.45,
+        source: 'Kamu malı (Op. 9 No. 2, 1832). Mutopia Project baskısı '
+            '(Renato Biolcati Rinaldi), CC BY-SA 3.0, tam eser.',
       );
 }

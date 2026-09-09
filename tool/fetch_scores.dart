@@ -30,7 +30,12 @@ class _Score {
 
   final String url;
 
-  /// Mutopia's own citation for the edition.
+  /// Mutopia's own citation for the edition, and the terms it carries.
+  ///
+  /// Not all of them are the same: most Mutopia typesetters put their
+  /// engraving in the public domain, but some license it under Creative
+  /// Commons instead, which asks for attribution and carries a share-alike
+  /// clause onto anything derived from it — this MIDI included.
   final String reference;
 
   /// The text in the .ly file that opens the piano staff. `\unfoldRepeats`
@@ -57,6 +62,15 @@ const _scores = [
     reference: 'Mutopia-2011/09/12-5, typeset by Tobias Erbsland',
     staffAnchor: r'\context PianoStaff',
   ),
+  _Score(
+    constant: 'nocturneOp9No2',
+    url: 'https://www.mutopiaproject.org/ftp/ChopinFF/O9/'
+        'chopin_nocturne_op9_n2/chopin_nocturne_op9_n2.ly',
+    reference: 'Mutopia-2014/12/18-1590, typeset by Renato Biolcati Rinaldi '
+        'after G. Schirmer (New York, 1881), licensed CC BY-SA 3.0 — '
+        'https://creativecommons.org/licenses/by-sa/3.0',
+    staffAnchor: r'\new PianoStaff',
+  ),
 ];
 
 Future<void> main() async {
@@ -72,8 +86,6 @@ Future<void> main() async {
       stdout.writeln('${score.name}: convert-ly');
       await _run('convert-ly', ['-e', source.path], work.path);
 
-      // Rendering the engraving too would take far longer and produce a PDF
-      // nothing here reads, so the score block is cut down to MIDI only.
       var text = await source.readAsString();
       if (!text.contains(score.staffAnchor)) {
         throw StateError('${score.name}: no "${score.staffAnchor}" to unfold '
@@ -81,7 +93,19 @@ Future<void> main() async {
       }
       text = text.replaceFirst(
           score.staffAnchor, r'\unfoldRepeats ' + score.staffAnchor);
-      text = text.replaceAll(RegExp(r'\\layout\s*\{\s*\}'), '');
+
+      // Engraving would take far longer than the MIDI and produce a PDF
+      // nothing here reads, so the layout is dropped. It also sidesteps a
+      // pile of old engraving syntax that no longer compiles.
+      text = _stripLayout(text);
+
+      // `set-octavation` is a Scheme call convert-ly leaves alone in files
+      // that already claim a recent version. It draws the 8va bracket and
+      // moves the printed notes under it; the sounding pitch is what the
+      // source says either way, so this cannot change a note.
+      text = text.replaceAllMapped(
+          RegExp(r'#\(set-octavation\s+(-?\d+)\)'), (m) => r'\ottava #' + m[1]!);
+
       await source.writeAsString(text);
 
       stdout.writeln('${score.name}: lilypond');
@@ -129,6 +153,38 @@ Future<void> main() async {
   final target = File('lib/data/scores.g.dart');
   await target.writeAsString(out.toString());
   stdout.writeln('wrote ${target.path}');
+}
+
+/// Cut every `\layout { ... }` block out of [text], braces matched.
+///
+/// A regular expression will not do it: these blocks nest, and the one in the
+/// Chopin carries a whole `\context` inside it.
+String _stripLayout(String text) {
+  final out = StringBuffer();
+  var i = 0;
+  while (true) {
+    final start = text.indexOf(r'\layout', i);
+    if (start == -1) {
+      out.write(text.substring(i));
+      return out.toString();
+    }
+    out.write(text.substring(i, start));
+
+    final open = text.indexOf('{', start);
+    if (open == -1) {
+      throw StateError(r'a \layout with no block after it');
+    }
+    var depth = 0;
+    var at = open;
+    while (at < text.length) {
+      if (text[at] == '{') depth++;
+      if (text[at] == '}') depth--;
+      at++;
+      if (depth == 0) break;
+    }
+    if (depth != 0) throw StateError(r'unbalanced braces in a \layout block');
+    i = at;
+  }
 }
 
 Future<List<int>> _download(String url) async {

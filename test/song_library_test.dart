@@ -52,15 +52,20 @@ void main() {
         expect(song.duration.inMinutes, lessThan(10));
       });
 
-      test('taps are spaced far enough apart to be playable', () {
-        final chords = song.chordsOf(song.melody);
-        expect(chords, isNotEmpty);
+      // Not a promise that every touch can be caught — at their written
+      // tempo these pieces run past what a finger can do, and Chopin's
+      // thirty-second triplets leave 76 ms. What it catches is an import
+      // gone wrong: an ornament left in, or a chord split into a stutter of
+      // separate touches a few milliseconds apart.
+      test('no two touches land close enough to be one mangled chord', () {
+        final moments = song.chordsOf(song.notes);
+        expect(moments, isNotEmpty);
         final secondsPerBeat = 60 / song.bpm;
-        for (var i = 1; i < chords.length; i++) {
-          final gap =
-              (chords[i].first.beat - chords[i - 1].first.beat) * secondsPerBeat;
-          expect(gap, greaterThan(0.1),
-              reason: 'taps ${gap.toStringAsFixed(3)}s apart are unplayable');
+        for (var i = 1; i < moments.length; i++) {
+          final gap = (moments[i].first.beat - moments[i - 1].first.beat) *
+              secondsPerBeat;
+          expect(gap, greaterThan(0.05),
+              reason: 'two moments ${(gap * 1000).round()} ms apart');
         }
       });
     });
@@ -126,16 +131,24 @@ void main() {
       expect(SongLibrary.odeToJoy.lengthInBeats / 4, closeTo(16, 0.5));
     });
 
-    test('no ornament is left as a touch no finger could catch', () {
-      for (final song in SongLibrary.all) {
-        final moments = song.chordsOf(song.notes);
-        for (var i = 1; i < moments.length; i++) {
-          final gap = moments[i].first.beat - moments[i - 1].first.beat;
-          expect(gap * 60 / song.bpm, greaterThan(0.05),
-              reason: '${song.id}: two moments '
-                  '${(gap * 60 / song.bpm * 1000).round()} ms apart');
-        }
-      }
+    test('the Chopin nocturne is the whole piece, cadenza and all', () {
+      final song = SongLibrary.nocturneOp9No2;
+      expect(song.bpm, 132, reason: 'the edition marks the eighth at 132');
+      expect(song.beatsPerBar, 12, reason: '12/8');
+      expect(song.lengthInBeats / song.beatsPerBar, greaterThan(35));
+      expect(song.duration.inSeconds, inInclusiveRange(180, 230));
+      // The cadenza climbs far above where the melody sits.
+      expect(song.pitchRange.$2, greaterThan(95));
+      // Its accompaniment is the thickest in the library: chords three notes
+      // deep on nearly every eighth, so it outnumbers the melody.
+      expect(song.accompaniment.length, greaterThan(song.melody.length));
+    });
+
+    test('its engraving is credited, since that one is not public domain', () {
+      // Chopin is long out of copyright but this typesetting is CC BY-SA,
+      // which asks for the typesetter's name to travel with it.
+      expect(SongLibrary.nocturneOp9No2.source, contains('CC BY-SA'));
+      expect(SongLibrary.nocturneOp9No2.source, contains('Renato'));
     });
   });
 

@@ -101,8 +101,9 @@ docs/          magic-piano-analiz.md  mekanik incelemesi
 | `ode-to-joy` | Neşeye Övgü | 160 (♩) | 16 ölçülük tam tema | Piano Flow düzenlemesi |
 | `fur-elise` | Für Elise | 144 (♪) | Tam eser, ~125 ölçü, tekrarlar açık | Mutopia WoO 59 |
 | `prelude-in-c` | Prelüd, Do Majör | 60 (♩) | Tam eser, 35 ölçü | Mutopia BWV 846 |
+| `nocturne-op9-no2` | Nokturn, Mi Bemol Majör | 132 (♪) | Tam eser, 37 ölçü, kadans dahil | Mutopia Op. 9 No. 2 |
 
-**Nota verisi artık hafızadan yazılmıyor.** Für Elise ve Prelüd, Mutopia
+**Nota verisi artık hafızadan yazılmıyor.** Für Elise, Prelüd ve Nokturn, Mutopia
 Project'in LilyPond nüshalarından geliyor: `tool/fetch_scores.dart` kaynağı
 indirir, `convert-ly` ile günceller, `\unfoldRepeats` ile tekrarları açar,
 LilyPond'a MIDI ürettirir ve baytları base64 olarak `lib/data/scores.g.dart`
@@ -131,6 +132,21 @@ kalsın. 40'tan fazla çağrı noktası ve testler bunu varsayıyor.
   dokunuşlar olarak çizilirdi.
 - **El başına gürlük.** Nüshada nüans yok; MIDI'de her nota aynı hızda.
 
+### Lisans — Nokturn diğerlerinden farklı
+
+Müziğin kendisi üçünde de kamu malı. Ama **baskılar aynı lisansta değil**:
+
+- Für Elise ve Prelüd: dizgiciler baskıyı kamu malına bırakmış.
+- **Nokturn: CC BY-SA 3.0.** Dizgicinin (Renato Biolcati Rinaldi) adı
+  anılmalı ve baskıdan türetilen her şey — `scores.g.dart`'taki MIDI ve
+  ondan çıkan nota verisi dahil — aynı lisansı taşır.
+
+Şu an uyumluyuz: `source` alanında dizgici ve lisans yazıyor, oyun içinde
+şarkı listesinde görünüyor, `song_library_test.dart` bunu kontrol ediyor.
+**App Store hazırlığında (yol haritası adım 9) buna tekrar bakılmalı**;
+katı biçimde yalnız kamu malı isteniyorsa Nokturn için başka bir baskı
+bulunmalı.
+
 ### Elle yazılmış veride bulunan hata
 
 Prelüd'ün tamamı bir oktav aşağıdaydı (`G3 C4 E4` yazılmıştı, doğrusu
@@ -145,6 +161,7 @@ Hepsi eserin kendi temposu; oyunda hız seçeneği yok.
   yarım nota = 80, yani ♩ = 160.
 - Für Elise: nüsha ♩ = 72 diyor, 3/8 olduğu için ♪ = 144.
 - Prelüd: nüsha ♩ = 60 diyor.
+- Nokturn: nüsha doğrudan ♪ = 132 diyor (Andante, 12/8).
 
 Neşeye Övgü hâlâ bizim düzenlememiz: tema önce viyolonsel ve kontrbas için
 yazılmış, kopyalanacak bir piyano nüshası yok. Beethoven'ın Re majörü yerine
@@ -167,7 +184,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 220 test geçiyor
+flutter test        # 227 test geçiyor
 ```
 
 ## Cihazsız doğrulama
@@ -222,11 +239,21 @@ altında yazıyor; oyuncudan "ekranda hangi kod yazıyor" diye teyit alın.
 
 ## Sıradaki iş
 
-1. Oyuncu üç WAV'ı dinleyip yanlış notaları bildirecek. Für Elise ve Prelüd
-   artık nüshadan geldiği için nota hatası beklenmiyor; asıl soru **tempolar
-   oynanabilir mi**. Für Elise'in doruğundaki otuz ikilik iniş, ♪ = 144'te
-   dokunuşlar arası 104 ms bırakıyor — gerçek tempo bu, ama oyun olarak çok
-   sert gelirse `song_library.dart` içinde tek satır.
+1. **Parmağın yetişemediği yerler.** Gerçek tempoda bazı geçitler dokunma
+   hızının üstünde kalıyor:
+
+   | Şarkı | En dar aralık | Kaç dokunuş |
+   |---|---|---|
+   | Nokturn | 76 ms (ölçü 16 ve 24, otuz ikilik üçlemeler) | 408'de 9 tanesi 100 ms altı |
+   | Für Elise | 104 ms (doruktaki otuz ikilik iniş) | — |
+   | Prelüd | 250 ms | yok |
+
+   Normal ve Zor'da hiçbir şey kendi kendine çalmadığı için bu notalar
+   basılamazsa hiç seslenmiyor. Üç seçenek var, hiçbiri henüz kararlaştırılmadı:
+   (a) olduğu gibi bırak, kaçırılsın; (b) belirli bir hızın üstündeki geçitleri
+   her zorlukta `autoNotes`'a al; (c) şarkı başına tempo düşür. (b) DURUM'daki
+   "normalde hiçbir şey kendi çalmaz" kararına dokunduğu için oyuncuya
+   sorulmalı.
 2. Normal zorlukta akor parmaklama sorusu yanıtlanacak.
 3. MIDI içe aktarma **arayüzü** (yol haritası adım 8) — okuyucu ve dönüştürücü
    hazır, eksik olan yalnızca dosya seçme ekranı. Oyuncu kendi MIDI'lerini
