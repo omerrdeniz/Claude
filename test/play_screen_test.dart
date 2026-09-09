@@ -98,7 +98,7 @@ void main() {
       (tester) async {
     // The lift is what ends a held note, so the wiring for it has to exist.
     await tester.pumpWidget(MaterialApp(
-        home: PlayScreen(song: SongLibrary.odeToJoy)));
+        home: PlayScreen(song: SongLibrary.odeToJoy, speed: 0.6)));
     await play(tester, const Duration(milliseconds: 2200), frames: 40);
 
     final stage = tester.getRect(find.byType(PlayScreen));
@@ -111,7 +111,7 @@ void main() {
 
   testWidgets('both sides of the screen accept a finger', (tester) async {
     await tester.pumpWidget(MaterialApp(
-        home: PlayScreen(song: SongLibrary.odeToJoy)));
+        home: PlayScreen(song: SongLibrary.odeToJoy, speed: 0.6)));
     await play(tester, const Duration(milliseconds: 2200), frames: 40);
 
     final stage = tester.getRect(find.byType(PlayScreen));

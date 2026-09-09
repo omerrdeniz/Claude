@@ -148,6 +148,38 @@ void main() {
     expect(energyAt(buf, fundamental), greaterThan(aliasBand * 10));
   });
 
+  group('the treble is held back', () {
+    // Chopin's nocturne spends a tenth of its melody above B flat 6, and at
+    // the same amplitude as the middle of the keyboard that came out
+    // piercing rather than bright — the ear is at its most sensitive exactly
+    // where those fundamentals sit.
+    test('nothing below C6 is touched', () {
+      for (final midi in [21, 48, 60, 72, 84]) {
+        expect(SynthEngine.trebleGain(midi), 1.0, reason: 'midi $midi');
+      }
+    });
+
+    test('and it falls away by the octave above it', () {
+      expect(SynthEngine.trebleGain(96), closeTo(0.5, 0.01), reason: 'C7');
+      expect(SynthEngine.trebleGain(90), lessThan(1.0));
+      expect(SynthEngine.trebleGain(90), greaterThan(SynthEngine.trebleGain(96)));
+    });
+
+    test('but never all the way to nothing', () {
+      expect(SynthEngine.trebleGain(108), greaterThan(0.25),
+          reason: 'the top of the keyboard still has to sound struck');
+    });
+
+    test('a high note really is quieter than a middle one', () {
+      engine.noteOn(96, velocity: 0.8);
+      final high = rms(renderFrames(engine, 4096));
+      engine.panic();
+      engine.noteOn(72, velocity: 0.8);
+      final middle = rms(renderFrames(engine, 4096));
+      expect(high, lessThan(middle));
+    });
+  });
+
   test('panic stops everything immediately', () {
     engine.noteOn(60);
     engine.noteOn(64);

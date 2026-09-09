@@ -111,6 +111,33 @@ class SynthEngine {
     }
   }
 
+  /// How much of its written loudness a note at [midi] actually gets.
+  ///
+  /// Two things pile up in the top octaves. The ear is at its most sensitive
+  /// between roughly two and four kilohertz, which is where those notes put
+  /// their fundamental; and a real piano radiates far less power up there than
+  /// it does in the middle, where the strings are long and the soundboard is
+  /// working. Give the treble the same amplitude as the middle and it does not
+  /// read as bright, it reads as painful — which is what Chopin's nocturne
+  /// sounded like, a tenth of its melody sitting above B flat 6.
+  ///
+  /// So the top is held back by an octave-for-octave halving above C6, down to
+  /// a floor. Below that nothing changes: the other three pieces live there
+  /// and already sounded right.
+  static double trebleGain(int midi) {
+    if (midi <= _trebleFrom) return 1.0;
+    final octaves = (midi - _trebleFrom) / 12.0;
+    final gain = math.pow(0.5, octaves).toDouble();
+    return gain < _trebleFloor ? _trebleFloor : gain;
+  }
+
+  /// C6 — above here the ear starts doing the work for us.
+  static const int _trebleFrom = 84;
+
+  /// About −10 dB, reached around C7. Past this the note stops sounding like
+  /// a struck string at all.
+  static const double _trebleFloor = 0.32;
+
   /// Pick a free voice, otherwise steal the quietest sounding one.
   _Voice _allocate() {
     _Voice? quietest;
@@ -176,6 +203,9 @@ class _Voice {
     // this is what makes velocity read as brightness rather than just volume.
     final brightness = math.pow(velocity, 1.6).toDouble();
 
+    // And the top of the keyboard is held back.
+    final treble = SynthEngine.trebleGain(note);
+
     for (var i = 0; i < _partialCount; i++) {
       final n = i + 1;
       // Stiff strings: partials sit progressively sharp of the harmonic series.
@@ -194,7 +224,7 @@ class _Voice {
       _increment[i] = partialFreq * SynthEngine._tableSize / sampleRate;
 
       final gain = 1.0 / math.pow(n, 1.35);
-      _amp[i] = gain * velocity * (i == 0 ? 1.0 : brightness);
+      _amp[i] = gain * velocity * treble * (i == 0 ? 1.0 : brightness);
 
       // Higher partials decay faster — the note darkens as it rings.
       final tau = baseDecay / (1.0 + 0.55 * i * i.toDouble()) / 6.9;

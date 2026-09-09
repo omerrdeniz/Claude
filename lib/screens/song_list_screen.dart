@@ -27,6 +27,15 @@ class SongListScreen extends StatefulWidget {
 class _SongListScreenState extends State<SongListScreen> {
   Difficulty _difficulty = Difficulty.normal;
 
+  /// Speeds offered, as a fraction of the written tempo.
+  static const List<double> _speeds = [0.4, 0.6, 0.8, 1.0];
+
+  /// Full speed by default: the songs are written at the tempo they are
+  /// actually played at and should sound that way on the first press. Slowing
+  /// down is a practice tool, one tap away, for the pieces that outrun a hand
+  /// — which at their real tempo, Chopin's and Beethoven's both do.
+  double _speed = 1.0;
+
   /// Forgiving by default, and the music kept in time by default: the game
   /// should flatter a beginner before it tests one.
   TimingTolerance _tolerance = TimingTolerance.wide;
@@ -77,6 +86,12 @@ class _SongListScreenState extends State<SongListScreen> {
               onChanged: (value) => setState(() => _difficulty = value),
             ),
             const SizedBox(height: 20),
+            _SpeedPicker(
+              speeds: _speeds,
+              selected: _speed,
+              onChanged: (value) => setState(() => _speed = value),
+            ),
+            const SizedBox(height: 20),
             _TolerancePicker(
               selected: _tolerance,
               onChanged: (value) => setState(() => _tolerance = value),
@@ -91,6 +106,7 @@ class _SongListScreenState extends State<SongListScreen> {
               _SongTile(
                 song: song,
                 difficulty: _difficulty,
+                speed: _speed,
                 tolerance: _tolerance,
                 quantize: _quantize,
               ),
@@ -138,7 +154,53 @@ class _DifficultyPicker extends StatelessWidget {
   }
 }
 
-/// A selectable pill.
+/// Chooses how fast the song runs.
+///
+/// Slowing a piece down is how anyone learns one; the game should offer it
+/// before a beginner concludes they simply cannot play.
+class _SpeedPicker extends StatelessWidget {
+  const _SpeedPicker({
+    required this.speeds,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<double> speeds;
+  final double selected;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            for (final speed in speeds)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _Chip(
+                    label: speed == 1.0 ? 'Tam hız' : '%${(speed * 100).round()}',
+                    selected: speed == selected,
+                    onTap: () => onChanged(speed),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          selected == 1.0
+              ? 'Şarkının kendi temposu'
+              : 'Yavaşlatılmış — notalar arasında daha çok zaman',
+          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
@@ -264,19 +326,22 @@ class _SongTile extends StatelessWidget {
   const _SongTile({
     required this.song,
     required this.difficulty,
+    required this.speed,
     required this.tolerance,
     required this.quantize,
   });
 
   final Song song;
   final Difficulty difficulty;
+  final double speed;
   final TimingTolerance tolerance;
   final bool quantize;
 
   @override
   Widget build(BuildContext context) {
-    final minutes = song.duration.inSeconds ~/ 60;
-    final seconds = song.duration.inSeconds % 60;
+    final length = song.duration.inSeconds ~/ speed;
+    final minutes = length ~/ 60;
+    final seconds = length % 60;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -290,6 +355,7 @@ class _SongTile extends StatelessWidget {
               builder: (_) => PlayScreen(
                 song: song,
                 difficulty: difficulty,
+                speed: speed,
                 tolerance: tolerance,
                 quantize: quantize,
               ),

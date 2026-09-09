@@ -144,6 +144,20 @@ class PlaySession {
   bool get isRunning => _running;
   double get beatsPerSecond => chart.song.bpm / 60 * speed;
 
+  /// Song time as the player's hand meets it.
+  ///
+  /// Everything they hear is [_totalLatencyMs] behind the clock, so a finger
+  /// that feels on the beat arrives that much after it. Matching a touch to a
+  /// note, judging how close it was, and giving up on a note nobody played all
+  /// have to agree on this.
+  ///
+  /// They did not. Only the judging compensated, so there was a band of taps
+  /// as wide as the latency that got matched to a note and then judged too far
+  /// from it to count — and a tap judged a miss returned nothing at all. The
+  /// game answered a real touch with silence, which is exactly what a dead
+  /// control feels like.
+  double get _judgedBeat => _beat - _totalLatencyMs / 1000 * beatsPerSecond;
+
   /// Empty stage before the first note, so it arrives travelling rather than
   /// appearing on the line.
   double get leadInBeats => approachSeconds * beatsPerSecond;
@@ -207,7 +221,7 @@ class PlaySession {
 
   /// A note the player never tapped is a miss once it is too late to hit.
   void _expireMissedTaps() {
-    final deadline = _beat - judge.windowMs / 1000 * beatsPerSecond;
+    final deadline = _judgedBeat - judge.windowMs / 1000 * beatsPerSecond;
     for (final tap in chart.taps) {
       if (tap.beat >= deadline) break; // taps are in time order
       if (!_isPending(tap)) continue;
@@ -260,10 +274,12 @@ class PlaySession {
     }
 
     final tapTarget = chart.taps[index];
-    final errorMs =
-        (_beat - tapTarget.beat) / beatsPerSecond * 1000 - _totalLatencyMs;
+    final errorMs = (_judgedBeat - tapTarget.beat) / beatsPerSecond * 1000;
+    // Matching and judging measure from the same moment against the same
+    // window, so anything matched here is inside it — and a matched touch
+    // always sounds. It used to be able to come back a miss and return
+    // nothing, which is how a real touch got answered with silence.
     final verdict = judge.verdictFor(errorMs);
-    if (verdict == Verdict.miss) return null; // too far away to belong to it
 
     _resolve(tapTarget);
     scoreboard.register(verdict);
@@ -353,13 +369,14 @@ class PlaySession {
     var bestDistance = double.infinity;
     var bestGap = double.infinity;
 
+    final now = _judgedBeat;
     for (var i = 0; i < chart.taps.length; i++) {
       final tap = chart.taps[i];
-      if (tap.beat - _beat > windowBeats) break; // taps are in time order
+      if (tap.beat - now > windowBeats) break; // taps are in time order
       if (!_isPending(tap)) continue;
       if (chart.separatesHands && tap.hand != hand) continue;
 
-      final distance = (tap.beat - _beat).abs();
+      final distance = (tap.beat - now).abs();
       if (distance > windowBeats) continue;
 
       final gap = (tap.across - across).abs();
@@ -378,17 +395,18 @@ class PlaySession {
   /// How far off a tap was from the nearest note it could plausibly have been
   /// aimed at, or null if there was nothing anywhere near.
   double? _nearMiss(double across, Hand hand) {
+    final now = _judgedBeat;
     double? closest;
     void consider(double beat, Hand tapHand) {
       if (chart.separatesHands && tapHand != hand) return;
-      final delta = beat - _beat;
+      final delta = beat - now;
       if (delta.abs() > _reachBeats) return;
       if (closest == null || delta.abs() < closest!.abs()) closest = delta;
     }
 
     // Notes still to come — the player was early.
     for (final tap in chart.taps) {
-      if (tap.beat - _beat > _reachBeats) break;
+      if (tap.beat - now > _reachBeats) break;
       if (_isPending(tap)) consider(tap.beat, tap.hand);
     }
     // Notes just gone — the player was late.

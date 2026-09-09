@@ -45,8 +45,10 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   çarpanlar 1.8 / 1.0 / 0.6. Erken basışlar kuyruğa alınıp **kendi vuruşunda**
   seslendirilir (quantize anahtarı), geç basışlar hemen çalar.
 - **Hem dikey hem yatay** oynanabilir.
-- **Şarkılar kendi temposunda.** Hız seçici kaldırıldı (`speed` parametresi
-  `PlaySession`'da duruyor ama arayüzde yok).
+- **Hız seçici var**, varsayılanı **Tam hız**. Bir kez kaldırılmıştı, oyuncu
+  geri istedi: gerçek tempolarında bazı parçalar elin yetişemeyeceği kadar
+  hızlı. Şarkılar kendi temposunda yazılı kalıyor; yavaşlatma bir çalışma
+  aracı. `%40 / %60 / %80 / Tam hız`.
 
 ### Reddedilenler — tekrar önermeyin
 
@@ -55,6 +57,14 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   süsünden yanlışlıkla türetilmişti.
 - Notaların arkasındaki dikey izler (hold trail çizgileri).
 - Perdeye göre renklendirme.
+
+### Sentezde perdeye göre seviye
+
+`SynthEngine.trebleGain`: C6'nın üstünde oktav başına yarıya inen bir seviye
+düşüşü, 0.32'de tabanlanıyor. Sebep: kulak 2–4 kHz arasında en duyarlı,
+gerçek piyano da tiz bölgede çok daha az güç yayıyor. Bu olmadan Nokturn
+"parlak" değil **rahatsız edici** çıkıyordu — melodisinin onda biri Si♭6
+üstünde. C6 altında hiçbir şey değişmiyor.
 
 ### Açık soru
 
@@ -89,6 +99,14 @@ docs/          magic-piano-analiz.md  mekanik incelemesi
   `test/song_list_test.dart` bunu doğruluyor.
 - Çalınmışlık durumu dokunuş indeksiyle değil `Set<(beat, midi)>` ile tutulur;
   aksi halde cihaz döndürülünce bozuluyordu.
+- **Tek saat kuralı.** Dokunuşu notayla eşleme, ne kadar isabetli olduğuna
+  karar verme ve kaçmış notayı silme — üçü de `PlaySession._judgedBeat`
+  kullanmak zorunda. Bir dönem yalnız karar verme gecikmeyi telafi ediyordu;
+  arada gecikme genişliğinde bir bant kalıyordu: dokunuş bir notaya eşleniyor,
+  sonra o notaya uzak sayılıp `null` dönüyordu — ne ses ne geri bildirim.
+  Oyuncu bunu "bazen algılıyor bazen algılamıyor" diye bildirdi.
+  `test/play_session_test.dart` içindeki "with a latency to compensate for"
+  grubu bunu kilitliyor.
 - Ses yolundaki gecikme `audio.latencyMs` ile telafi edilir, yoksa her dokunuş
   geç sayılır.
 - iOS'ta ses için her `onPointerDown`'da `_audio.nudge()` çağrılır (AudioContext
@@ -184,7 +202,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 227 test geçiyor
+flutter test        # 233 test geçiyor
 ```
 
 ## Cihazsız doğrulama
@@ -239,8 +257,8 @@ altında yazıyor; oyuncudan "ekranda hangi kod yazıyor" diye teyit alın.
 
 ## Sıradaki iş
 
-1. **Parmağın yetişemediği yerler.** Gerçek tempoda bazı geçitler dokunma
-   hızının üstünde kalıyor:
+1. **Parmağın yetişemediği yerler.** Tam hızda bazı geçitler dokunma hızının
+   üstünde kalıyor (hız seçici bunun için geri geldi, ama kalıcı çözüm değil):
 
    | Şarkı | En dar aralık | Kaç dokunuş |
    |---|---|---|

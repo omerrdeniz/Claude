@@ -410,4 +410,72 @@ void main() {
     session.update(Duration(microseconds: (seconds * 1e6).round()));
     expect(session.tap(right)!.verdict, Verdict.perfect);
   });
+
+  group('with a latency to compensate for', () {
+    /// A session that thinks the player's ear is [latencyMs] behind.
+    ///
+    /// Quantizing is off so that a touch sounds the moment it lands: with it
+    /// on, an early one waits for its beat and the test could not tell a note
+    /// held back from a note lost.
+    (PlaySession, RecordingEngine) calibrated(double latencyMs,
+        {double noteAtBeat = 0}) {
+      final recorder = RecordingEngine();
+      final session = PlaySession(
+        chart: Chart.build(songOf([note(noteAtBeat, 60)]),
+            difficulty: Difficulty.easy),
+        audio: PianoAudio(engine: recorder),
+        latencyOffsetMs: latencyMs,
+        quantize: false,
+      )..start();
+      return (session, recorder);
+    }
+
+    /// Move to [beat] of song time.
+    void at(PlaySession session, double beat) => session.update(Duration(
+        microseconds:
+            ((beat + session.leadInBeats) / session.beatsPerSecond * 1e6)
+                .round()));
+
+    // The bug this pins down: matching a touch to a note used one clock and
+    // judging it used another, a whole latency apart. Between the two there
+    // was a band of taps that found a note and were then judged too far from
+    // it to count — and the game returned nothing at all, no sound and no
+    // verdict, for a touch the player had every reason to expect to work.
+    test('a touch anywhere in the window is answered, never swallowed', () {
+      const latency = 150.0;
+      // The judge counts anything inside goodMs; stop just short of the edge
+      // so the sweep is not testing rounding.
+      const reach = 200.0;
+      for (var offsetMs = -reach; offsetMs <= reach; offsetMs += 10) {
+        final (session, recorder) = calibrated(latency);
+        // Where the hand has to be, in song time, for the player to feel
+        // they were offsetMs off the beat.
+        at(session, (offsetMs + latency) / 1000 * session.beatsPerSecond);
+
+        final outcome = session.tap(right);
+        final off = offsetMs.round();
+        expect(outcome, isNotNull,
+            reason: 'a touch $off ms off the beat did nothing at all');
+        expect(outcome!.verdict, isNot(Verdict.miss),
+            reason: 'a touch $off ms off was inside the window and still '
+                'judged a miss');
+        expect(outcome.scored, isTrue, reason: 'a touch $off ms off went '
+            'unscored');
+        expect(recorder.struck.map((s) => s.$1), contains(60),
+            reason: 'a touch $off ms off was silent');
+      }
+    });
+
+    test('a note stays available as long as the player window is open', () {
+      // Expiry ran on the raw clock, so with a latency the note was written
+      // off while the hand still had time to reach it.
+      const latency = 150.0;
+      final (session, recorder) = calibrated(latency);
+      // Just inside the far edge of the window, as the player experiences it.
+      at(session, (200 + latency) / 1000 * session.beatsPerSecond);
+      final outcome = session.tap(right);
+      expect(outcome?.scored, isTrue, reason: 'the note was expired too early');
+      expect(recorder.struck.map((s) => s.$1), contains(60));
+    });
+  });
 }

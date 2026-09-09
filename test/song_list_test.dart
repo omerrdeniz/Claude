@@ -24,7 +24,7 @@ void main() {
     expect(find.byIcon(Icons.lock), findsNothing);
   });
 
-  testWidgets('offers every difficulty and tolerance', (tester) async {
+  testWidgets('offers every difficulty, speed and tolerance', (tester) async {
     await pumpList(tester);
     // 'Normal' names both a difficulty and a tolerance, so these are counted
     // rather than required to be unique.
@@ -33,6 +33,9 @@ void main() {
     }
     for (final tolerance in TimingTolerance.values) {
       expect(find.text(tolerance.label), findsAtLeastNWidgets(1));
+    }
+    for (final label in ['%40', '%60', '%80', 'Tam hız']) {
+      expect(find.text(label), findsOneWidget);
     }
     expect(find.text('Notalar tam zamanında çalsın'), findsOneWidget);
   });
@@ -62,12 +65,16 @@ void main() {
     await tester.tap(find.ancestor(
         of: find.text('Zor'), matching: find.byType(InkWell)));
     await tester.pump();
+    await tester.tap(find.ancestor(
+        of: find.text('%40'), matching: find.byType(InkWell)));
+    await tester.pump();
     await tester.tap(find.text('Neşeye Övgü'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
     expect(screen.difficulty, Difficulty.hard);
+    expect(screen.speed, 0.4);
     expect(screen.tolerance, TimingTolerance.wide, reason: 'the default');
     expect(screen.quantize, isTrue, reason: 'the default');
   });
