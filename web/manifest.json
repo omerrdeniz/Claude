@@ -1,12 +1,12 @@
 {
-    "name": "piano_flow",
-    "short_name": "piano_flow",
+    "name": "Piano Flow",
+    "short_name": "Piano Flow",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
+    "background_color": "#0B0B14",
+    "theme_color": "#0B0B14",
     "description": "Piano Flow — akan notalara dokunarak piyano çalma oyunu",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

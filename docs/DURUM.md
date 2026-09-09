@@ -267,6 +267,36 @@ dart run tool/inspect_midi.dart score.mid 1.5         # MIDI'yi ölçü ölçü 
 
 Üretilen WAV ve PNG'ler oyuncuya gönderiliyor.
 
+## Ana ekrana ekleme (telefonda app gibi)
+
+Oyun `display: standalone` bir web app. iPhone'da Safari → Paylaş → **Ana
+Ekrana Ekle**; sonra kendi ikonuyla, Safari çubuğu olmadan açılıyor.
+
+`web/index.html` içinde bunun için duran ve **silinmemesi gereken** şeyler:
+
+- **`viewport` meta.** Yoktu. Yokken telefon sayfayı 980 piksellik varsayılan
+  genişlikte kurup küçültüyor; oyun yanlış ölçekte çiziliyor ve dokunuşlar da
+  o ölçekte geliyor. Muhtemelen uzun süredir görülen düzen tuhaflıklarının
+  bir kısmı buydu.
+- **`viewport-fit=cover` bilerek YOK.** Kapalı bırakılınca iOS sayfayı güvenli
+  alanın içinde tutuyor. Bu oyunun vuruş çizgisi ekranın altına yakın (0.68);
+  tüm ekrana yayılsa o çizgi ana ekran çubuğunun altına düşer ve oradaki
+  kaydırma nota çalmak yerine uygulamadan çıkar.
+- **`touch-action: manipulation`** ve arkadaşları: çift dokunuşla yakınlaştırma
+  (ve onu beklemekten gelen gecikme), uzun basınca metin seçme/menü, iki
+  parmakla yakınlaştırma — hepsi oyunun ortasında tetikleniyordu. `none`
+  değil `manipulation`, çünkü şarkı listesinin kaydırılması gerekiyor.
+- **`gesturestart` engelleme:** Safari `user-scalable=no`'yu düzensiz
+  uyguluyor. Bu oyun tasarımı gereği ikinci parmağı istiyor (her el bir yan),
+  o parmak yakınlaştırma yapmamalı.
+
+**Service worker hâlâ yok ve olmamalı.** Ana ekrana ekleme onu gerektirmiyor.
+Bedeli çevrimdışı oynama (zaten hiç olmadı), kazancı düzeltmelerin telefona
+gerçekten ulaşması.
+
+İkonlar `tool/make_icons.py` ile üretiliyor (Pillow gerekir). Flutter'ın
+şablonundan gelenler Flutter logosuydu; ana ekranda o görünüyordu.
+
 ## Yayınlama (GitHub Pages)
 
 Oyuncu iPhone'dan oynuyor, Mac/Xcode yok. Web derlemesi
