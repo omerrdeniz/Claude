@@ -85,7 +85,9 @@ void main() {
   test('the Bach prelude repeats one figure under changing harmony', () {
     final song = SongLibrary.preludeInC;
     final figure = song.melody.take(3).map((n) => n.midi).toList();
-    expect(figure, [55, 60, 64], reason: 'G3 C4 E4');
+    // Written out from memory this sat an octave low; the engraved edition
+    // puts the right hand above middle C, where it belongs.
+    expect(figure, [67, 72, 76], reason: 'G4 C5 E5');
     // The same shape returns immediately, a step further into the bar.
     expect(song.melody.skip(3).take(3).map((n) => n.midi), figure);
     // Bar three changes harmony, so the figure moves.
@@ -94,6 +96,47 @@ void main() {
         .take(3)
         .map((n) => n.midi);
     expect(barThree, isNot(figure));
+  });
+
+  group('the pieces are complete, at the tempo they are written at', () {
+    test('Für Elise is the whole rondo, not just its theme', () {
+      final song = SongLibrary.furElise;
+      // A B A C A with the repeats played out, counted in eighths.
+      expect(song.lengthInBeats / song.beatsPerBar, greaterThan(100),
+          reason: 'bars');
+      expect(song.duration.inSeconds, inInclusiveRange(140, 190));
+      expect(song.bpm, 144, reason: 'the edition marks the quarter at 72');
+      expect(song.beatsPerBar, 3);
+      // It reaches the top of the C section and the bottom of the bass.
+      expect(song.pitchRange.$2, greaterThan(93), reason: 'above A6');
+      expect(song.pitchRange.$1, lessThan(40), reason: 'below E2');
+    });
+
+    test('the Bach prelude runs all thirty-five bars', () {
+      final song = SongLibrary.preludeInC;
+      expect(song.lengthInBeats / song.beatsPerBar, closeTo(35, 0.5));
+      expect(song.bpm, 60, reason: 'the edition marks the quarter at 60');
+      // The last bar is the long tonic the piece settles onto.
+      expect(song.notes.last.endBeat, greaterThan(135));
+    });
+
+    test('Ode to Joy keeps Beethoven Allegro assai', () {
+      // Half note = 80 in the Ninth, so the quarter is 160.
+      expect(SongLibrary.odeToJoy.bpm, 160);
+      expect(SongLibrary.odeToJoy.lengthInBeats / 4, closeTo(16, 0.5));
+    });
+
+    test('no ornament is left as a touch no finger could catch', () {
+      for (final song in SongLibrary.all) {
+        final moments = song.chordsOf(song.notes);
+        for (var i = 1; i < moments.length; i++) {
+          final gap = moments[i].first.beat - moments[i - 1].first.beat;
+          expect(gap * 60 / song.bpm, greaterThan(0.05),
+              reason: '${song.id}: two moments '
+                  '${(gap * 60 / song.bpm * 1000).round()} ms apart');
+        }
+      }
+    });
   });
 
   test('every note belongs to a hand', () {

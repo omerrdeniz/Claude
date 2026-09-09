@@ -1,7 +1,8 @@
 # Durum ve devir notu
 
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
-sürdürebilmesi için yazıldı. Son güncelleme: `a6614d0` derlemesi.
+sürdürebilmesi için yazıldı. Son güncelleme: şarkılar basılı nüshalardan
+tam haliyle alındı.
 
 ## Proje
 
@@ -73,7 +74,11 @@ lib/game/      chart.dart      Difficulty, Tap, el bölgeleri, seyreltme
 lib/render/    stage_painter.dart  tüm oyun alanı çizimi
 lib/screens/   song_list_screen.dart (zorluk/tolerans/quantize seçimi), play_screen.dart
 lib/data/      song_library.dart  telifsiz şarkılar
+               score_import.dart  nüshadan gelen MIDI'yi oyuna uydurur
+               scores.g.dart      ÜRETİLMİŞ — gömülü Mutopia MIDI'leri
 tool/          render_song.dart, render_demo.dart  WAV üretici
+               fetch_scores.dart  nüshaları indirir, scores.g.dart'ı üretir
+               inspect_midi.dart  MIDI'yi ölçü ölçü döker, nüshayla karşılaştırmak için
 docs/          magic-piano-analiz.md  mekanik incelemesi
 ```
 
@@ -91,17 +96,59 @@ docs/          magic-piano-analiz.md  mekanik incelemesi
 
 ## Şarkılar
 
-| id | Ad | BPM | Kapsam |
-|---|---|---|---|
-| `ode-to-joy` | Neşeye Övgü | 120 | 16 ölçülük tam tema |
-| `fur-elise` | Für Elise | 132 | Ana tema iki kez (8'lik = vuruş, 3/8) |
-| `prelude-in-c` | Prelüd, Do Majör | 66 | İlk 19 ölçü |
+| id | Ad | BPM | Kapsam | Kaynak |
+|---|---|---|---|---|
+| `ode-to-joy` | Neşeye Övgü | 160 (♩) | 16 ölçülük tam tema | Piano Flow düzenlemesi |
+| `fur-elise` | Für Elise | 144 (♪) | Tam eser, ~125 ölçü, tekrarlar açık | Mutopia WoO 59 |
+| `prelude-in-c` | Prelüd, Do Majör | 60 (♩) | Tam eser, 35 ölçü | Mutopia BWV 846 |
 
-**Uyarı:** Bu nota verisi hafızadan yazıldı; bu ortamdan partisyona bakılamıyor
-(ağ kısıtı). Doğrulama kulakla, `tool/render_song.dart` ile üretilen WAV'lar
-üzerinden yapılıyor. Kalıcı çözüm: **MIDI içe aktarma arayüzü** (yol haritası
-adım 8) — `lib/music/midi_reader.dart` format 0/1, running status, tempo ve el
-ataması okuyabiliyor, eksik olan yalnızca dosya seçme ekranı.
+**Nota verisi artık hafızadan yazılmıyor.** Für Elise ve Prelüd, Mutopia
+Project'in LilyPond nüshalarından geliyor: `tool/fetch_scores.dart` kaynağı
+indirir, `convert-ly` ile günceller, `\unfoldRepeats` ile tekrarları açar,
+LilyPond'a MIDI ürettirir ve baytları base64 olarak `lib/data/scores.g.dart`
+içine yazar. `lib/data/score_import.dart` bu MIDI'yi oyuna uygun hale getirir.
+
+Aracı çalıştırmak için internet ve LilyPond gerekir:
+
+```bash
+apt-get install -y lilypond
+dart run tool/fetch_scores.dart
+```
+
+Varlık (asset) yerine base64 gömülmesinin sebebi: `SongLibrary` senkron
+kalsın. 40'tan fazla çağrı noktası ve testler bunu varsayıyor.
+
+`score_import.dart` nüshaya yalnızca şunları yapar — hepsi testli:
+
+- **Vuruş birimi** (`beatsPerQuarter`). Für Elise 3/8; vuruş sekizliktir,
+  o yüzden MIDI'nin dörtlükleri 2 ile çarpılır.
+- **Süslemeler atılır.** LilyPond `\grace`/`\appoggiatura` notalarına
+  kırıntı kadar süre verir (0.026–0.055 dörtlük); gerçek en kısa nota
+  otuz ikiliktir (0.125). Für Elise'de üç tane var. Bunlar ayrı bir
+  dokunuş olamaz — süsledikleri notadan milisaniyelerle önce gelirler.
+- **Izgaraya oturtma**: dörtlüğün 1/48'i. Otuz ikilikleri de üçlemeleri de
+  tam tutar. Yoksa akorun notaları birkaç ondalık tick arayla düşüp ayrı
+  dokunuşlar olarak çizilirdi.
+- **El başına gürlük.** Nüshada nüans yok; MIDI'de her nota aynı hızda.
+
+### Elle yazılmış veride bulunan hata
+
+Prelüd'ün tamamı bir oktav aşağıdaydı (`G3 C4 E4` yazılmıştı, doğrusu
+`G4 C5 E5`). Nüshadan okuyunca düzeldi; `song_library_test.dart` bunu artık
+kilitliyor.
+
+### Tempolar
+
+Hepsi eserin kendi temposu; oyunda hız seçeneği yok.
+
+- Neşeye Övgü: Beethoven'ın kendi metronom işareti, Allegro assai,
+  yarım nota = 80, yani ♩ = 160.
+- Für Elise: nüsha ♩ = 72 diyor, 3/8 olduğu için ♪ = 144.
+- Prelüd: nüsha ♩ = 60 diyor.
+
+Neşeye Övgü hâlâ bizim düzenlememiz: tema önce viyolonsel ve kontrbas için
+yazılmış, kopyalanacak bir piyano nüshası yok. Beethoven'ın Re majörü yerine
+Do majörde, ezgi beyaz tuşlarda kalsın diye.
 
 ## Ortam kurulumu
 
@@ -120,7 +167,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 210 test geçiyor
+flutter test        # 220 test geçiyor
 ```
 
 ## Cihazsız doğrulama
@@ -130,6 +177,7 @@ Elde cihaz yok; her değişiklik şöyle doğrulanıyor:
 ```bash
 dart run tool/render_song.dart fur-elise /tmp/a.wav   # şarkıyı çal, WAV'a yaz
 flutter test test/stage_painter_test.dart             # oyun alanını build/screens/*.png yap
+dart run tool/inspect_midi.dart score.mid 1.5         # MIDI'yi ölçü ölçü dök
 ```
 
 Üretilen WAV ve PNG'ler oyuncuya gönderiliyor.
@@ -163,7 +211,7 @@ altında yazıyor; oyuncudan "ekranda hangi kod yazıyor" diye teyit alın.
 | Adım | Durum |
 |---|---|
 | 1. Ses motoru | ✅ |
-| 2. Şarkı verisi + MIDI okuyucu | ✅ |
+| 2. Şarkı verisi + MIDI okuyucu | ✅ (şarkılar basılı nüshadan) |
 | 3. Oyun ekranı | ✅ |
 | 4. Dokunuş, değerlendirme, puan | ✅ |
 | 5. Adaptif tempo + eşlik | ⏳ |
@@ -174,6 +222,15 @@ altında yazıyor; oyuncudan "ekranda hangi kod yazıyor" diye teyit alın.
 
 ## Sıradaki iş
 
-1. Oyuncu üç WAV'ı dinleyip yanlış notaları bildirecek.
-2. MIDI içe aktarma arayüzü — şarkı verisini hafızadan yazma sorununu bitirir.
-3. Normal zorlukta akor parmaklama sorusu yanıtlanacak.
+1. Oyuncu üç WAV'ı dinleyip yanlış notaları bildirecek. Für Elise ve Prelüd
+   artık nüshadan geldiği için nota hatası beklenmiyor; asıl soru **tempolar
+   oynanabilir mi**. Für Elise'in doruğundaki otuz ikilik iniş, ♪ = 144'te
+   dokunuşlar arası 104 ms bırakıyor — gerçek tempo bu, ama oyun olarak çok
+   sert gelirse `song_library.dart` içinde tek satır.
+2. Normal zorlukta akor parmaklama sorusu yanıtlanacak.
+3. MIDI içe aktarma **arayüzü** (yol haritası adım 8) — okuyucu ve dönüştürücü
+   hazır, eksik olan yalnızca dosya seçme ekranı. Oyuncu kendi MIDI'lerini
+   ekleyebilsin diye.
+4. Kolay moddaki seyreltme (`Chart._divideVoices`, `minGap = 0.5` vuruş) vuruş
+   birimine bağlı: Für Elise'de vuruş sekizlik olduğu için 0.5 vuruş bir
+   on altılığa denk geliyor ve pek seyreltmiyor. Saniyeye çevrilmesi gerekebilir.
