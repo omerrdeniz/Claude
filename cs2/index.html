@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>CS2.js — Three.js ile Counter-Strike tarzı FPS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%94%AB%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="./styles.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.min.js",
+    "three/addons/": "./vendor/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- Nişangâh -->
+  <div id="crosshair">
+    <i class="ch-line ch-top"></i><i class="ch-line ch-bottom"></i>
+    <i class="ch-line ch-left"></i><i class="ch-line ch-right"></i>
+    <i class="ch-dot"></i>
+  </div>
+  <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+  <div id="scope"><i class="scope-h"></i><i class="scope-v"></i></div>
+  <div id="damage-flash"></div>
+  <div id="flash-overlay"></div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="topbar">
+      <div class="team-block ct">
+        <span class="team-name">CT</span>
+        <span class="team-score" id="score-ct">0</span>
+        <span class="alive" id="alive-ct"></span>
+      </div>
+      <div class="center-block">
+        <div id="timer">1:55</div>
+        <div id="round-label">Raunt 1</div>
+      </div>
+      <div class="team-block t">
+        <span class="alive" id="alive-t"></span>
+        <span class="team-score" id="score-t">0</span>
+        <span class="team-name">T</span>
+      </div>
+    </div>
+
+    <div id="killfeed"></div>
+    <canvas id="radar" width="240" height="240"></canvas>
+
+    <div id="center-msg"></div>
+    <div id="hint"></div>
+
+    <div id="progress">
+      <div id="progress-label">Bomba kuruluyor</div>
+      <div id="progress-track"><div id="progress-bar"></div></div>
+    </div>
+
+    <div id="bottom-left">
+      <div class="stat-row">
+        <span class="icon">&#10010;</span><span id="health">100</span>
+        <span class="icon armor-icon">&#9679;</span><span id="armor">0</span>
+      </div>
+      <div id="money">$800</div>
+    </div>
+
+    <div id="bottom-right">
+      <div id="weapon-name">AK-47</div>
+      <div id="ammo"><span id="ammo-mag">30</span><span id="ammo-reserve">/ 90</span></div>
+      <div id="nades"></div>
+      <div id="items"></div>
+    </div>
+
+    <div id="bomb-status"></div>
+  </div>
+
+  <!-- Satın alma menüsü -->
+  <div id="buy-menu" class="panel hidden">
+    <h2>Satın Alma <small>(B ile kapat)</small></h2>
+    <div id="buy-list"></div>
+    <div class="buy-footer">Para: <span id="buy-money">$800</span></div>
+  </div>
+
+  <!-- Skor tablosu -->
+  <div id="scoreboard" class="panel hidden">
+    <h2 id="sb-title">Skor Tablosu</h2>
+    <div class="sb-teams">
+      <table class="sb-table ct"><thead><tr><th>Counter-Terrorist</th><th>K</th><th>Ö</th><th>Skor</th><th>$</th></tr></thead><tbody id="sb-ct"></tbody></table>
+      <table class="sb-table t"><thead><tr><th>Terrorist</th><th>K</th><th>Ö</th><th>Skor</th><th>$</th></tr></thead><tbody id="sb-t"></tbody></table>
+    </div>
+  </div>
+
+  <!-- Başlangıç / duraklatma ekranı -->
+  <div id="menu" class="overlay">
+    <div class="menu-card">
+      <h1>CS<span class="accent">2</span>.js</h1>
+      <p class="sub">Three.js ile yazılmış Counter-Strike tarzı FPS — <b>de_verge</b></p>
+
+      <div class="menu-section" id="setup-section">
+        <label class="field">
+          <span>Takım</span>
+          <select id="opt-team">
+            <option value="CT">Counter-Terrorist</option>
+            <option value="T">Terrorist</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Bot zorluğu</span>
+          <select id="opt-difficulty">
+            <option value="0">Kolay</option>
+            <option value="1">Normal</option>
+            <option value="2" selected>Zor</option>
+            <option value="3">Uzman</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Takım başına oyuncu</span>
+          <select id="opt-teamsize">
+            <option value="2">2v2</option>
+            <option value="3">3v3</option>
+            <option value="4">4v4</option>
+            <option value="5" selected>5v5</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="menu-section">
+        <label class="field">
+          <span>Fare hassasiyeti <b id="val-sens">2.2</b></span>
+          <input id="opt-sens" type="range" min="0.4" max="6" step="0.1" value="2.2">
+        </label>
+        <label class="field">
+          <span>Görüş açısı (FOV) <b id="val-fov">90</b></span>
+          <input id="opt-fov" type="range" min="70" max="110" step="1" value="90">
+        </label>
+        <label class="field">
+          <span>Ses <b id="val-vol">60</b>%</span>
+          <input id="opt-vol" type="range" min="0" max="100" step="1" value="60">
+        </label>
+        <label class="field checkbox">
+          <input id="opt-shadows" type="checkbox" checked>
+          <span>Gölgeler</span>
+        </label>
+        <label class="field checkbox">
+          <input id="opt-postfx" type="checkbox" checked>
+          <span>Görsel efektler (bloom, kenar yumuşatma)</span>
+        </label>
+      </div>
+
+      <button id="btn-start" class="primary">OYNA</button>
+      <button id="btn-restart" class="ghost hidden">Maçı Yeniden Başlat</button>
+
+      <div class="controls">
+        <div><b>WASD</b> hareket</div><div><b>Space</b> zıpla</div>
+        <div><b>Ctrl</b> çömel</div><div><b>Shift</b> sessiz yürü</div>
+        <div><b>Sol tık</b> ateş</div><div><b>Sağ tık</b> dürbün (keskin nişancı)</div>
+        <div><b>R</b> şarjör</div><div><b>1/2/3/4</b> silah</div>
+        <div><b>E</b> bomba kur / imha et</div><div><b>B</b> satın alma</div>
+        <div><b>Tab</b> skor tablosu</div><div><b>Esc</b> menü</div>
+      </div>
+      <div class="fine">İpucu: Sprey kontrolü gerçek CS gibi çalışır — seri ateşte nişangâhı aşağı çekin.</div>
+    </div>
+  </div>
+
+  <div id="fps" class="hidden">0 fps</div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
