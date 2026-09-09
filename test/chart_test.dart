@@ -131,6 +131,46 @@ void main() {
     });
   });
 
+  group('where each note of a chord is drawn', () {
+    final chord = songOf([
+      note(0, 48, hand: Hand.left),
+      note(0, 52, hand: Hand.left),
+      note(0, 55, hand: Hand.left),
+    ]);
+
+    test('a touch knows a place for every note it carries', () {
+      for (final difficulty in Difficulty.values) {
+        for (final tap in Chart.build(chord, difficulty: difficulty).taps) {
+          expect(tap.noteAcross, hasLength(tap.notes.length),
+              reason: 'on ${difficulty.label}');
+        }
+      }
+    });
+
+    test('a chord under one finger still spreads over three places', () {
+      final chart = Chart.build(chord, difficulty: Difficulty.normal);
+      final tap = chart.taps.single;
+      expect(tap.notes, hasLength(3), reason: 'one touch');
+      expect(tap.noteAcross.toSet(), hasLength(3),
+          reason: 'but three notes to draw, at three pitches');
+      final sorted = [...tap.noteAcross]..sort();
+      expect(sorted, tap.noteAcross,
+          reason: 'in pitch order, like the notes themselves');
+    });
+
+    test('the touch sits at the middle of the notes it carries', () {
+      final tap = Chart.build(chord, difficulty: Difficulty.normal).taps.single;
+      final average =
+          tap.noteAcross.reduce((a, b) => a + b) / tap.noteAcross.length;
+      expect(tap.across, closeTo(average, 0.0001));
+    });
+
+    test('a single note is drawn where it sounds', () {
+      final tap = Chart.build(songOf([note(0, 60)])).taps.single;
+      expect(tap.noteAcross, [tap.across]);
+    });
+  });
+
   group('how many notes are sounding', () {
     final chord = songOf([
       note(0, 60, hand: Hand.left),

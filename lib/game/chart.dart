@@ -61,7 +61,15 @@ class Tap {
   final Hand hand;
 
   /// Where it sits across the screen, 0 at the left edge and 1 at the right.
+  /// For a touch carrying several notes this is their centre.
   final double across;
+
+  /// Where each of its notes sits, in the same order as [notes].
+  ///
+  /// A chord is drawn as the notes it actually contains, at the pitches they
+  /// actually are, even when the level lets one finger take them all. The
+  /// player should see the music, not the input scheme.
+  late final List<double> noteAcross;
 
   /// How many notes sound together in this hand at this moment.
   ///
@@ -174,22 +182,24 @@ class Chart {
         final notes = entry.value;
         if (difficulty.fingersChords) {
           for (final note in notes) {
+            final at = acrossOf(hand, note.midi.toDouble());
             taps.add(Tap(
               beat: moment.first.beat,
               notes: [note],
               hand: hand,
-              across: acrossOf(note.hand, note.midi.toDouble()),
-            ));
+              across: at,
+            )..noteAcross = [at]);
           }
         } else {
-          final pitch =
-              notes.map((n) => n.midi).reduce((a, b) => a + b) / notes.length;
+          final places = [
+            for (final note in notes) acrossOf(hand, note.midi.toDouble())
+          ];
           taps.add(Tap(
             beat: moment.first.beat,
             notes: notes,
             hand: hand,
-            across: acrossOf(hand, pitch),
-          ));
+            across: places.reduce((a, b) => a + b) / places.length,
+          )..noteAcross = places);
         }
       }
     }

@@ -74,7 +74,6 @@ class StagePainter extends CustomPainter {
     );
   }
 
-  /// The line where notes are due.
   /// The line down the middle, where one hand's territory ends and the
   /// other's begins.
   ///
@@ -169,35 +168,59 @@ class StagePainter extends CustomPainter {
           : (0.35 + progress.clamp(0.0, 1.0) * 0.65).clamp(0.0, 1.0);
       if (fade <= 0.01) continue;
 
-      if (group.length > 1) {
-        _paintChordBand(canvas, g, group, progress, colour, fade);
+      // Every note that sounds at this moment in this hand, wherever its
+      // pitch puts it. A chord is drawn as its notes even when one finger
+      // takes them all: the picture is of the music, not of the input.
+      final dots = <({double across, double endBeat, bool isHold})>[];
+      for (final member in group) {
+        for (var i = 0; i < member.notes.length; i++) {
+          dots.add((
+            across: member.noteAcross[i],
+            endBeat: member.beat + member.notes[i].duration,
+            isHold: member.isHold,
+          ));
+        }
       }
 
-      for (final member in group) {
-        // A long note is drawn as a bar reaching back the way it came: the
-        // finger is meant to stay down for its length, and the bar is how
-        // long. Struck notes stay plain circles, so the two never look alike.
-        if (member.isHold) {
-          _paintHoldBar(canvas, g, member, progress, tailProgress, radius,
-              colour, fade);
+      if (dots.length > 1) {
+        _paintChordBand(canvas, g, dots, progress, colour, fade);
+      }
+
+      for (final dot in dots) {
+        if (dot.isHold) {
+          _paintHoldBar(
+            canvas,
+            g,
+            dot.across,
+            progress,
+            StageGeometry.progressFor(dot.endBeat - beat, windowInBeats),
+            radius,
+            colour,
+            fade,
+          );
         }
-        _paintNote(canvas, g, member, progress, radius, colour, fade);
+        _paintNote(canvas, g, dot.across, progress, radius, colour, fade);
       }
     }
   }
 
   /// The band tying a chord's notes together.
   ///
-  /// Without it three dots in a row are three separate notes to the eye, and
-  /// the player answers them one at a time. The band says: these are one
-  /// gesture, put three fingers down at once.
-  void _paintChordBand(Canvas canvas, StageGeometry g, List<Tap> group,
-      double progress, Color colour, double fade) {
+  /// Without it, notes side by side read as separate notes and the player
+  /// answers them one at a time. The band says: these belong together, and
+  /// whether they take one finger or three, they sound at once.
+  void _paintChordBand(
+      Canvas canvas,
+      StageGeometry g,
+      List<({double across, double endBeat, bool isHold})> dots,
+      double progress,
+      Color colour,
+      double fade) {
     var lowest = 1.0;
     var highest = 0.0;
-    for (final tap in group) {
-      if (tap.across < lowest) lowest = tap.across;
-      if (tap.across > highest) highest = tap.across;
+    for (final dot in dots) {
+      if (dot.across < lowest) lowest = dot.across;
+      if (dot.across > highest) highest = dot.across;
     }
 
     final left = g.positionAtPosition(lowest, progress);
@@ -221,16 +244,17 @@ class StagePainter extends CustomPainter {
 
   /// The body of a note that has to be held down, drawn as a bar as long as
   /// the note lasts.
-  void _paintHoldBar(Canvas canvas, StageGeometry g, Tap tap, double progress,
-      double tailProgress, double radius, Color colour, double fade) {
+  void _paintHoldBar(Canvas canvas, StageGeometry g, double across,
+      double progress, double tailProgress, double radius, Color colour,
+      double fade) {
     if (tailProgress >= progress) return;
 
     // The bar is exactly as long as the note: it starts at the head and
     // reaches back the distance the note lasts, and it keeps travelling until
     // its far end has crossed the line. However long it looks is how long the
     // finger stays down.
-    final head = g.positionAtPosition(tap.across, progress);
-    final tail = g.positionAtPosition(tap.across, tailProgress);
+    final head = g.positionAtPosition(across, progress);
+    final tail = g.positionAtPosition(across, tailProgress);
     final width = radius * 0.72;
 
     canvas.drawRRect(
@@ -252,9 +276,9 @@ class StagePainter extends CustomPainter {
     );
   }
 
-  void _paintNote(Canvas canvas, StageGeometry g, Tap tap, double progress,
-      double radius, Color colour, double fade) {
-    final centre = g.positionAtPosition(tap.across, progress);
+  void _paintNote(Canvas canvas, StageGeometry g, double across,
+      double progress, double radius, Color colour, double fade) {
+    final centre = g.positionAtPosition(across, progress);
 
     // The halo is a gradient, not a blur: a blur filter here costs more per
     // frame than everything else on screen put together.
@@ -296,22 +320,6 @@ class StagePainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: 0.55 * fade),
     );
 
-    // How many notes this one touch carries, as pips inside it. On the easier
-    // levels a chord arrives under a single finger, and without these there
-    // is nothing to say that three notes are about to sound rather than one.
-    if (tap.notes.length > 1) {
-      final count = tap.notes.length;
-      final pip = (radius * 0.17).clamp(1.6, 4.0);
-      final spacing = pip * 2.6;
-      final start = -(count - 1) / 2 * spacing;
-      for (var i = 0; i < count; i++) {
-        canvas.drawCircle(
-          Offset(centre.dx + start + i * spacing, centre.dy),
-          pip,
-          Paint()..color = Colors.white.withValues(alpha: 0.9 * fade),
-        );
-      }
-    }
   }
 
   @override
