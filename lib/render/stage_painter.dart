@@ -36,7 +36,6 @@ class StagePainter extends CustomPainter {
     final geometry = StageGeometry(size: size, beamCount: chart.beamCount);
 
     _paintBackground(canvas, size, geometry);
-    _paintBeams(canvas, size, geometry);
     _paintHitLine(canvas, size, geometry);
     _paintNotes(canvas, geometry);
   }
@@ -70,92 +69,36 @@ class StagePainter extends CustomPainter {
     );
   }
 
-  /// Wedges of light fanning out from the point the notes come from.
-  ///
-  /// They are scenery, not lanes: nothing has to be tapped on one, and none of
-  /// them is a boundary. They give the notes somewhere to come *from* — depth
-  /// the eye can read — and tint the stage by register, cool at the bottom of
-  /// the range and warm at the top.
-  void _paintBeams(Canvas canvas, Size size, StageGeometry g) {
-    const wedges = 11;
-    final reach = g.hitRadius * 1.5;
-
-    for (var i = 0; i < wedges; i++) {
-      final across = i / (wedges - 1);
-      final colour = AppTheme.colorAcross(across);
-      final angle = g.angleAt(across);
-      final half = g.spreadAngle / wedges * 0.62;
-
-      // A thin triangle from the origin outward: narrow at the source, wide
-      // where the notes arrive, like light through a gap.
-      final path = Path()..moveTo(g.origin.dx, g.origin.dy);
-      for (final edge in [angle - half, angle + half]) {
-        path.lineTo(
-          g.origin.dx + math.sin(edge) * reach,
-          g.origin.dy + math.cos(edge) * reach,
-        );
-      }
-      path.close();
-
-      canvas.drawPath(
-        path,
-        Paint()
-          ..shader = ui.Gradient.radial(
-            g.origin,
-            reach,
-            [
-              colour.withValues(alpha: 0.0),
-              colour.withValues(alpha: 0.11),
-              colour.withValues(alpha: 0.02),
-            ],
-            const [0.25, 0.72, 1.0],
-          ),
-      );
-    }
-  }
-
-  /// The arc where notes are due.
-  ///
-  /// An arc rather than a straight line, because every note is the same
-  /// distance from the origin when its moment comes; drawing it straight would
-  /// put the outer notes past the mark while the middle ones were still short.
+  /// The line where notes are due.
   void _paintHitLine(Canvas canvas, Size size, StageGeometry g) {
-    final bounds = Rect.fromCircle(center: g.origin, radius: g.hitRadius);
-    final start = math.pi / 2 - g.spreadAngle;
-    final sweep = g.spreadAngle * 2;
+    final y = g.hitLineY;
     final flash = litBeams.values.fold(0.0, (max, v) => v > max ? v : max);
 
-    // A soft band under the arc, rather than a blur filter: on a phone browser
-    // a blur here costs more per frame than everything else put together.
-    canvas.drawArc(
-      bounds,
-      start,
-      sweep,
-      false,
+    // A soft band rather than a blurred line: a blur filter here costs more
+    // per frame than everything else on screen put together, and on a phone
+    // browser that is the difference between flowing and stuttering.
+    final glow = Rect.fromLTWH(0, y - 24, size.width, 48);
+    canvas.drawRect(
+      glow,
       Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 26
-        ..color = AppTheme.accentSoft.withValues(alpha: 0.10 + flash * 0.10),
+        ..shader = ui.Gradient.linear(
+          Offset(0, glow.top),
+          Offset(0, glow.bottom),
+          [
+            AppTheme.accentSoft.withValues(alpha: 0.0),
+            AppTheme.accentSoft.withValues(alpha: 0.22 + flash * 0.22),
+            AppTheme.accentSoft.withValues(alpha: 0.0),
+          ],
+          const [0.0, 0.5, 1.0],
+        ),
     );
-    canvas.drawArc(
-      bounds,
-      start,
-      sweep,
-      false,
+
+    canvas.drawLine(
+      Offset(0, y),
+      Offset(size.width, y),
       Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 9
-        ..color = AppTheme.accentSoft.withValues(alpha: 0.20 + flash * 0.18),
-    );
-    canvas.drawArc(
-      bounds,
-      start,
-      sweep,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2
-        ..color = Colors.white.withValues(alpha: 0.85),
+        ..strokeWidth = 2
+        ..color = Colors.white.withValues(alpha: 0.75 + flash * 0.25),
     );
   }
 
