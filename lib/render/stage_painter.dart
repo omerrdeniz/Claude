@@ -251,6 +251,51 @@ class StagePainter extends CustomPainter {
         _paintNote(canvas, g, dot.across, head, radius, tap.voices, fade);
       }
     }
+
+    _paintRunPaths(canvas, g, visible);
+  }
+
+  /// The thread through a run: a line joining notes that arrive faster than a
+  /// finger can answer one at a time.
+  ///
+  /// It is the whole of how the slide is taught. Nothing else on screen says
+  /// these notes are not to be tapped one by one, and a mechanic nobody
+  /// discovers is a mechanic that does not exist — so the path the finger is
+  /// meant to take is simply drawn, and the player follows a line.
+  ///
+  /// Over the notes, not under them. Under was tried first and vanished: a
+  /// run this fast packs its notes edge to edge, so a line behind them is
+  /// covered along its whole length. Threaded through the beads instead, it
+  /// reads as one continuous thing to be followed.
+  void _paintRunPaths(Canvas canvas, StageGeometry g, List<Tap> visible) {
+    if (chart.runs.isEmpty) return;
+    final thickness = (g.noteRadius * 0.22).clamp(1.5, 4.0);
+
+    for (final tap in visible) {
+      final runId = tap.runId;
+      if (runId == null) continue;
+      final run = chart.runs[runId]!;
+      if (tap.runIndex + 1 >= run.length) continue;
+
+      final next = run[tap.runIndex + 1];
+      final here = StageGeometry.progressFor(tap.beat - beat, windowInBeats);
+      final there = StageGeometry.progressFor(next.beat - beat, windowInBeats);
+      // The near end has passed the line and gone; the far end is what is
+      // left to play, so it decides whether there is anything to show.
+      final fade = here > 1
+          ? (1 - (here - 1) / 0.16).clamp(0.0, 1.0)
+          : (0.35 + here.clamp(0.0, 1.0) * 0.65);
+      if (fade <= 0.01) continue;
+
+      canvas.drawLine(
+        g.positionAtPosition(tap.across, here),
+        g.positionAtPosition(next.across, there),
+        Paint()
+          ..strokeWidth = thickness
+          ..strokeCap = StrokeCap.round
+          ..color = Colors.white.withValues(alpha: 0.80 * fade),
+      );
+    }
   }
 
   /// Lays a chord's notes out so they do not overlap. See

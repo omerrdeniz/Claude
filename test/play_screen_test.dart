@@ -6,6 +6,12 @@ import 'package:piano_flow/music/song.dart';
 import 'package:piano_flow/screens/play_screen.dart';
 
 void main() {
+  /// The number on the scoreboard.
+  int scoreOf(WidgetTester tester) => tester
+      .widgetList<Text>(find.byType(Text))
+      .map((t) => int.tryParse(t.data ?? ''))
+      .firstWhere((n) => n != null, orElse: () => 0)!;
+
   /// Pumping a fixed number of frames, rather than settling, because the
   /// playfield animates forever — pumpAndSettle would never return.
   Future<void> play(WidgetTester tester, Duration duration,
@@ -38,6 +44,44 @@ void main() {
       scored = find.text('0').evaluate().isEmpty;
     }
     expect(scored, isTrue, reason: 'a tap on the right beam should score');
+  });
+
+  testWidgets('sliding carries a run the finger could never tap', (tester) async {
+    // Twelve notes an eighth of a second apart, all in the right hand.
+    final song = Song(
+      id: 'run',
+      title: 'Run',
+      composer: '',
+      bpm: 120,
+      notes: [
+        for (var i = 0; i < 12; i++)
+          Note(beat: i * 0.25, midi: 72 + i, duration: 0.25),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: song)));
+    // Let the first note travel down to the line.
+    await play(tester, const Duration(milliseconds: 1900), frames: 40);
+
+    final stage = tester.getRect(find.byType(PlayScreen));
+    final start = Offset(stage.left + stage.width * 0.75, stage.center.dy);
+    final finger = await tester.startGesture(start);
+    await tester.pump(const Duration(milliseconds: 16));
+    final afterOneTap = scoreOf(tester);
+    expect(afterOneTap, greaterThan(0), reason: 'the run was never entered');
+
+    // Now keep sliding without ever lifting.
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 125));
+      await finger.moveBy(const Offset(8, 0));
+      await tester.pump(const Duration(milliseconds: 4));
+    }
+    await finger.up();
+    await tester.pump();
+
+    // The streak counter only appears past one, so seeing it at all means the
+    // slide played notes the finger never tapped.
+    expect(scoreOf(tester), greaterThan(afterOneTap),
+        reason: 'the run did not follow the finger');
   });
 
   testWidgets('pause and resume are offered', (tester) async {

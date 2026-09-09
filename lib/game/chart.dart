@@ -71,6 +71,15 @@ class Tap {
   /// player should see the music, not the input scheme.
   late final List<double> noteAcross;
 
+  /// Which run of fast notes this touch belongs to, and where in it.
+  ///
+  /// A run is a stretch the hand cannot answer one tap at a time — see
+  /// [Chart.runs]. Null for everything else, which is most of the music.
+  int? runId;
+
+  /// Position within [runId]'s run, counting from zero.
+  int runIndex = 0;
+
   /// How many notes sound together in this hand at this moment.
   ///
   /// Counted in notes rather than touches on purpose: a three-note chord is a
@@ -105,8 +114,10 @@ class Chart {
     required this.difficulty,
     required List<Tap> taps,
     required List<Note> autoNotes,
+    Map<int, List<Tap>> runs = const {},
   })  : taps = List.unmodifiable(taps),
-        autoNotes = List.unmodifiable(autoNotes);
+        autoNotes = List.unmodifiable(autoNotes),
+        runs = Map.unmodifiable(runs);
 
   final Song song;
   final Difficulty difficulty;
@@ -116,6 +127,16 @@ class Chart {
 
   /// What the game plays on the player's behalf, in time order.
   final List<Note> autoNotes;
+
+  /// Stretches of notes that arrive faster than a finger can answer one at a
+  /// time, keyed by id and each in time order.
+  ///
+  /// Beethoven's rondo has one sixty-two notes long and Chopin's cadenza runs
+  /// at seventy-six milliseconds a note. Tapping those is not hard, it is
+  /// impossible — and a passage nobody can play is a passage that teaches
+  /// nothing. So a run is entered by tapping its first note and then carried
+  /// by keeping the finger down and sliding it; see [PlaySession.drag].
+  final Map<int, List<Tap>> runs;
 
   bool get separatesHands => difficulty.separatesHands;
 
@@ -229,7 +250,63 @@ class Chart {
       difficulty: difficulty,
       taps: taps,
       autoNotes: auto,
+      runs: _findRuns(taps, song, difficulty.separatesHands),
     );
+  }
+
+  /// The most a run's notes may be apart, in seconds.
+  ///
+  /// Not a claim about what a hand can do in general — a practised one taps
+  /// faster than this. It is where a *stranger's* hand stops being able to
+  /// pick out individual notes and starts needing the whole passage to be one
+  /// gesture, which is the moment this game is built around.
+  static const double runGapSeconds = 0.15;
+
+  /// How many notes in a row it takes to be worth sliding through. Two fast
+  /// notes are a flourish; three are a run.
+  static const int runLength = 3;
+
+  /// Find the stretches too fast to tap, hand by hand.
+  ///
+  /// Hand by hand because the two are answered separately and independently:
+  /// a left-hand chord landing in the middle of a right-hand run does not
+  /// interrupt it, and should not break the slide.
+  ///
+  /// Notes struck *together* end a run rather than extending it — a chord is
+  /// not a fast passage, it is one moment with several notes in it, and the
+  /// hard level splits it into a touch per note.
+  static Map<int, List<Tap>> _findRuns(
+      List<Tap> taps, Song song, bool separatesHands) {
+    final secondsPerBeat = 60 / song.bpm;
+    final byHand = <Hand, List<Tap>>{};
+    for (final tap in taps) {
+      (byHand[separatesHands ? tap.hand : Hand.right] ??= []).add(tap);
+    }
+
+    final runs = <int, List<Tap>>{};
+    var nextId = 1;
+    for (final line in byHand.values) {
+      var start = 0;
+      for (var i = 1; i <= line.length; i++) {
+        final gapBeats =
+            i < line.length ? line[i].beat - line[i - 1].beat : double.infinity;
+        final continues =
+            gapBeats > onsetTolerance && gapBeats * secondsPerBeat <= runGapSeconds;
+        if (continues) continue;
+
+        if (i - start >= runLength) {
+          final run = line.sublist(start, i);
+          final id = nextId++;
+          for (var j = 0; j < run.length; j++) {
+            run[j].runId = id;
+            run[j].runIndex = j;
+          }
+          runs[id] = List.unmodifiable(run);
+        }
+        start = i;
+      }
+    }
+    return runs;
   }
 
   /// How far apart two notes can be and still count as struck together. Wide

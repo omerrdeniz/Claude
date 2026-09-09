@@ -1,8 +1,8 @@
 # Durum ve devir notu
 
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
-sürdürebilmesi için yazıldı. Son güncelleme: kod gözden geçirildi — ölü kod
-silindi, `SongLibrary` önbelleğe alındı, şarkı listesi bölündü.
+sürdürebilmesi için yazıldı. Son güncelleme: Kanon, Re Majör eklendi ve
+hızlı geçitler için parmakla sürükleme mekaniği yazıldı.
 
 ## Proje
 
@@ -93,6 +93,36 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   **asgari** aralığı zorluyor: zaten açık duran bir akor (oktav, onlu) perdenin
   koyduğu yerde kalıyor, sıra hiç değişmiyor, hiçbir nota diğer elin yarısına
   itilmiyor.
+- **Hızlı geçitler parmakla sürülerek çalınır.** Oyuncunun isteği:
+  *"çok sayıda nota arka arkaya belirli bir hızın üzerinde geliyorsa tek tek
+  basmak zor oluyor... ilk notaya basalım, sonra basılı tutmaya devam ederek
+  sağa veya sola sürükleyerek sonraki notalara basmış olalım."*
+
+  Aynı elde, aralarında **150 ms veya daha az** olan **en az 3** nota bir
+  "koşu" (`Chart.runs`) sayılır. İlk notaya basılır, parmak kaldırılmadan
+  sürüklenir; koşunun kalanı parmağa gelir.
+
+  İki karar:
+  - **Zamanı şarkı verir, hareketi parmak.** Sürükleme notayı öne çekmez;
+    her nota kendi anında seslenir. Parmağın yaptığı, o anın *gelip
+    gelmediğine* değil, koşunun devam edip etmediğine karar vermek.
+  - **Parmak durursa hiçbir şey çalmaz.** Bir sonraki nota için ekran
+    genişliğinin `%1.2`'si kadar yol gerekiyor (`PlaySession.dragStep`);
+    yön önemsiz, sağa da sola da olur. Duran el koşuyu kaçırır. Böylece
+    sürükleme bir jest olarak kalıyor, ekrana konmuş bir parmak olarak değil.
+
+  Toplama değil, ekleme: koşunun notalarına tek tek basmak hâlâ mümkün ve
+  aynı şekilde puanlanıyor.
+
+  **Görünürlük:** koşunun notaları ekranda parlak ince bir iplikle birbirine
+  dikiliyor (`StagePainter._paintRunPaths`). Önce notaların *altına* çizildi
+  ve kayboldu — bu hızda toplar birbirine değiyor, arkadaki çizgi boyunca
+  örtülüyor. Üstten geçince "boncukların arasından geçen ip" gibi okunuyor.
+
+  Kapsam (Normal): Für Elise dokunuşlarının %12'si (3 koşu, en uzunu **62
+  nota**), Kanon %28 (57 koşu, en uzunu 11), Nokturn %4 (5 koşu, en uzunu
+  14), Neşeye Övgü ve Prelüd %0 — ikisi de bunu gerektirecek kadar hızlı
+  değil.
 - **Tolerans bir ayardır.** `TimingTolerance { wide, normal, tight }` —
   çarpanlar 1.8 / 1.0 / 0.6. Erken basışlar kuyruğa alınıp **kendi vuruşunda**
   seslendirilir (quantize anahtarı), geç basışlar hemen çalar.
@@ -211,12 +241,14 @@ lib/audio/     sample_bank.dart  kayıtlı piyano (asıl ses kaynağı)
                synth_engine.dart sentez + örnek çalma; banka yoksa yedek
                pcm_output*: iOS/Android'de flutter_pcm_sound, web'de Web Audio
 lib/music/     note/song modeli, nota yazım dili (notation.dart), MIDI okuyucu
-lib/game/      chart.dart      Difficulty, Tap, el bölgeleri, seyreltme
-               play_session.dart  şarkı saati, dokunuş eşleme, tutma, gecikme telafisi
+lib/game/      chart.dart      Difficulty, Tap, el bölgeleri, seyreltme, koşular
+               play_session.dart  şarkı saati, dokunuş eşleme, tutma, sürükleme,
+                                  gecikme telafisi
                judgement.dart  Judge, TimingTolerance, Scoreboard
                stage_geometry.dart  düz düzen, vuruş çizgisi 0.68, sabit nota
                                     boyutu, akor yayılımı, tutmanın çizgide durması
-lib/render/    stage_painter.dart  tüm oyun alanı çizimi; nota fırçaları önbellekli
+lib/render/    stage_painter.dart  tüm oyun alanı çizimi; nota fırçaları önbellekli,
+                                   koşuların üstünden geçen ip
 lib/screens/   song_list_screen.dart  ekran ve ayarların durumu
                song_list/settings.dart  ChoiceRow<T>, QuantizeSwitch, LatencyPicker
                song_list/song_tile.dart  listedeki bir şarkı; oyuna geçişi bu yapar
@@ -303,20 +335,32 @@ buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
 | id | Ad | BPM | Kapsam | Kaynak |
 |---|---|---|---|---|
 | `ode-to-joy` | Neşeye Övgü | 160 (♩) | 16 ölçülük tam tema | Piano Flow düzenlemesi |
+| `canon-in-d` | Kanon, Re Majör | 55 (♩) | Tam eser, 4:05, 1947 nota | Mutopia + piyano düzenlemesi |
 | `fur-elise` | Für Elise | 144 (♪) | Tam eser, ~125 ölçü, tekrarlar açık | Mutopia WoO 59 |
 | `prelude-in-c` | Prelüd, Do Majör | 60 (♩) | Tam eser, 35 ölçü | Mutopia BWV 846 |
 | `nocturne-op9-no2` | Nokturn, Mi Bemol Majör | 132 (♪) | Tam eser, 37 ölçü, kadans dahil | Mutopia Op. 9 No. 2 |
 
-**Nota verisi artık hafızadan yazılmıyor.** Für Elise, Prelüd ve Nokturn, Mutopia
-Project'in LilyPond nüshalarından geliyor: `tool/fetch_scores.dart` kaynağı
-indirir, `convert-ly` ile günceller, `\unfoldRepeats` ile tekrarları açar,
-LilyPond'a MIDI ürettirir ve baytları base64 olarak `lib/data/scores.g.dart`
-içine yazar. `lib/data/score_import.dart` bu MIDI'yi oyuna uygun hale getirir.
+**Nota verisi artık hafızadan yazılmıyor.** Neşeye Övgü dışındaki her şey
+Mutopia Project'in LilyPond nüshalarından geliyor: `tool/fetch_scores.dart`
+kaynağı indirir, `convert-ly` ile günceller, `\unfoldRepeats` ile tekrarları
+açar, LilyPond'a MIDI ürettirir ve baytları base64 olarak
+`lib/data/scores.g.dart` içine yazar. `lib/data/score_import.dart` bu MIDI'yi
+oyuna uygun hale getirir.
 
-Aracı çalıştırmak için internet ve LilyPond gerekir:
+Kanon iki noktada diğerlerinden ayrılıyor ve araç bu yüzden iki tür kaynak
+biliyor. Eser **üç keman ve bas** için yazılmış, yani kopyalanacak bir klavye
+nüshası yok — her piyano hâli birinin düzenlemesi. Aldığımız düzenleme
+(Isaac David) Mutopia nüshasının üzerine bir **yama** olarak yayımlanmış, o
+yüzden kaynak tek bir `.ly` değil bir zip: açılıyor, `patch -p0` uygulanıyor,
+sonra arşivdeki **her** `.ly`/`.ily` dosyası `convert-ly`'den ve MIDI'ye
+hazırlamadan geçiyor. Sonuncusu şart: LilyPond kaynakları birbirini include
+ediyor ve iki dosya öteki bayat bir `\layout` hâlâ gravür motorunu çağırıp
+derlemeyi düşürüyor.
+
+Aracı çalıştırmak için internet, LilyPond, `unzip` ve `patch` gerekir:
 
 ```bash
-apt-get install -y lilypond
+apt-get install -y lilypond unzip patch
 dart run tool/fetch_scores.dart
 ```
 
@@ -338,14 +382,16 @@ senkron kalma zorunluluğu yok ve 2.5 MB gömülemez.)
   dokunuşlar olarak çizilirdi.
 - **El başına gürlük.** Nüshada nüans yok; MIDI'de her nota aynı hızda.
 
-### Lisans — Nokturn diğerlerinden farklı
+### Lisans — hepsi aynı lisansta değil
 
-Müziğin kendisi üçünde de kamu malı. Ama **baskılar aynı lisansta değil**:
+Müziğin kendisi hepsinde kamu malı. Ama **baskılar aynı lisansta değil**:
 
 - Für Elise ve Prelüd: dizgiciler baskıyı kamu malına bırakmış.
 - **Nokturn: CC BY-SA 3.0.** Dizgicinin (Renato Biolcati Rinaldi) adı
   anılmalı ve baskıdan türetilen her şey — `scores.g.dart`'taki MIDI ve
   ondan çıkan nota verisi dahil — aynı lisansı taşır.
+- **Kanon: CC BY 4.0**, hem nüsha (Michael Fischer v. Mollard) hem piyano
+  düzenlemesi (Isaac David). Atıf ister, share-alike istemez.
 
 Şu an uyumluyuz: `source` alanında dizgici ve lisans yazıyor, oyun içinde
 şarkı listesinde görünüyor, `song_library_test.dart` bunu kontrol ediyor.
@@ -366,6 +412,7 @@ Tam hız) ve bunları oranlıyor; şarkı verisi her zaman gerçek tempoda durur
 
 - Neşeye Övgü: Beethoven'ın kendi metronom işareti, Allegro assai,
   yarım nota = 80, yani ♩ = 160.
+- Kanon: nüsha ♩ = 55 diyor.
 - Für Elise: nüsha ♩ = 72 diyor, 3/8 olduğu için ♪ = 144.
 - Prelüd: nüsha ♩ = 60 diyor.
 - Nokturn: nüsha doğrudan ♪ = 132 diyor (Andante, 12/8).
@@ -506,8 +553,8 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
 
 ## Sıradaki iş
 
-1. **Parmağın yetişemediği yerler.** Tam hızda bazı geçitler dokunma hızının
-   üstünde kalıyor (hız seçici bunun için geri geldi, ama kalıcı çözüm değil):
+1. **Parmağın yetişemediği yerler — büyük ölçüde çözüldü, denenmedi.**
+   Tam hızda bazı geçitler dokunma hızının üstünde kalıyor:
 
    | Şarkı | En dar aralık | Kaç dokunuş |
    |---|---|---|
@@ -515,12 +562,12 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
    | Für Elise | 104 ms (doruktaki otuz ikilik iniş) | — |
    | Prelüd | 250 ms | yok |
 
-   Normal ve Zor'da hiçbir şey kendi kendine çalmadığı için bu notalar
-   basılamazsa hiç seslenmiyor. Üç seçenek var, hiçbiri henüz kararlaştırılmadı:
-   (a) olduğu gibi bırak, kaçırılsın; (b) belirli bir hızın üstündeki geçitleri
-   her zorlukta `autoNotes`'a al; (c) şarkı başına tempo düşür. (b) DURUM'daki
-   "normalde hiçbir şey kendi çalmaz" kararına dokunduğu için oyuncuya
-   sorulmalı.
+   Cevap sürükleme mekaniği oldu (yukarıda, "Kabul edilenler"). Kimseden
+   nota alınmıyor, kendi kendine hiçbir şey çalmıyor, tek tek basmak da
+   hâlâ mümkün — yalnızca ikinci bir yol açıldı. **Ama henüz gerçek
+   telefonda oynanmadı.** Bakılacaklar: `dragStep` (%1.2) parmağın doğal
+   hızına göre çok mu sıkı/gevşek; 150 ms eşiği Kanon'da dokunuşların
+   %28'ini kapsıyor, orada ip fazla mı görünüyor.
 2. **Delik/kendi çalma ikilemi çözülmedi, sadece seçeneğe bağlandı.**
    Doldurma kapalı gelirse Nokturn'ün üçte ikisi sessiz; açılırsa oyun
    basmadığınız her şeyi çalıyor. Üçüncü bir yol olabilir ve zorluk

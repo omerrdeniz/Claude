@@ -276,6 +276,100 @@ void main() {
     });
   });
 
+  group('runs, the passages too fast to tap', () {
+    // A beat is half a second here, so a quarter of a beat is 125 ms — inside
+    // the 150 ms that makes a run — and half a beat is 250 ms, outside it.
+    List<Tap> runOf(Chart chart) =>
+        chart.runs.isEmpty ? const [] : chart.runs.values.single;
+
+    test('three notes in a row close together make one', () {
+      final chart = Chart.build(
+        songOf([for (var i = 0; i < 3; i++) note(i * 0.25, 60 + i)]),
+        difficulty: Difficulty.normal,
+      );
+      expect(runOf(chart).map((t) => t.beat), [0, 0.25, 0.5]);
+      expect(chart.taps.map((t) => t.runIndex), [0, 1, 2]);
+    });
+
+    test('two are a flourish, not a run', () {
+      final chart = Chart.build(
+        songOf([note(0, 60), note(0.25, 62)]),
+        difficulty: Difficulty.normal,
+      );
+      expect(chart.runs, isEmpty);
+      expect(chart.taps.every((t) => t.runId == null), isTrue);
+    });
+
+    test('notes a hand can reach one at a time are left alone', () {
+      final chart = Chart.build(
+        songOf([for (var i = 0; i < 8; i++) note(i * 0.5, 60 + i)]),
+        difficulty: Difficulty.normal,
+      );
+      expect(chart.runs, isEmpty);
+    });
+
+    test('it ends where the hurry ends', () {
+      final chart = Chart.build(
+        songOf([
+          for (var i = 0; i < 4; i++) note(i * 0.25, 60 + i),
+          note(4, 72), // a beat and a half later: the hand has caught up
+          note(5, 74),
+        ]),
+        difficulty: Difficulty.normal,
+      );
+      expect(runOf(chart).map((t) => t.beat), [0, 0.25, 0.5, 0.75]);
+    });
+
+    test('a chord is a moment, not a hurry', () {
+      final chart = Chart.build(
+        songOf([note(0, 60), note(0, 64), note(0, 67)]),
+        difficulty: Difficulty.hard, // a touch per note, all at once
+      );
+      expect(chart.taps, hasLength(3));
+      expect(chart.runs, isEmpty, reason: 'three fingers, one moment');
+    });
+
+    test('the other hand does not break it', () {
+      final chart = Chart.build(
+        songOf([
+          for (var i = 0; i < 4; i++) note(i * 0.25, 72 + i),
+          note(0.3, 48, hand: Hand.left),
+          note(0.6, 50, hand: Hand.left),
+        ]),
+        difficulty: Difficulty.normal,
+      );
+      expect(runOf(chart).map((t) => t.beat), [0, 0.25, 0.5, 0.75],
+          reason: 'a left-hand note landing inside a right-hand run is not '
+              'part of it and does not interrupt it');
+    });
+
+    test('the pieces that prompted this have them', () {
+      // The rondo's coda and the nocturne's cadenza are what a hand cannot
+      // do; if these ever come back empty the mechanic has quietly died.
+      for (final song in [SongLibrary.furElise, SongLibrary.nocturneOp9No2]) {
+        final chart = Chart.build(song, difficulty: Difficulty.normal);
+        expect(chart.runs, isNotEmpty, reason: song.title);
+        final longest = chart.runs.values
+            .map((r) => r.length)
+            .reduce((a, b) => a > b ? a : b);
+        expect(longest, greaterThanOrEqualTo(10), reason: song.title);
+      }
+    });
+
+    test('every run is in time order and long enough to be one', () {
+      for (final song in SongLibrary.all) {
+        for (final run in Chart.build(song).runs.values) {
+          expect(run.length, greaterThanOrEqualTo(Chart.runLength));
+          for (var i = 1; i < run.length; i++) {
+            expect(run[i].beat, greaterThan(run[i - 1].beat));
+            expect(run[i].hand, run[i - 1].hand);
+            expect(run[i].runIndex, i);
+          }
+        }
+      }
+    });
+  });
+
   test('which hand a touch belongs to is read from where it landed', () {
     expect(Chart.handAt(0.1), Hand.left);
     expect(Chart.handAt(0.49), Hand.left);

@@ -70,6 +70,9 @@ class _PlayScreenState extends State<PlayScreen>
   /// Which note each finger currently on the screen is holding down.
   final Map<int, int> _heldByPointer = {};
 
+  /// Which run each finger currently on the screen is sliding through.
+  final Map<int, int> _dragByPointer = {};
+
   TapOutcome? _lastOutcome;
   Duration _lastOutcomeAt = Duration.zero;
   Duration _now = Duration.zero;
@@ -129,7 +132,35 @@ class _PlayScreenState extends State<PlayScreen>
     if (outcome == null) return;
 
     if (outcome.holdId != null) _heldByPointer[pointer] = outcome.holdId!;
+    if (outcome.dragId != null) _dragByPointer[pointer] = outcome.dragId!;
 
+    _show(outcome);
+  }
+
+  /// A finger already on the screen moved. If it entered a run, the run
+  /// follows it: see [PlaySession.drag].
+  void _onDrag(int pointer, Offset position, Size size) {
+    final dragId = _dragByPointer[pointer];
+    if (dragId == null) return;
+
+    final across = (position.dx / size.width).clamp(0.0, 1.0);
+    final outcome = _session.drag(dragId, across);
+    if (outcome != null) _show(outcome);
+  }
+
+  /// A finger came off the screen. If it was holding a long note, that note
+  /// stops here; if it was carrying a run, the run is on its own again.
+  void _onTapUp(int pointer) {
+    final dragId = _dragByPointer.remove(pointer);
+    if (dragId != null) _session.endDrag(dragId);
+
+    final holdId = _heldByPointer.remove(pointer);
+    if (holdId == null) return;
+    if (_session.releaseHold(holdId)) setState(() {});
+  }
+
+  /// Put what just happened on the screen.
+  void _show(TapOutcome outcome) {
     setState(() {
       // A near miss reports itself but does not light anything: nothing
       // sounded, so nothing should look as though it did.
@@ -137,14 +168,6 @@ class _PlayScreenState extends State<PlayScreen>
       _lastOutcome = outcome;
       _lastOutcomeAt = _now;
     });
-  }
-
-  /// A finger came off the screen. If it was holding a long note, that note
-  /// stops here.
-  void _onTapUp(int pointer) {
-    final holdId = _heldByPointer.remove(pointer);
-    if (holdId == null) return;
-    if (_session.releaseHold(holdId)) setState(() {});
   }
 
   void _togglePause() {
@@ -164,6 +187,7 @@ class _PlayScreenState extends State<PlayScreen>
       _lastOutcome = null;
       _litHands.clear();
       _heldByPointer.clear();
+      _dragByPointer.clear();
     });
     if (!_ticker.isActive) _ticker.start();
   }
@@ -187,6 +211,8 @@ class _PlayScreenState extends State<PlayScreen>
             behavior: HitTestBehavior.opaque,
             onPointerDown: (event) =>
                 _onTapDown(event.pointer, event.localPosition, size),
+            onPointerMove: (event) =>
+                _onDrag(event.pointer, event.localPosition, size),
             onPointerUp: (event) => _onTapUp(event.pointer),
             onPointerCancel: (event) => _onTapUp(event.pointer),
             child: Stack(

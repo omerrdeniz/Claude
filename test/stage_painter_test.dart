@@ -181,6 +181,22 @@ void main() {
     }
   });
 
+  test('a run is threaded, so the slide is something the player can see', () {
+    // The ribbon is the only thing on screen that says these notes are not
+    // to be tapped one at a time. Drawn with it and without it, the two
+    // frames have to differ — otherwise the mechanic is invisible.
+    final withRun = paintFrame(SongLibrary.furElise, 156.0);
+    final withoutRun = paintFrame(SongLibrary.preludeInC, 5.0);
+    expect(withRun.approximateBytesUsed,
+        isNot(withoutRun.approximateBytesUsed));
+    final chart = Chart.build(SongLibrary.furElise);
+    final onScreen = chart
+        .visibleAt(156.0, 4)
+        .where((t) => t.runId != null)
+        .length;
+    expect(onScreen, greaterThan(3), reason: 'nothing to thread');
+  });
+
   test('an empty window still paints the stage', () {
     // Before the first note there is nothing to draw but beams and the line;
     // that must still be a picture, not a blank screen.
@@ -222,6 +238,10 @@ void main() {
       'yatay-prelude': await savePng(
           SongLibrary.preludeInC, 5.0, 'yatay-prelude',
           size: phoneLandscape),
+      // A run: the rondo's chromatic descent, sixty-two notes no hand can
+      // tap, with the ribbon threading them into one slide.
+      'hizli-akis': await savePng(SongLibrary.furElise, 156.0, 'hizli-akis'),
+      'kanon': await savePng(SongLibrary.canonInD, 103.0, 'kanon'),
     };
     for (final entry in sizes.entries) {
       // A stage drawn with nothing on it compresses to almost nothing.

@@ -564,4 +564,116 @@ void main() {
       expect(recorder.struck.map((s) => s.$1), contains(60));
     });
   });
+
+  group('sliding through a run', () {
+    // Four notes an eighth of a second apart: too fast to tap one at a time,
+    // which is the whole reason the slide exists.
+    Song fastRun() =>
+        songOf([for (var i = 0; i < 4; i++) note(i * 0.25, 72 + i)]);
+
+    /// Enter the run by tapping its first note, and hand back the token the
+    /// finger slides with.
+    (PlaySession, int) entered() {
+      final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
+      seek(session, 0);
+      final outcome = session.tap(right);
+      expect(outcome, isNotNull);
+      expect(outcome!.dragId, isNotNull, reason: 'the run was not offered');
+      return (session, outcome.dragId!);
+    }
+
+    test('an ordinary note offers nothing to slide through', () {
+      final session = sessionFor(
+        songOf([note(0, 60), note(4, 62)]),
+        difficulty: Difficulty.normal,
+      );
+      seek(session, 0);
+      expect(session.tap(right)!.dragId, isNull);
+    });
+
+    test('the last note of a run has nothing left to reach', () {
+      final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
+      seek(session, 0.75);
+      expect(session.tap(right)!.dragId, isNull);
+    });
+
+    test('a finger that keeps moving plays the rest of the run', () {
+      final (session, drag) = entered();
+      expect(engine.struck.map((s) => s.$1), [72]);
+
+      var at = right;
+      for (final beat in [0.25, 0.5, 0.75]) {
+        seek(session, beat);
+        at += 0.05;
+        expect(session.drag(drag, at)?.verdict, Verdict.perfect,
+            reason: 'the note at $beat did not come to the finger');
+      }
+      expect(engine.struck.map((s) => s.$1), [72, 73, 74, 75]);
+      expect(session.scoreboard.notesPlayed, 4);
+    });
+
+    test('sliding back the other way works just as well', () {
+      final (session, drag) = entered();
+      var at = right;
+      for (final beat in [0.25, 0.5, 0.75]) {
+        seek(session, beat);
+        at -= 0.05; // leftwards, against the rising pitch
+        expect(session.drag(drag, at), isNotNull, reason: 'at $beat');
+      }
+      expect(engine.struck.map((s) => s.$1), [72, 73, 74, 75]);
+    });
+
+    test('a finger that stops moving gets nothing', () {
+      final (session, drag) = entered();
+      seek(session, 0.25);
+      expect(session.drag(drag, right), isNull, reason: 'it never moved');
+      expect(engine.struck.map((s) => s.$1), [72]);
+    });
+
+    test('the run never runs ahead of the music', () {
+      final (session, drag) = entered();
+      // Halfway to the second note, sliding hard. The song decides when a
+      // note sounds; the finger only decides whether it does.
+      seek(session, 0.12);
+      expect(session.drag(drag, right + 0.3), isNull);
+      expect(engine.struck.map((s) => s.$1), [72]);
+      // And the moment it comes due, the finger already moving catches it.
+      seek(session, 0.25);
+      expect(session.drag(drag, right + 0.31), isNotNull);
+    });
+
+    test('a stalled finger rejoins where the run is, not where it left off',
+        () {
+      final (session, drag) = entered();
+      // The finger sits still until the run is three notes further on, then
+      // slides. The two notes whose windows have closed are gone for good;
+      // the one still within reach comes to the finger.
+      seek(session, 1.0);
+      expect(session.drag(drag, right + 0.2)?.notes.single.midi, 75);
+      expect(engine.struck.map((s) => s.$1), [72, 75]);
+    });
+
+    test('a slide that arrives after the run is over does nothing', () {
+      final (session, drag) = entered();
+      seek(session, 2.0);
+      expect(session.drag(drag, right + 0.2), isNull);
+      expect(engine.struck.map((s) => s.$1), [72]);
+      expect(session.scoreboard.counts[Verdict.miss], 3,
+          reason: 'the rest of the run went by unplayed');
+    });
+
+    test('lifting the finger ends it', () {
+      final (session, drag) = entered();
+      session.endDrag(drag);
+      seek(session, 0.25);
+      expect(session.drag(drag, right + 0.1), isNull);
+      expect(engine.struck.map((s) => s.$1), [72]);
+    });
+
+    test('a slide from a stopped session does nothing', () {
+      final (session, drag) = entered();
+      session.pause();
+      expect(session.drag(drag, right + 0.1), isNull);
+    });
+  });
 }

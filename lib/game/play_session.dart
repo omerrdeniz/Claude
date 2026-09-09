@@ -12,6 +12,7 @@ class TapOutcome {
     required this.notes,
     this.scored = true,
     this.holdId,
+    this.dragId,
   });
 
   final Verdict verdict;
@@ -20,6 +21,11 @@ class TapOutcome {
   /// Set when this touch began a note the finger is expected to keep down.
   /// Hand it back to [PlaySession.releaseHold] when the finger lifts.
   final int? holdId;
+
+  /// Set when this touch landed on a run the finger can slide through. Hand
+  /// it to [PlaySession.drag] as the finger moves, and to
+  /// [PlaySession.endDrag] when it lifts.
+  final int? dragId;
 
   /// How early (negative) or late (positive) the tap was.
   final double errorMs;
@@ -41,6 +47,23 @@ class _Hold {
   final double beat;
   final List<int> midis;
   final double endBeat;
+}
+
+/// A finger sliding through a run.
+class _Drag {
+  _Drag({required this.runId, required this.index, required this.across});
+
+  final int runId;
+
+  /// The last note of the run that has been dealt with.
+  int index;
+
+  /// Where the finger was when this was last looked at.
+  double across;
+
+  /// How far it has moved since the last note sounded. Direction does not
+  /// matter — a slide back the other way is still a slide.
+  double travelled = 0;
 }
 
 /// Runs one performance: keeps the clock, matches taps to notes, plays the
@@ -343,27 +366,7 @@ class PlaySession {
     _resolve(tapTarget);
     scoreboard.register(verdict);
 
-    // Tighter timing is played a little firmer, so a clean run sounds clean
-    // as well as scoring well.
-    final firmness = 0.85 + judge.quality(errorMs) * 0.3;
-    final early = quantize && _beat < tapTarget.beat;
-
-    for (final note in tapTarget.notes) {
-      final velocity = (note.velocity * firmness).clamp(0.05, 1.0);
-      if (early) {
-        // Hold it back to its written moment, so the piece comes out in time
-        // however jumpy the hand was.
-        _waiting.add((
-          beat: tapTarget.beat,
-          midi: note.midi,
-          velocity: velocity,
-          duration: note.duration,
-        ));
-      } else {
-        audio.noteOn(note.midi, velocity: velocity);
-        _scheduleRelease(note.midi, tapTarget.beat + note.duration);
-      }
-    }
+    _sound(tapTarget, errorMs);
 
     int? holdId;
     if (tapTarget.isHold) {
@@ -381,8 +384,123 @@ class PlaySession {
       errorMs: errorMs,
       notes: tapTarget.notes,
       holdId: holdId,
+      dragId: _beginDrag(tapTarget, across),
     );
   }
+
+  /// Sound a touch's notes, [errorMs] deciding how firmly.
+  ///
+  /// Tighter timing is played a little firmer, so a clean run sounds clean as
+  /// well as scoring well.
+  void _sound(Tap target, double errorMs) {
+    final firmness = 0.85 + judge.quality(errorMs) * 0.3;
+    final early = quantize && _beat < target.beat;
+
+    for (final note in target.notes) {
+      final velocity = (note.velocity * firmness).clamp(0.05, 1.0);
+      if (early) {
+        // Hold it back to its written moment, so the piece comes out in time
+        // however jumpy the hand was.
+        _waiting.add((
+          beat: target.beat,
+          midi: note.midi,
+          velocity: velocity,
+          duration: note.duration,
+        ));
+      } else {
+        audio.noteOn(note.midi, velocity: velocity);
+        _scheduleRelease(note.midi, target.beat + note.duration);
+      }
+    }
+  }
+
+  /// Fingers sliding through a run.
+  final Map<int, _Drag> _drags = {};
+  int _nextDragId = 1;
+
+  /// How far the finger has to slide to earn the next note of a run, as a
+  /// fraction of the screen's width.
+  ///
+  /// Small, and it has to be: the fastest run in the library gives it
+  /// seventy-six milliseconds, four or five frames. What this is really
+  /// asking is whether the finger is still moving — a hand that stops gets
+  /// nothing, which is what keeps the slide a gesture rather than a rest.
+  static const double dragStep = 0.012;
+
+  /// A touch that landed on a run leaves the finger able to slide through it.
+  /// Returns the token the screen hands back to [drag].
+  int? _beginDrag(Tap target, double across) {
+    final runId = target.runId;
+    if (runId == null) return null;
+    final run = chart.runs[runId];
+    if (run == null || target.runIndex + 1 >= run.length) return null;
+
+    final id = _nextDragId++;
+    _drags[id] = _Drag(runId: runId, index: target.runIndex, across: across);
+    return id;
+  }
+
+  /// The finger that entered a run has moved to [across].
+  ///
+  /// This is the answer to a passage no hand can tap: press the first note,
+  /// then keep sliding and the rest of the run comes to the finger. The song
+  /// still decides *when* each note sounds — a slide never runs ahead of the
+  /// music, and never drags behind it — so what the gesture is being asked
+  /// for is that it keep going. Stop moving and the run goes on without you,
+  /// note by note, as misses.
+  ///
+  /// Returns what the note that just sounded was worth, or null if this move
+  /// did not reach one.
+  TapOutcome? drag(int dragId, double across) {
+    if (!_running) return null;
+    final drag = _drags[dragId];
+    if (drag == null) return null;
+
+    drag.travelled += (across - drag.across).abs();
+    drag.across = across;
+
+    final run = chart.runs[drag.runId]!;
+    while (drag.index + 1 < run.length) {
+      final next = run[drag.index + 1];
+      final errorMs = (_judgedBeat - next.beat) / beatsPerSecond * 1000;
+
+      // Not its moment yet. The travel already banked is kept, so a finger
+      // that is moving catches the note the instant it comes due.
+      if (errorMs < 0) return null;
+
+      // Gone: expired as a miss while the finger was still, taken by another
+      // finger, or simply too late now. Step over it without spending the
+      // slide — it is already someone else's business.
+      if (errorMs > judge.windowMs || !_isPending(next)) {
+        drag.index++;
+        continue;
+      }
+
+      if (drag.travelled < dragStep) return null;
+      drag.index++;
+      drag.travelled = 0;
+
+      final verdict = judge.verdictFor(errorMs);
+      _resolve(next);
+      scoreboard.register(verdict);
+      _sound(next, errorMs);
+
+      return TapOutcome(
+        verdict: verdict,
+        hand: next.hand,
+        errorMs: errorMs,
+        notes: next.notes,
+        dragId: dragId,
+      );
+    }
+
+    // The run is over; the finger is just a finger again.
+    _drags.remove(dragId);
+    return null;
+  }
+
+  /// The finger came off, or the run is over.
+  void endDrag(int dragId) => _drags.remove(dragId);
 
   /// Notes the finger is currently keeping down.
   final Map<int, _Hold> _holds = {};
@@ -515,6 +633,7 @@ class PlaySession {
     _justMissed.clear();
     _waiting.clear();
     _holds.clear();
+    _drags.clear();
     audio.engine.allNotesOff();
   }
 
