@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { Actor } from './actor.js';
-import { clamp, randRange, angleDiff, DEG, gauss } from '../core/math.js';
+import { clamp, damp, randRange, angleDiff, DEG, gauss } from '../core/math.js';
 import { walkClear } from '../world/nav.js';
 
 const SKILL_LEVELS = [0.32, 0.55, 0.76, 0.93];
@@ -50,6 +50,11 @@ export class Bot extends Actor {
 
   // --- Algı -----------------------------------------------------------
   perceive(game) {
+    // Flaşlanmışsa hiçbir şey göremez
+    if (game.time < this.blindUntil) {
+      this.targetVisible = false;
+      return;
+    }
     const enemies = game.actors.filter((a) => a.alive && a.team !== this.team);
     let best = null;
     let bestScore = Infinity;
@@ -133,7 +138,7 @@ export class Bot extends Actor {
     let clear = false;
     for (let i = Math.min(this.path.length - 1, this.pathIndex + 3); i >= this.pathIndex; i--) {
       const n = nav.nodes[this.path[i]];
-      if (walkClear(this.pos.x, this.pos.z, n.x, n.z, game.world.colliders, this.pos.y)) { idx = i; clear = true; break; }
+      if (walkClear(this.pos.x, this.pos.z, n.x, n.z, game.world.navColliders, this.pos.y)) { idx = i; clear = true; break; }
     }
     this.pathIndex = idx;
     // Hiçbir düğüme doğrudan gidemiyorsak yol bayatlamıştır: yeniden hesapla.
@@ -231,6 +236,23 @@ export class Bot extends Actor {
     const target = this.target;
     const dist = Math.hypot(target.pos.x - this.pos.x, target.pos.z - this.pos.z);
     const error = this.aimAt(target, dt, game);
+
+    // El bombası atma anı
+    if (this.slot === 'grenade' && this.nadeTarget) {
+      this.cmd.forward = 0;
+      this.cmd.side = 0;
+      this.faceDirection(this.nadeTarget.x, this.nadeTarget.z, dt, 1.2);
+      this.pitch = damp(this.pitch, -0.22, 6, dt);
+      if (game.time >= (this.nadeUntil || 0)) {
+        this.cmd.attack = true;
+        this.cmd.attackPressed = true;
+        this.nadeTarget = null;
+        this.nadeUntil = 0;
+      }
+      return;
+    }
+    if (this.tryGrenade(game, target, dist)) return;
+
     const weapon = this.weapon();
 
     // Silah seçimi: uzun menzilde ana silah, cephane bitince tabanca
@@ -257,7 +279,8 @@ export class Bot extends Actor {
     this.cmd.crouch = this.targetVisible && dist > 8 && dist < 30 && this.skill > 0.6 && Math.sin(game.time * 0.7 + this.id) > 0.55;
 
     // Ateş kararı
-    const ready = game.time > this.firstSeen && this.targetVisible && !this.reloading;
+    const ready = game.time > this.firstSeen && this.targetVisible && !this.reloading
+      && game.time > this.blindUntil;
     const errorLimit = (weapon.type === 'sniper' ? 1.2 : 2.6 + dist * 0.05) * DEG;
     const canShoot = ready && error < errorLimit && game.time > this.pauseFireUntil && !this.friendlyInLine(game);
 
@@ -281,7 +304,24 @@ export class Bot extends Actor {
     else if (st && !this.targetVisible && st.ammo < WEAPON_LOW(weapon) && st.reserve > 0) this.cmd.reload = true;
   }
 
+  // El bombası atma denemesi (yalnız HE, uzak mesafede)
+  tryGrenade(game, target, dist) {
+    if (this.skill < 0.5) return false;
+    if (game.time < (this.nadeCooldown || 0)) return false;
+    if (!this.grenadeBag.includes('he')) return false;
+    if (dist < 11 || dist > 30) return false;
+    if (this.friendlyInLine(game)) return false;
+    this.nadeCooldown = game.time + 18 + Math.random() * 12;
+    this.inventory.grenade = { id: 'he', ammo: 1, reserve: 0 };
+    this.switchSlot('grenade', game.time);
+    this.nadeUntil = game.time + 0.75;
+    this.nadeTarget = { x: target.pos.x, z: target.pos.z };
+    return true;
+  }
+
   pickWeapon(game) {
+    // Atış hazırlığı sürerken silah değiştirme
+    if (this.slot === 'grenade' && game.time < (this.nadeUntil || 0)) return;
     const cur = this.weaponState();
     const primary = this.inventory.primary;
     const secondary = this.inventory.secondary;
@@ -422,6 +462,20 @@ export class Bot extends Actor {
     cmd.reload = false; cmd.use = false;
 
     if (!this.alive) return;
+
+    // Ateşin içindeyse hemen dışarı kaç
+    const fire = game.grenades.fireAt(this.pos.x, this.pos.z);
+    if (fire) {
+      const away = Math.atan2(this.pos.x - fire.pos.x, this.pos.z - fire.pos.z);
+      const tx = fire.pos.x + Math.sin(away) * (fire.radius + 2.5);
+      const tz = fire.pos.z + Math.cos(away) * (fire.radius + 2.5);
+      this.moveToward(tx, tz);
+      cmd.walk = false;
+      this.faceDirection(tx, tz, dt, 0.8);
+      this.checkStuck(game);
+      return;
+    }
+
     if (game.round.frozen) {
       // Donma süresinde sadece etrafa bak
       this.yaw += Math.sin(game.time * 0.6 + this.id) * dt * 0.4;

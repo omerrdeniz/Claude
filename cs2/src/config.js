@@ -63,6 +63,7 @@ export const DEFAULT_SETTINGS = {
   sensitivity: 2.2,      // CS ile aynı ölçek (m_yaw 0.022)
   fov: 90,
   shadows: true,
+  postfx: true,
   volume: 0.6,
   botDifficulty: 2,      // 0=kolay 1=normal 2=zor 3=uzman
   showFps: false,

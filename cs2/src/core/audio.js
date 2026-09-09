@@ -123,6 +123,34 @@ export class AudioEngine {
         og.connect(this.master);
         osc.start(t);
         osc.stop(t + cfg.dur + 0.02);
+
+        // Keskin çatlama (yakın mesafede belirgin)
+        const crack = this._out(vol * 0.35 * cfg.level, pan);
+        crack.gain.setValueAtTime(vol * 0.35 * cfg.level, t);
+        crack.gain.exponentialRampToValueAtTime(0.0006, t + 0.05);
+        this._noise(crack, 0.05, 'highpass', 4200, 1);
+
+        // Yankı kuyruğu (uzaklaştıkça daha baskın)
+        const tailGain = vol * (0.14 + (1 - gain) * 0.3) * cfg.level;
+        if (tailGain > 0.002) {
+          for (let i = 0; i < 2; i++) {
+            const delay = 0.07 + i * 0.13;
+            const tail = this._out(tailGain / (i + 1.5), pan * 0.5);
+            tail.gain.setValueAtTime(0.0001, t + delay);
+            tail.gain.linearRampToValueAtTime(tailGain / (i + 1.5), t + delay + 0.02);
+            tail.gain.exponentialRampToValueAtTime(0.0006, t + delay + 0.45);
+            const src = this.ctx.createBufferSource();
+            src.buffer = this.noiseBuffer;
+            src.loop = true;
+            const filt = this.ctx.createBiquadFilter();
+            filt.type = 'lowpass';
+            filt.frequency.value = 900 - i * 250;
+            src.connect(filt);
+            filt.connect(tail);
+            src.start(t + delay);
+            src.stop(t + delay + 0.5);
+          }
+        }
         break;
       }
       case 'impact': {
@@ -208,6 +236,21 @@ export class AudioEngine {
         osc.connect(out);
         osc.start(t);
         osc.stop(t + 0.13);
+        break;
+      }
+      case 'smoke': {
+        const out = this._out(vol * 0.5, pan);
+        out.gain.setValueAtTime(vol * 0.5, t);
+        out.gain.exponentialRampToValueAtTime(0.0008, t + 1.6);
+        this._noise(out, 1.6, 'highpass', 900, 0.6);
+        break;
+      }
+      case 'fire': {
+        const out = this._out(vol * 0.4, pan);
+        out.gain.setValueAtTime(0.0001, t);
+        out.gain.linearRampToValueAtTime(vol * 0.4, t + 0.15);
+        out.gain.exponentialRampToValueAtTime(0.0008, t + 2.2);
+        this._noise(out, 2.2, 'bandpass', 420, 0.5);
         break;
       }
       case 'ui': {

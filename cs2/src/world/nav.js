@@ -2,7 +2,7 @@
 
 import { segmentClear } from '../core/math.js';
 
-const LINK_RADIUS = 20;
+const LINK_RADIUS = 13;
 const CLEARANCE = 0.6;     // botun omuz genişliği payı
 const TEST_HEIGHTS = [0.55, 1.35];
 
@@ -27,15 +27,65 @@ export function walkClear(ax, az, bx, bz, colliders, y = 0) {
   return true;
 }
 
+// Bir nokta katı bir cismin içinde mi (veya çok yakınında)?
+function blocked(x, z, colliders, pad = 0.55) {
+  for (const o of colliders) {
+    if (o.ground) continue;
+    if (o.maxY < 0.5 || o.minY > 1.4) continue;     // altından/üstünden geçilebilenler sayılmaz
+    if (x > o.minX - pad && x < o.maxX + pad && z > o.minZ - pad && z < o.maxZ + pad) return true;
+  }
+  return false;
+}
+
+// Engel içinde kalan waypoint'leri en yakın boş noktaya kaydırır, olmazsa eler.
+function sanitize(points, colliders) {
+  const out = [];
+  for (const p of points) {
+    if (!blocked(p.x, p.z, colliders)) { out.push({ x: p.x, z: p.z }); continue; }
+    let moved = null;
+    for (const r of [0.9, 1.6, 2.4, 3.2]) {
+      for (let a = 0; a < 12 && !moved; a++) {
+        const ang = (a / 12) * Math.PI * 2;
+        const nx = p.x + Math.cos(ang) * r;
+        const nz = p.z + Math.sin(ang) * r;
+        if (!blocked(nx, nz, colliders)) moved = { x: +nx.toFixed(2), z: +nz.toFixed(2) };
+      }
+      if (moved) break;
+    }
+    if (moved) out.push(moved);
+    else console.warn(`[nav] waypoint (${p.x}, ${p.z}) engel içinde ve taşınamadı, elendi`);
+  }
+  return out;
+}
+
+// Haritayı ızgarayla tarayıp boş noktalara ek düğüm koyar (grafik kopmasın).
+function gridFill(points, world, spacing = 4.5, minDist = 3.4) {
+  const b = world.bounds;
+  const out = points.slice();
+  for (let x = b.minX + spacing / 2; x <= b.maxX; x += spacing) {
+    for (let z = b.minZ + spacing / 2; z <= b.maxZ; z += spacing) {
+      if (blocked(x, z, world.navColliders, 0.75)) continue;
+      let near = false;
+      for (const p of out) {
+        if ((p.x - x) ** 2 + (p.z - z) ** 2 < minDist * minDist) { near = true; break; }
+      }
+      if (!near) out.push({ x: +x.toFixed(2), z: +z.toFixed(2) });
+    }
+  }
+  return out;
+}
+
 export function buildNav(world) {
-  const nodes = world.waypointPositions.map((p, i) => ({ id: i, x: p.x, z: p.z, links: [] }));
+  const manual = sanitize(world.waypointPositions, world.navColliders);
+  const points = gridFill(manual, world);
+  const nodes = points.map((p, i) => ({ id: i, x: p.x, z: p.z, links: [] }));
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       const a = nodes[i];
       const b = nodes[j];
       const d = Math.hypot(a.x - b.x, a.z - b.z);
       if (d > LINK_RADIUS) continue;
-      if (!walkClear(a.x, a.z, b.x, b.z, world.colliders)) continue;
+      if (!walkClear(a.x, a.z, b.x, b.z, world.navColliders)) continue;
       a.links.push({ id: j, cost: d });
       b.links.push({ id: i, cost: d });
     }
@@ -49,7 +99,7 @@ export function buildNav(world) {
       for (const n of nodes) {
         const d = (n.x - x) ** 2 + (n.z - z) ** 2;
         if (d < bestD) {
-          if (requireVisible && !walkClear(x, z, n.x, n.z, world.colliders, y)) continue;
+          if (requireVisible && !walkClear(x, z, n.x, n.z, world.navColliders, y)) continue;
           bestD = d; best = n.id;
         }
       }

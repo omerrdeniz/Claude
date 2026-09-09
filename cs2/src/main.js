@@ -18,6 +18,7 @@ const els = {
   fov: document.getElementById('opt-fov'),
   vol: document.getElementById('opt-vol'),
   shadows: document.getElementById('opt-shadows'),
+  postfx: document.getElementById('opt-postfx'),
   valSens: document.getElementById('val-sens'),
   valFov: document.getElementById('val-fov'),
   valVol: document.getElementById('val-vol'),
@@ -48,6 +49,7 @@ els.sens.value = settings.sensitivity;
 els.fov.value = settings.fov;
 els.vol.value = Math.round(settings.volume * 100);
 els.shadows.checked = settings.shadows;
+els.postfx.checked = settings.postfx !== false;
 els.difficulty.value = String(settings.botDifficulty);
 els.valSens.textContent = Number(settings.sensitivity).toFixed(1);
 els.valFov.textContent = settings.fov;
@@ -71,12 +73,13 @@ function readSettingsFromUI() {
   settings.fov = parseInt(els.fov.value, 10);
   settings.volume = parseInt(els.vol.value, 10) / 100;
   settings.shadows = els.shadows.checked;
+  settings.postfx = els.postfx.checked;
   settings.botDifficulty = parseInt(els.difficulty.value, 10);
   saveSettings(settings);
   game.applySettings(settings);
 }
 
-for (const el of [els.sens, els.fov, els.vol, els.shadows, els.difficulty]) {
+for (const el of [els.sens, els.fov, els.vol, els.shadows, els.postfx, els.difficulty]) {
   el.addEventListener('input', () => {
     els.valSens.textContent = Number(els.sens.value).toFixed(1);
     els.valFov.textContent = els.fov.value;

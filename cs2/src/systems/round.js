@@ -146,6 +146,13 @@ export class Round {
       bot.money -= KEVLAR_PRICE;
       bot.armor = 100;
     }
+    // El bombaları
+    const nadeOptions = [['he', 300, 0.55], ['flash', 200, 0.35], ['smoke', 300, 0.3]];
+    for (const [id, price, chance] of nadeOptions) {
+      if (bot.money >= price + 700 && Math.random() < chance) {
+        if (bot.giveGrenade(id)) bot.money -= price;
+      }
+    }
     if (team === 'CT' && !bot.kit && bot.money >= DEFUSE_KIT_PRICE && Math.random() < 0.5) {
       bot.money -= DEFUSE_KIT_PRICE;
       bot.kit = true;

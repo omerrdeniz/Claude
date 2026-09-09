@@ -5,6 +5,15 @@ import { STATE } from '../systems/round.js';
 
 const $ = (id) => document.getElementById(id);
 
+// El bombası rozetleri
+const NADE_UI = {
+  he: { label: 'HE', color: '#7fae5a' },
+  flash: { label: 'FLAŞ', color: '#e8e2b0' },
+  smoke: { label: 'SİS', color: '#9fb4c4' },
+  molotov: { label: 'MOL', color: '#e07a3c' },
+  incendiary: { label: 'YNG', color: '#e07a3c' },
+};
+
 function fmtTime(sec) {
   const s = Math.max(0, Math.ceil(sec));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -17,6 +26,8 @@ export class Hud {
       hitmarker: $('hitmarker'),
       scope: $('scope'),
       damage: $('damage-flash'),
+      flashOverlay: $('flash-overlay'),
+      nades: $('nades'),
       scoreCT: $('score-ct'),
       scoreT: $('score-t'),
       aliveCT: $('alive-ct'),
@@ -61,6 +72,17 @@ export class Hud {
     this.el.hitmarker.classList.add('show');
     this.el.hitmarker.classList.toggle('kill', kill);
     this.hitmarkerUntil = time + 0.14;
+  }
+
+  // Flaş bombası: beyaz perde, süreye göre sönümlenir
+  flash(duration, strength) {
+    const el = this.el.flashOverlay;
+    if (!el) return;
+    el.style.transition = 'none';
+    el.style.opacity = String(Math.min(1, 0.35 + strength * 0.75));
+    void el.offsetWidth;
+    el.style.transition = `opacity ${Math.max(0.4, duration).toFixed(2)}s ease-out`;
+    el.style.opacity = '0';
   }
 
   damageFlash() {
@@ -133,7 +155,7 @@ export class Hud {
       } else if (entry.kind === 'grenade') {
         name = WEAPONS[entry.id].name;
         price = WEAPONS[entry.id].price;
-        owned = !!player.inventory.grenade;
+        owned = player.grenadeBag.includes(entry.id);
       }
       const afford = player.money >= price;
       rows.push(`<div class="buy-row ${owned ? 'owned' : (afford ? '' : 'cant')}">
@@ -244,9 +266,16 @@ export class Hud {
     const items = [];
     if (player.armor > 0) items.push(player.helmet ? 'Kevlar+Kask' : 'Kevlar');
     if (player.kit) items.push('İmha kiti');
-    if (player.inventory.grenade) items.push('HE');
     if (player.hasBomb) items.push('C4');
     el.items.textContent = items.join(' · ');
+
+    if (el.nades) {
+      const active = player.inventory.grenade ? player.inventory.grenade.id : null;
+      el.nades.innerHTML = player.grenadeBag.map((id) => {
+        const g = NADE_UI[id] || { label: '?', color: '#aaa' };
+        return `<span class="nade ${id === active ? 'active' : ''}" style="--nade:${g.color}">${g.label}</span>`;
+      }).join('');
+    }
 
     // Nişangâh açıklığı
     const inaccuracy = player.currentInaccuracy();

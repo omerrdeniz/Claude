@@ -1,6 +1,10 @@
 // Oyunun çekirdeği: sahne kurulumu, aktörler, giriş işleme, tur olayları ve ana döngü adımı.
 
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { PHYS, DEFAULT_SETTINGS, ROUND, ECONOMY, COLORS } from './config.js';
 import { WEAPONS, KEVLAR_PRICE, HELMET_PRICE, DEFUSE_KIT_PRICE, weaponsForTeam } from './weapons.js';
 import { clamp, damp, DEG } from './core/math.js';
@@ -56,6 +60,7 @@ export class Game {
     this.hud = new Hud();
     this.radar = new Radar(document.getElementById('radar'), this.world);
     this.viewmodel = new ViewModel(this.camera);
+    this._initComposer();
 
     this._bindInput();
     window.addEventListener('resize', () => this.resize());
@@ -72,35 +77,91 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = this.settings.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+  }
+
+  // Post-processing zinciri: MSAA hedefi + hafif bloom + tone mapping çıkışı
+  _initComposer() {
+    const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    const target = new THREE.WebGLRenderTarget(size.x, size.y, {
+      type: THREE.HalfFloatType,
+      samples: 4,
+    });
+    this.composer = new EffectComposer(this.renderer, target);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    // Silah ayrı sahnede, derinlik temizlenerek üstüne çizilir
+    const vmPass = new RenderPass(this.viewmodel.scene, this.viewmodel.camera);
+    vmPass.clear = false;
+    vmPass.clearDepth = true;
+    this.composer.addPass(vmPass);
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(size.x / 2, size.y / 2), 0.32, 0.7, 0.92,
+    );
+    this.composer.addPass(this.bloomPass);
+    this.composer.addPass(new OutputPass());
   }
 
   _initScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(COLORS.sky);
-    this.scene.fog = new THREE.Fog(COLORS.sky, 60, 170);
+    this.scene.fog = new THREE.Fog(0xc9d9e8, 70, 210);
 
-    this.camera = new THREE.PerspectiveCamera(this.settings.fov, 1, 0.02, 400);
+    this.camera = new THREE.PerspectiveCamera(this.settings.fov, 1, 0.02, 500);
     this.camera.rotation.order = 'YXZ';
     this.scene.add(this.camera);
 
-    const hemi = new THREE.HemisphereLight(0xbfd8f2, 0x6d6045, 1.15);
-    this.scene.add(hemi);
+    // Gökyüzü + ortam yansıması (PMREM)
+    const skyTex = gradientSkyTexture();
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(300, 32, 20),
+      new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false }),
+    );
+    sky.renderOrder = -1;
+    this.scene.add(sky);
 
-    const sun = new THREE.DirectionalLight(0xfff2d8, 1.5);
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    pmrem.compileEquirectangularShader();
+    const envScene = new THREE.Scene();
+    const envSky = new THREE.Mesh(
+      new THREE.SphereGeometry(20, 24, 16),
+      new THREE.MeshBasicMaterial({ map: skyTex.clone(), side: THREE.BackSide }),
+    );
+    envScene.add(envSky);
+    const sunQuad = new THREE.Mesh(
+      new THREE.SphereGeometry(2.2, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0xfff2cc }),
+    );
+    sunQuad.position.set(8, 14, 6);
+    envScene.add(sunQuad);
+    const envRT = pmrem.fromScene(envScene, 0.04);
+    this.scene.environment = envRT.texture;
+    pmrem.dispose();
+
+    // Işıklar
+    this.scene.add(new THREE.HemisphereLight(0xbcc9d2, 0x8a7550, 0.55));
+    this.scene.add(new THREE.AmbientLight(0x7a6a50, 0.28));
+
+    const sun = new THREE.DirectionalLight(0xffeccb, 2.9);
     sun.position.set(38, 62, 26);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -48;
-    sun.shadow.camera.right = 48;
-    sun.shadow.camera.top = 52;
-    sun.shadow.camera.bottom = -52;
+    sun.shadow.camera.left = -42;
+    sun.shadow.camera.right = 42;
+    sun.shadow.camera.top = 46;
+    sun.shadow.camera.bottom = -46;
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 180;
-    sun.shadow.bias = -0.0006;
-    sun.shadow.normalBias = 0.03;
+    sun.shadow.camera.far = 190;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.035;
     this.scene.add(sun);
     this.scene.add(sun.target);
     this.sun = sun;
+
+    // Karşı yönden hafif dolgu ışığı (gölgeler tamamen kararmasın)
+    const fill = new THREE.DirectionalLight(0xa9c3de, 0.22);
+    fill.position.set(-30, 24, -18);
+    this.scene.add(fill);
 
     this.world = buildMap(this.scene);
     this.nav = buildNav(this.world);
@@ -112,6 +173,12 @@ export class Game {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    if (this.viewmodel) this.viewmodel.setAspect(w / h);
+    if (this.composer) {
+      const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+      this.composer.setSize(size.x, size.y);
+      if (this.bloomPass) this.bloomPass.setSize(size.x / 2, size.y / 2);
+    }
   }
 
   applySettings(settings) {
@@ -119,6 +186,7 @@ export class Game {
     this.audio.setVolume(this.settings.volume);
     this.renderer.shadowMap.enabled = this.settings.shadows;
     this.sun.castShadow = this.settings.shadows;
+    if (this.bloomPass) this.bloomPass.enabled = this.settings.postfx !== false;
     this.camera.fov = this.settings.fov;
     this.camera.updateProjectionMatrix();
     this.hud.el.fps.classList.toggle('hidden', !this.settings.showFps);
@@ -204,6 +272,16 @@ export class Game {
         return;
       }
       const slotKeys = { Digit1: 'primary', Digit2: 'secondary', Digit3: 'melee', Digit4: 'grenade' };
+      if (e.code === 'Digit4') {
+        if (player.slot === 'grenade' && player.grenadeBag.length > 1) {
+          player.cycleGrenade();
+          player.deployEnd = this.time + 0.35;
+          this.audio.play('reload', { volume: 0.4 });
+        } else if (player.grenadeBag.length && player.switchSlot('grenade', this.time)) {
+          this.audio.play('reload', { volume: 0.4 });
+        }
+        return;
+      }
       if (slotKeys[e.code]) {
         if (player.switchSlot(slotKeys[e.code], this.time)) {
           this.audio.play('reload', { volume: 0.4 });
@@ -237,8 +315,14 @@ export class Game {
     if (entry.kind === 'weapon') {
       buyWeapon(entry.id);
     } else if (entry.kind === 'grenade') {
-      if (player.inventory.grenade) return this.hud.hint(this.time, 'Zaten bir el bomban var');
-      buyWeapon(entry.id);
+      const def = WEAPONS[entry.id];
+      if (player.grenadeBag.includes(entry.id)) return this.hud.hint(this.time, `${def.name} zaten var`);
+      if (player.grenadeBag.length >= 3) return this.hud.hint(this.time, 'En fazla 3 el bombası taşınır');
+      if (player.money < def.price) return this.hud.hint(this.time, 'Yeterli paran yok');
+      player.money -= def.price;
+      player.giveGrenade(entry.id);
+      this.audio.play('ui', { freq: 760, volume: 0.6 });
+      this.hud.hint(this.time, `${def.name} alındı`);
     } else if (entry.kind === 'armor') {
       if (player.armor > 0 && !player.helmet) return this.hud.hint(this.time, 'Zırhın zaten var');
       if (player.money < KEVLAR_PRICE) return this.hud.hint(this.time, 'Yeterli paran yok');
@@ -472,6 +556,12 @@ export class Game {
     }
   }
 
+  // Oyuncu flaşlandığında beyaz perde
+  onPlayerFlashed(duration, strength) {
+    this.hud.flash(duration, strength);
+    this.audio.play('beep', { freq: 2400, volume: 0.5 });
+  }
+
   shake(amount) {
     this.shakeAmount = Math.min(1.6, this.shakeAmount + amount);
   }
@@ -596,7 +686,7 @@ export class Game {
       this.effects.update(dt);
       this.menuCamera(dt);
       this.hud.update(this);
-      this.renderer.render(this.scene, this.camera);
+      this.present();
       return;
     }
     for (const a of this.actors) {
@@ -607,7 +697,7 @@ export class Game {
 
     // Viewmodel
     const weapon = player.weapon();
-    this.viewmodel.setWeapon(player.weaponState() ? player.weaponState().id : 'knife', weapon.type);
+    this.viewmodel.setWeapon(player.weaponState() ? player.weaponState().id : 'knife');
     if (player.alive && player.lastShot > this._lastShotSeen) {
       this._lastShotSeen = player.lastShot;
       this.viewmodel.fireKick(weapon);
@@ -623,7 +713,22 @@ export class Game {
 
     this.hud.update(this);
     this.radar.draw(this);
+    this.present();
+  }
+
+  // Ayara göre post-processing ile veya doğrudan çizer.
+  present() {
+    if (this.settings.postfx !== false && this.composer) {
+      this.composer.render();
+      return;
+    }
     this.renderer.render(this.scene, this.camera);
+    if (this.viewmodel && this.viewmodel.root.visible) {
+      this.renderer.autoClear = false;
+      this.renderer.clearDepth();
+      this.renderer.render(this.viewmodel.scene, this.viewmodel.camera);
+      this.renderer.autoClear = true;
+    }
   }
 
   frame(rawDt) {
@@ -632,16 +737,37 @@ export class Game {
     if (!this.paused) {
       this.accumulator += dt;
       let steps = 0;
-      while (this.accumulator >= FIXED_DT && steps < 6) {
+      while (this.accumulator >= FIXED_DT && steps < 8) {
         this.step(FIXED_DT);
         this.accumulator -= FIXED_DT;
         steps++;
       }
-      if (steps === 6) this.accumulator = 0;
+      if (steps === 8) this.accumulator = 0;
     }
     this.render(dt);
     this.input.endFrame();
   }
+}
+
+// Dikey gradyanlı gökyüzü dokusu (küre iç yüzeyine sarılır)
+function gradientSkyTexture() {
+  const c = document.createElement('canvas');
+  c.width = 16;
+  c.height = 256;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0.0, '#2f6fb5');
+  g.addColorStop(0.35, '#79a9d8');
+  g.addColorStop(0.55, '#bcd2e4');
+  g.addColorStop(0.72, '#e2dcc8');
+  g.addColorStop(1.0, '#cbb894');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 16, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
 }
 
 export { STATE };

@@ -70,6 +70,18 @@ export class Combat {
     });
     game.notifyNoise(shooter, origin, weapon.silenced ? 22 : 45);
 
+    // Boş kovan (tabanca/tüfek)
+    if (weapon.type !== 'knife' && weapon.type !== 'grenade') {
+      const right = new THREE.Vector3(Math.cos(shooter.yaw), 0, -Math.sin(shooter.yaw));
+      const up = new THREE.Vector3(0, 1, 0);
+      const ejectPos = new THREE.Vector3(
+        origin.x + right.x * 0.16 + dir.x * 0.25,
+        origin.y - 0.12,
+        origin.z + right.z * 0.16 + dir.z * 0.25,
+      );
+      game.effects.shell(ejectPos, right, up);
+    }
+
     if (shooter !== game.player) {
       const fwd = shooter.forwardVector(new THREE.Vector3());
       const muzzle = new THREE.Vector3(
@@ -193,7 +205,9 @@ export class Combat {
       const len = Math.hypot(dx, dy, dz);
       if (len < 0.01) return true;
       const hit = raycastBoxes(eye.x, eye.y, eye.z, dx / len, dy / len, dz / len, len - 0.05, this.game.world.colliders);
-      if (!hit) return true;
+      if (hit) continue;
+      if (this.game.grenades && this.game.grenades.blocksVision(eye.x, eye.y, eye.z, p.x, p.y, p.z)) continue;
+      return true;
     }
     return false;
   }

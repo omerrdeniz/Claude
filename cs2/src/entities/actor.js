@@ -1,7 +1,7 @@
 // Oyuncu ve botların ortak tabanı: CS tarzı hareket fiziği, envanter, ateş durumu ve hitbox'lar.
 
 import * as THREE from 'three';
-import { PHYS, HITBOX, COLORS } from '../config.js';
+import { PHYS, HITBOX } from '../config.js';
 import { WEAPONS, cycleTime } from '../weapons.js';
 import { clamp, damp, DEG } from '../core/math.js';
 
@@ -46,6 +46,7 @@ export class Actor {
     this.damageDealt = 0;
 
     this.inventory = { primary: null, secondary: null, melee: { id: 'knife' }, grenade: null };
+    this.grenadeBag = [];      // taşınan el bombası kimlikleri (en fazla 3)
     this.slot = 'melee';
     this.nextFire = 0;
     this.reloading = false;
@@ -67,6 +68,8 @@ export class Actor {
     this.lastAttacker = null;
     this.lastDamageTime = -99;
     this.blindUntil = 0;
+    this.blindStrength = 0;
+    this.nextBurnTick = 0;
 
     this.cmd = emptyCommand();
     this.model = null;
@@ -97,7 +100,25 @@ export class Actor {
   }
 
   hasWeapon(id) {
+    if (this.grenadeBag.includes(id)) return true;
     return Object.values(this.inventory).some((w) => w && w.id === id);
+  }
+
+  // El bombası çantasına ekler (aynı türden bir tane, toplam üç tane).
+  giveGrenade(id) {
+    if (this.grenadeBag.length >= 3 || this.grenadeBag.includes(id)) return false;
+    this.grenadeBag.push(id);
+    if (!this.inventory.grenade) this.inventory.grenade = { id, ammo: 1, reserve: 0 };
+    return true;
+  }
+
+  // Çantadaki bir sonraki el bombasına geçer.
+  cycleGrenade() {
+    if (this.grenadeBag.length === 0) return false;
+    const cur = this.inventory.grenade ? this.grenadeBag.indexOf(this.inventory.grenade.id) : -1;
+    const next = this.grenadeBag[(cur + 1) % this.grenadeBag.length];
+    this.inventory.grenade = { id: next, ammo: 1, reserve: 0 };
+    return true;
   }
 
   switchSlot(slot, time) {
@@ -127,6 +148,7 @@ export class Actor {
     this.inventory.primary = null;
     this.inventory.secondary = null;
     this.inventory.grenade = null;
+    this.grenadeBag.length = 0;
     this.slot = 'melee';
   }
 
@@ -568,9 +590,15 @@ export class Actor {
     this.lastShot = time;
 
     if (w.type === 'grenade') {
-      game.grenades.throwFrom(this);
-      this.inventory.grenade = null;
-      this.nextSlot(time, -1);
+      const id = this.inventory.grenade ? this.inventory.grenade.id : 'he';
+      game.grenades.throwFrom(this, id);
+      const at = this.grenadeBag.indexOf(id);
+      if (at >= 0) this.grenadeBag.splice(at, 1);
+      this.inventory.grenade = this.grenadeBag.length
+        ? { id: this.grenadeBag[0], ammo: 1, reserve: 0 }
+        : null;
+      if (!this.inventory.grenade) this.nextSlot(time, -1);
+      else this.deployEnd = time + 0.5;
       return;
     }
 
@@ -618,73 +646,5 @@ export class Actor {
   }
 }
 
-// --- Basit kutu tabanlı karakter modeli --------------------------------
-export function createActorModel(team) {
-  const group = new THREE.Group();
-  const main = team === 'CT' ? COLORS.ct : COLORS.t;
-  const dark = team === 'CT' ? COLORS.ctDark : COLORS.tDark;
-  const bodyMat = new THREE.MeshLambertMaterial({ color: main });
-  const darkMat = new THREE.MeshLambertMaterial({ color: dark });
-  const headMat = new THREE.MeshLambertMaterial({ color: team === 'CT' ? 0x2c3440 : 0x6b4a2a });
-  const gunMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2c });
-
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.62, 0.34), bodyMat);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), headMat);
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.85, 0.24), darkMat);
-  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.85, 0.24), darkMat);
-  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.5, 0.16), bodyMat);
-  const armR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.5, 0.16), bodyMat);
-  const gun = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.72), gunMat);
-
-  for (const m of [torso, head, legL, legR, armL, armR, gun]) {
-    m.castShadow = true;
-    m.receiveShadow = false;
-    group.add(m);
-  }
-  group.userData = { torso, head, legL, legR, armL, armR, gun };
-  return group;
-}
-
-export function updateActorModel(actor, dt) {
-  const g = actor.model;
-  if (!g) return;
-  const p = g.userData;
-  const h = actor.height;
-  const legLen = Math.max(0.35, h - 0.95);
-
-  g.position.set(actor.pos.x, actor.pos.y, actor.pos.z);
-  if (!actor.alive) {
-    // Basit ölüm animasyonu: yere devril
-    g.rotation.x = damp(g.rotation.x, -Math.PI / 2, 6, dt);
-    g.position.y = actor.pos.y + 0.2 * (1 + g.rotation.x / (Math.PI / 2));
-    return;
-  }
-  g.rotation.set(0, actor.yaw, 0);
-
-  p.legL.scale.y = legLen / 0.85;
-  p.legR.scale.y = legLen / 0.85;
-  const speed = Math.hypot(actor.vel.x, actor.vel.z);
-  const swing = Math.sin(actor.walkPhase * 2) * Math.min(0.45, speed * 0.09);
-  p.legL.position.set(-0.13, legLen / 2, swing * 0.35);
-  p.legR.position.set(0.13, legLen / 2, -swing * 0.35);
-  p.legL.rotation.x = swing;
-  p.legR.rotation.x = -swing;
-
-  const torsoY = legLen + 0.31;
-  p.torso.position.set(0, torsoY, 0);
-  p.head.position.set(0, torsoY + 0.45, 0);
-  p.head.rotation.x = -actor.pitch * 0.6;
-
-  const armY = torsoY + 0.12;
-  p.armL.position.set(-0.32, armY - 0.05, -0.12);
-  p.armR.position.set(0.32, armY - 0.05, -0.12);
-  p.armL.rotation.x = -0.9 - actor.pitch * 0.5;
-  p.armR.rotation.x = -0.9 - actor.pitch * 0.5;
-
-  const w = actor.weapon();
-  p.gun.visible = w.type !== 'knife';
-  p.gun.position.set(0.16, armY - 0.18, -0.42);
-  p.gun.rotation.x = -actor.pitch;
-  const scale = w.type === 'pistol' ? 0.5 : (w.type === 'sniper' ? 1.25 : 1);
-  p.gun.scale.set(1, 1, scale);
-}
+// Karakter modeli ve animasyonu character.js'te üretilir.
+export { createCharacter as createActorModel, updateCharacter as updateActorModel } from './character.js';

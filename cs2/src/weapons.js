@@ -157,12 +157,38 @@ export const WEAPONS = {
     pattern: makePattern('heavy', 10),
   }),
   he: weapon({
-    id: 'he', name: 'HE Bombası', type: 'grenade', slot: 'grenade', price: 300,
+    id: 'he', name: 'HE Bombası', type: 'grenade', kind: 'he', slot: 'grenade', price: 300,
     damage: 98, radius: 7.0, fuse: 1.7, auto: false, mag: 1, reserve: 0,
     speedMul: 1.0, killReward: 300, deployTime: 0.6,
     spread: { stand: 0, move: 0, air: 0, crouchMul: 1, bloom: 0, bloomMax: 0 },
   }),
+  flash: weapon({
+    id: 'flash', name: 'Flaş Bombası', type: 'grenade', kind: 'flash', slot: 'grenade', price: 200,
+    damage: 0, radius: 14, fuse: 1.6, auto: false, mag: 1, reserve: 0,
+    blindMax: 4.2, speedMul: 1.0, killReward: 300, deployTime: 0.6,
+    spread: { stand: 0, move: 0, air: 0, crouchMul: 1, bloom: 0, bloomMax: 0 },
+  }),
+  smoke: weapon({
+    id: 'smoke', name: 'Sis Bombası', type: 'grenade', kind: 'smoke', slot: 'grenade', price: 300,
+    damage: 0, radius: 4.6, fuse: 1.9, duration: 16, auto: false, mag: 1, reserve: 0,
+    speedMul: 1.0, killReward: 300, deployTime: 0.6,
+    spread: { stand: 0, move: 0, air: 0, crouchMul: 1, bloom: 0, bloomMax: 0 },
+  }),
+  molotov: weapon({
+    id: 'molotov', name: 'Molotof', type: 'grenade', kind: 'fire', slot: 'grenade', price: 400,
+    damage: 0, radius: 2.9, duration: 7, dps: 33, fuse: 0, impact: true, auto: false,
+    mag: 1, reserve: 0, speedMul: 1.0, killReward: 300, deployTime: 0.6, team: 'T',
+    spread: { stand: 0, move: 0, air: 0, crouchMul: 1, bloom: 0, bloomMax: 0 },
+  }),
+  incendiary: weapon({
+    id: 'incendiary', name: 'Yangın Bombası', type: 'grenade', kind: 'fire', slot: 'grenade', price: 600,
+    damage: 0, radius: 2.9, duration: 7, dps: 33, fuse: 0, impact: true, auto: false,
+    mag: 1, reserve: 0, speedMul: 1.0, killReward: 300, deployTime: 0.6, team: 'CT',
+    spread: { stand: 0, move: 0, air: 0, crouchMul: 1, bloom: 0, bloomMax: 0 },
+  }),
 };
+
+export const MAX_GRENADES = 3;
 
 export const KEVLAR_PRICE = 650;
 export const HELMET_PRICE = 1000;
@@ -182,7 +208,11 @@ export const BUY_MENU = [
   { key: '7', kind: 'weapon', id: 'awp' },
   { key: '8', kind: 'armor' },
   { key: '9', kind: 'helmet' },
-  { key: '0', kind: 'grenade', id: 'he' },
+  { key: 'g', kind: 'grenade', id: 'he' },
+  { key: 'f', kind: 'grenade', id: 'flash' },
+  { key: 's', kind: 'grenade', id: 'smoke' },
+  { key: 'm', kind: 'grenade', id: 'molotov', team: 'T' },
+  { key: 'm', kind: 'grenade', id: 'incendiary', team: 'CT' },
   { key: 'k', kind: 'kit', team: 'CT' },
 ];
 

@@ -15,7 +15,8 @@ export class Radar {
     this.scale = Math.min(canvas.width / w, canvas.height / h);
     this.offX = (canvas.width - w * this.scale) / 2;
     this.offZ = (canvas.height - h * this.scale) / 2;
-    this.walls = world.colliders.filter((c) => !c.ground && c.maxY > 0.6);
+    this.walls = world.colliders.filter((c) => !c.ground && c.maxY >= 3.5);
+    this.props = world.colliders.filter((c) => !c.ground && c.maxY < 3.5 && c.maxY > 0.5);
   }
 
   px(x) { return this.offX + (x - this.minX) * this.scale; }
@@ -32,8 +33,15 @@ export class Radar {
       (this.maxX - this.minX) * this.scale, (this.maxZ - this.minZ) * this.scale);
 
     // Duvarlar
-    ctx.fillStyle = 'rgba(120, 128, 140, 0.75)';
+    ctx.fillStyle = 'rgba(126, 134, 146, 0.85)';
     for (const w of this.walls) {
+      ctx.fillRect(this.px(w.minX), this.pz(w.minZ),
+        Math.max(1, (w.maxX - w.minX) * this.scale),
+        Math.max(1, (w.maxZ - w.minZ) * this.scale));
+    }
+    // Kapaklar / kasalar
+    ctx.fillStyle = 'rgba(96, 104, 116, 0.55)';
+    for (const w of this.props) {
       ctx.fillRect(this.px(w.minX), this.pz(w.minZ),
         Math.max(1, (w.maxX - w.minX) * this.scale),
         Math.max(1, (w.maxZ - w.minZ) * this.scale));

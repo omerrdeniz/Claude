@@ -94,6 +94,19 @@ export class Effects {
     scene.add(this.flashLight);
     this.flashLightLife = 0;
 
+    // Kovanlar
+    this.shells = [];
+    const shellGeo = new THREE.BoxGeometry(0.012, 0.012, 0.032);
+    const shellMat = new THREE.MeshStandardMaterial({ color: 0xc59a3c, roughness: 0.35, metalness: 0.95 });
+    for (let i = 0; i < 24; i++) {
+      const mesh = new THREE.Mesh(shellGeo, shellMat);
+      mesh.visible = false;
+      mesh.castShadow = true;
+      scene.add(mesh);
+      this.shells.push({ mesh, life: 0, vel: new THREE.Vector3(), spin: new THREE.Vector3() });
+    }
+    this.shellIndex = 0;
+
     // Patlama
     this.explosions = [];
     const sphereGeo = new THREE.SphereGeometry(1, 12, 8);
@@ -159,6 +172,21 @@ export class Effects {
     }
   }
 
+  // Boş kovan fırlat
+  shell(pos, right, up) {
+    const s = this.shells[this.shellIndex];
+    this.shellIndex = (this.shellIndex + 1) % this.shells.length;
+    s.mesh.position.copy(pos);
+    s.mesh.visible = true;
+    s.vel.set(
+      right.x * (1.8 + Math.random()) + up.x * 1.2,
+      right.y * (1.8 + Math.random()) + up.y * 1.2 + 1.4,
+      right.z * (1.8 + Math.random()) + up.z * 1.2,
+    );
+    s.spin.set(Math.random() * 18, Math.random() * 18, Math.random() * 18);
+    s.life = 2.2;
+  }
+
   impact(point, normal, mat) {
     this.decal(point, normal);
     const color = mat === 'metal' ? 0xffd9a0 : (mat === 'wood' ? 0xb08040 : 0xcfcabc);
@@ -182,15 +210,33 @@ export class Effects {
     this.flashLightLife = 0.06;
   }
 
+  // Flaş bombası: çok parlak kısa süreli küre
+  flashBurst(pos) {
+    const e = this.explosions[this.explosionIndex];
+    this.explosionIndex = (this.explosionIndex + 1) % this.explosions.length;
+    e.mesh.position.copy(pos);
+    e.mesh.scale.setScalar(0.4);
+    e.mesh.visible = true;
+    e.mat.color.setHex(0xffffff);
+    e.mat.opacity = 1;
+    e.life = 0.3;
+    this.flashLight.position.copy(pos);
+    this.flashLight.color.setHex(0xffffff);
+    this.flashLight.intensity = 60;
+    this.flashLightLife = 0.35;
+  }
+
   explosion(pos) {
     const e = this.explosions[this.explosionIndex];
     this.explosionIndex = (this.explosionIndex + 1) % this.explosions.length;
     e.mesh.position.copy(pos);
     e.mesh.scale.setScalar(0.6);
     e.mesh.visible = true;
+    e.mat.color.setHex(0xffa040);
     e.mat.opacity = 0.95;
     e.life = 0.45;
     this.flashLight.position.copy(pos);
+    this.flashLight.color.setHex(0xffcc77);
     this.flashLight.intensity = 30;
     this.flashLightLife = 0.25;
     this.burst(pos, new THREE.Vector3(0, 1, 0), 0x555555, 14, 7, 0.5);
@@ -228,6 +274,21 @@ export class Effects {
       this.flashLightLife -= dt;
       this.flashLight.intensity *= Math.max(0, 1 - dt * 12);
       if (this.flashLightLife <= 0) this.flashLight.intensity = 0;
+    }
+    for (const s of this.shells) {
+      if (s.life <= 0) continue;
+      s.life -= dt;
+      s.vel.y -= 12 * dt;
+      s.mesh.position.addScaledVector(s.vel, dt);
+      s.mesh.rotation.x += s.spin.x * dt;
+      s.mesh.rotation.y += s.spin.y * dt;
+      s.mesh.rotation.z += s.spin.z * dt;
+      if (s.mesh.position.y < 0.012) {
+        s.mesh.position.y = 0.012;
+        s.vel.set(s.vel.x * 0.4, -s.vel.y * 0.25, s.vel.z * 0.4);
+        s.spin.multiplyScalar(0.4);
+      }
+      if (s.life <= 0) s.mesh.visible = false;
     }
     for (const e of this.explosions) {
       if (e.life <= 0) continue;
