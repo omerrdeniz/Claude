@@ -20205,7 +20205,8 @@ _.d=a
 _.e=1
 _.f=0
 _.r=b
-_.x=_.w=!0
+_.w=!0
+_.x=!1
 _.c=_.a=null},
 a6l:function a6l(a,b){this.a=a
 this.b=b},
@@ -63247,7 +63248,7 @@ return A.T($async$q4,r)},
 U(a){var s,r,q,p,o,n,m,l,k,j,i,h,g,f=this,e=null,d=A.a4(a).ok.e
 d=A.c_("Piano Flow",d==null?e:d.a1q(B.b7,1.2),e)
 s=t.E
-r=A.iB(A.c([B.A8,B.vv,A.c_("bcec122",A.fQ(e,e,B.a7.bz(0.5),e,e,e,e,e,e,e,e,11,e,e,e,e,e,!0,e,e,e,e,e,e,e,e),e)],s),B.ah,B.ar,B.aa)
+r=A.iB(A.c([B.A8,B.vv,A.c_("0bc54e5",A.fQ(e,e,B.a7.bz(0.5),e,e,e,e,e,e,e,e,11,e,e,e,e,e,!0,e,e,e,e,e,e,e,e),e)],s),B.ah,B.ar,B.aa)
 q=f.d
 p=A.alJ(q)
 o=f.e
@@ -63257,7 +63258,7 @@ l=A.apT(m)
 k=f.w
 j=k?"Erken basarsan nota vuru\u015fu bekler":"Nota parma\u011f\u0131n de\u011fdi\u011fi anda \xe7alar"
 i=f.x
-h=i?"Basamad\u0131\u011f\u0131n nota k\u0131s\u0131k \xe7alar \u2014 puan\u0131n yine ka\xe7t\u0131 der":"Basamad\u0131\u011f\u0131n nota hi\xe7 \xe7almaz, par\xe7ada bo\u015fluk kal\u0131r"
+h=i?"Basmad\u0131\u011f\u0131n her nota k\u0131s\u0131k \xe7alar \u2014 hi\xe7 basmazsan \u015fark\u0131 kendi \xe7alar":"Yaln\u0131z senin bast\u0131\u011f\u0131n notalar duyulur"
 s=A.c([d,B.HW,r,B.iB,new A.i2(B.Bu,q,new A.a6r(),p,new A.a6s(f),e,t.kM),B.iA,new A.i2(B.BE,o,new A.a6t(),n,new A.a6u(f),e,t.TU),B.iA,new A.i2(B.Bg,m,new A.a6v(),"Tolerans \u2014 "+l.toLowerCase(),new A.a6w(f),e,t.u6),B.f_,new A.uH("Notalar tam zaman\u0131nda \xe7als\u0131n",j,k,new A.a6x(f),e),B.f_,new A.uH("Ka\xe7\u0131rd\u0131klar\u0131m da duyulsun",h,i,new A.a6y(f),e),B.f_,new A.Bv(f.f,f.gZ_(),10,f.gWu(),e),B.iB],s)
 for(d=$.aiR(),r=d.length,g=0;g<r;++g)s.push(new A.Ed(d[g],f.d,f.e,f.r,f.w,f.x,f.f,e))
 s.push(B.f0)
