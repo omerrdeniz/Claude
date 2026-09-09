@@ -84,18 +84,6 @@ class Song {
     return out;
   }
 
-  Song copyWith({String? id, String? title, double? bpm, List<Note>? notes}) {
-    return Song(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      composer: composer,
-      bpm: bpm ?? this.bpm,
-      beatsPerBar: beatsPerBar,
-      source: source,
-      notes: notes ?? this.notes,
-    );
-  }
-
   @override
   String toString() =>
       'Song($title, ${notes.length} notes, ${lengthInBeats.toStringAsFixed(1)} beats @ $bpm bpm)';

@@ -111,22 +111,6 @@ List<Note> seq(
   return notes;
 }
 
-/// Repeat a phrase [times], each copy [spanBeats] later.
-List<Note> repeatPhrase(List<Note> notes, int times, double spanBeats) {
-  return [
-    for (var i = 0; i < times; i++)
-      for (final n in notes) n.copyWith(beat: _round(n.beat + i * spanBeats)),
-  ];
-}
-
-/// Move a phrase in time.
-List<Note> shift(List<Note> notes, double beats) =>
-    [for (final n in notes) n.copyWith(beat: _round(n.beat + beats))];
-
-/// Move a phrase in pitch.
-List<Note> transpose(List<Note> notes, int semitones) =>
-    [for (final n in notes) n.copyWith(midi: n.midi + semitones)];
-
 /// Beats are written as simple fractions; rounding here keeps float drift from
 /// splitting what should be a single chord onset into several.
 double _round(double x) => (x * 1e6).roundToDouble() / 1e6;

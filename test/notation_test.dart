@@ -93,22 +93,4 @@ void main() {
       expect(() => seq('C4:1*0'), throwsFormatException);
     });
   });
-
-  group('transforms', () {
-    final phrase = seq('C4:1 D4:1');
-
-    test('repeatPhrase lays copies end to end', () {
-      expect(repeatPhrase(phrase, 3, 2).map((n) => n.beat),
-          [0, 1, 2, 3, 4, 5]);
-    });
-
-    test('shift moves a phrase in time', () {
-      expect(shift(phrase, 4).map((n) => n.beat), [4, 5]);
-    });
-
-    test('transpose moves a phrase in pitch', () {
-      expect(transpose(phrase, 12).map((n) => n.midi), [72, 74]);
-      expect(transpose(phrase, -12).map((n) => n.midi), [48, 50]);
-    });
-  });
 }

@@ -264,7 +264,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 258 test geçiyor
+flutter test        # 247 test geçiyor
 ```
 
 ## Cihazsız doğrulama
