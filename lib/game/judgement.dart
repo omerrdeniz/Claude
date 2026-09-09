@@ -52,6 +52,13 @@ class Judge {
   /// Used to shape the sound, so a tight performance also sounds firmer.
   double quality(double errorMs) =>
       (1 - errorMs.abs() / goodMs).clamp(0.0, 1.0);
+
+  /// The same judge with every window tightened by [factor].
+  Judge tightened(double factor) => Judge(
+        perfectMs: perfectMs * factor,
+        greatMs: greatMs * factor,
+        goodMs: goodMs * factor,
+      );
 }
 
 /// Running score for one performance.

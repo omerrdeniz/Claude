@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../audio/piano_audio.dart';
 import '../game/chart.dart';
+import '../game/judgement.dart';
 import '../game/play_session.dart';
 import '../music/song.dart';
 import '../render/stage_painter.dart';
@@ -66,6 +67,11 @@ class _PlayScreenState extends State<PlayScreen>
       chart: Chart.build(widget.song,
           beamCount: _beamCount, difficulty: widget.difficulty),
       audio: _audio,
+      // The hard level is the same notes judged more tightly; everything else
+      // about it is identical, so this is the only place it differs.
+      judge: widget.difficulty == Difficulty.hard
+          ? const Judge().tightened(0.6)
+          : const Judge(),
       approachSeconds: widget.approachSeconds,
       speed: widget.speed,
     )..onMiss = (_) => setState(() {});

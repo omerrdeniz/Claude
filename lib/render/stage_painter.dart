@@ -107,13 +107,22 @@ class StagePainter extends CustomPainter {
     final visible = chart.visibleAt(beat, windowInBeats).toList()
       ..sort((a, b) => b.beat.compareTo(a.beat));
 
+    // Notes struck together, grouped so the band behind them can be drawn
+    // before any of them.
+    final moments = <double, List<Tap>>{};
     for (final tap in visible) {
+      final key = (tap.beat * 1000).roundToDouble();
+      (moments[key] ??= []).add(tap);
+    }
+
+    for (final entry in moments.entries) {
+      final group = entry.value;
+      final tap = group.first;
       final progress =
           StageGeometry.progressFor(tap.beat - beat, windowInBeats);
       if (progress < -0.05) continue;
 
-      final colour = AppTheme.colorAcross(tap.across);
-      final centre = g.positionAtPosition(tap.across, progress);
+      final colour = AppTheme.chordColor(tap.fingers);
       final radius = g.noteRadiusAt(progress);
 
       // Distant notes are dimmer; ones past the line drop away quickly, so
@@ -123,77 +132,123 @@ class StagePainter extends CustomPainter {
           : (0.35 + progress * 0.65).clamp(0.0, 1.0);
       if (fade <= 0.01) continue;
 
-      if (tap.isHold) _paintHoldTail(canvas, g, tap, progress, colour, fade);
+      if (group.length > 1) _paintChordBand(canvas, g, group, progress, colour, fade);
 
-      // The halo is a gradient, not a blur, for the same reason as the line.
-      canvas.drawCircle(
-        centre,
-        radius * 2.0,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              colour.withValues(alpha: 0.42 * fade),
-              colour.withValues(alpha: 0.16 * fade),
-              colour.withValues(alpha: 0.0),
-            ],
-            stops: const [0.35, 0.6, 1.0],
-          ).createShader(Rect.fromCircle(center: centre, radius: radius * 2.0)),
-      );
-
-      canvas.drawCircle(
-        centre,
-        radius,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              Color.lerp(Colors.white, colour, 0.15)!.withValues(alpha: fade),
-              colour.withValues(alpha: fade),
-              colour.withValues(alpha: 0.75 * fade),
-            ],
-            stops: const [0.0, 0.55, 1.0],
-          ).createShader(Rect.fromCircle(center: centre, radius: radius)),
-      );
-
-      // A bright rim reads as a hard edge at any size.
-      canvas.drawCircle(
-        centre,
-        radius,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.4
-          ..color = Colors.white.withValues(alpha: 0.55 * fade),
-      );
-
-      // A chord carries more than one note, so it is drawn heavier.
-      if (tap.notes.length > 1) {
-        canvas.drawCircle(
-          centre,
-          radius * 0.45,
-          Paint()..color = Colors.white.withValues(alpha: 0.85 * fade),
-        );
+      for (final member in group) {
+        if (member.isHold) {
+          _paintHoldTail(canvas, g, member, progress, colour, fade);
+        }
+        _paintNote(canvas, g, member, progress, radius, colour, fade);
       }
     }
   }
 
-  /// A held note trails behind itself, as long as the note lasts.
+  /// The band tying a chord's notes together.
+  ///
+  /// Without it three dots in a row are three separate notes to the eye, and
+  /// the player answers them one at a time. The band says: these are one
+  /// gesture, put three fingers down at once.
+  void _paintChordBand(Canvas canvas, StageGeometry g, List<Tap> group,
+      double progress, Color colour, double fade) {
+    var lowest = 1.0;
+    var highest = 0.0;
+    for (final tap in group) {
+      if (tap.across < lowest) lowest = tap.across;
+      if (tap.across > highest) highest = tap.across;
+    }
+
+    final left = g.positionAtPosition(lowest, progress);
+    final right = g.positionAtPosition(highest, progress);
+    final thickness = g.noteRadiusAt(progress) * 1.35;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(left.dx, left.dy - thickness / 2, right.dx,
+            right.dy + thickness / 2),
+        Radius.circular(thickness / 2),
+      ),
+      Paint()
+        ..shader = ui.Gradient.linear(left, right, [
+          colour.withValues(alpha: 0.30 * fade),
+          colour.withValues(alpha: 0.46 * fade),
+          colour.withValues(alpha: 0.30 * fade),
+        ], const [0.0, 0.5, 1.0]),
+    );
+  }
+
+  void _paintNote(Canvas canvas, StageGeometry g, Tap tap, double progress,
+      double radius, Color colour, double fade) {
+    final centre = g.positionAtPosition(tap.across, progress);
+
+    // The halo is a gradient, not a blur: a blur filter here costs more per
+    // frame than everything else on screen put together.
+    canvas.drawCircle(
+      centre,
+      radius * 2.0,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            colour.withValues(alpha: 0.42 * fade),
+            colour.withValues(alpha: 0.16 * fade),
+            colour.withValues(alpha: 0.0),
+          ],
+          stops: const [0.35, 0.6, 1.0],
+        ).createShader(Rect.fromCircle(center: centre, radius: radius * 2.0)),
+    );
+
+    canvas.drawCircle(
+      centre,
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Color.lerp(Colors.white, colour, 0.15)!.withValues(alpha: fade),
+            colour.withValues(alpha: fade),
+            colour.withValues(alpha: 0.75 * fade),
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Rect.fromCircle(center: centre, radius: radius)),
+    );
+
+    // A bright rim reads as a hard edge at any size.
+    canvas.drawCircle(
+      centre,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..color = Colors.white.withValues(alpha: 0.55 * fade),
+    );
+  }
+
+  /// A held note trails behind itself.
+  ///
+  /// The trail is capped rather than drawn to the note's full length: a long
+  /// note can last most of the look-ahead window, and a bar running the height
+  /// of the screen reads as a rendering fault rather than a long note.
   void _paintHoldTail(Canvas canvas, StageGeometry g, Tap tap, double progress,
       Color colour, double fade) {
-    final tailProgress = StageGeometry.progressFor(
-        tap.beat + tap.duration - beat, windowInBeats);
-    if (tailProgress >= progress) return;
+    const maxTrail = 0.28; // of the way back up the screen
+    final tailProgress = math.max(
+      progress - maxTrail,
+      StageGeometry.progressFor(tap.beat + tap.duration - beat, windowInBeats),
+    );
+    if (tailProgress >= progress - 0.01) return;
 
-    final head = g.positionAt(tap.beam, progress);
-    final tail = g.positionAt(tap.beam, math.max(tailProgress, -0.2));
+    final head = g.positionAtPosition(tap.across, progress);
+    final tail =
+        g.positionAtPosition(tap.across, math.max(tailProgress, -0.2));
+    final width = g.noteRadiusAt(progress) * 0.5;
 
-    canvas.drawLine(
-      tail,
-      head,
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(head.dx - width, tail.dy, head.dx + width, head.dy),
+        Radius.circular(width),
+      ),
       Paint()
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = g.noteRadiusAt(progress) * 1.1
         ..shader = ui.Gradient.linear(tail, head, [
-          colour.withValues(alpha: 0.05 * fade),
-          colour.withValues(alpha: 0.45 * fade),
+          colour.withValues(alpha: 0.0),
+          colour.withValues(alpha: 0.35 * fade),
         ]),
     );
   }

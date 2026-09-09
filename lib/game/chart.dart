@@ -12,12 +12,13 @@ enum Difficulty {
   /// answer, and a chord arrives under a single finger. For a first go.
   easy,
 
-  /// Melody, with the harmony that falls on the same moments folded in. The
-  /// rhythm is unchanged — the same taps as easy — but chords now need several
-  /// fingers at once.
+  /// The whole piece, chords under several fingers. Nothing plays itself:
+  /// a note the player did not ask to be spared is a note taken away from
+  /// them.
   normal,
 
-  /// Everything. The accompaniment is the player's too, nothing plays itself.
+  /// The whole piece, judged tightly. The notes are the same as normal; what
+  /// changes is how close to the beat a tap has to land.
   hard,
 }
 
@@ -30,8 +31,8 @@ extension DifficultyLabel on Difficulty {
 
   String get description => switch (this) {
         Difficulty.easy => 'Tek parmak, sade ezgi',
-        Difficulty.normal => 'Akorlar çok parmakla',
-        Difficulty.hard => 'Her nota senden',
+        Difficulty.normal => 'Her nota senden, akorlar çok parmakla',
+        Difficulty.hard => 'Aynı notalar, dar zamanlama',
       };
 }
 
@@ -59,6 +60,11 @@ class Tap {
   /// at the highest. Continuous, so neighbouring pitches sit side by side
   /// instead of snapping into columns.
   final double across;
+
+  /// How many fingers the moment this tap belongs to needs, counting every
+  /// tap struck with it. Drives the colour, so the hand knows what is coming
+  /// before it gets there.
+  int fingers = 1;
 
   /// The longest note in the tap — how long the beam should stay lit.
   double get duration =>
@@ -182,7 +188,19 @@ class Chart {
     }
     taps.sort((a, b) => a.beat != b.beat
         ? a.beat.compareTo(b.beat)
-        : a.beam.compareTo(b.beam));
+        : a.across.compareTo(b.across));
+
+    // Tell every tap how many fingers its moment needs.
+    for (var i = 0; i < taps.length;) {
+      var end = i;
+      while (end < taps.length && (taps[end].beat - taps[i].beat).abs() <= 0.03) {
+        end++;
+      }
+      for (var j = i; j < end; j++) {
+        taps[j].fingers = end - i;
+      }
+      i = end;
+    }
 
     return Chart(
       song: song,
@@ -220,23 +238,9 @@ class Chart {
         }
         return (kept, passed);
 
+      case Difficulty.normal:
       case Difficulty.hard:
         return ([...melody, ...accompaniment], const []);
-
-      case Difficulty.normal:
-        // Harmony that lands on a melody onset joins the player's hand. The
-        // rhythm does not change — the same moments, fuller chords — so the
-        // step up from easy is in the fingers, not in the speed.
-        final onsets = melody.map((n) => n.beat).toSet();
-        final joined = <Note>[];
-        final auto = <Note>[];
-        for (final note in accompaniment) {
-          (onsets.any((beat) => (beat - note.beat).abs() <= 0.03)
-                  ? joined
-                  : auto)
-              .add(note);
-        }
-        return ([...melody, ...joined], auto);
     }
   }
 

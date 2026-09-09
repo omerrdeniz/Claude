@@ -104,26 +104,34 @@ void main() {
       expect(chart.autoNotes, hasLength(4), reason: 'all harmony plays itself');
     });
 
-    test('normal folds the harmony under the melody into several fingers', () {
+    test('normal gives the player every note, chords under several fingers', () {
       final chart = Chart.build(withChord, difficulty: Difficulty.normal);
-      // Four notes at one moment, spread across beams: a chord to be pressed.
       final atZero = chart.taps.where((t) => t.beat == 0);
       expect(atZero.length, greaterThan(1),
           reason: 'a chord must need more than one finger');
       expect(atZero.map((t) => t.beam).toSet(), hasLength(atZero.length),
           reason: 'each finger gets its own beam');
-      // The bass note that falls between melody notes still plays itself, so
-      // the rhythm the player taps is unchanged.
-      expect(chart.autoNotes.map((n) => n.midi), [41]);
+      expect(chart.autoNotes, isEmpty,
+          reason: 'nothing should play itself on normal');
     });
 
-    test('hard leaves nothing playing by itself', () {
-      final chart = Chart.build(withChord, difficulty: Difficulty.hard);
-      expect(chart.autoNotes, isEmpty);
-      expect(
-        chart.taps.expand((t) => t.notes).map((n) => n.midi).toSet(),
-        {72, 48, 52, 55, 41},
-      );
+    test('every tap knows how many fingers its moment needs', () {
+      final chart = Chart.build(withChord, difficulty: Difficulty.normal);
+      final atZero = chart.taps.where((t) => t.beat == 0).toList();
+      for (final tap in atZero) {
+        expect(tap.fingers, atZero.length,
+            reason: 'all of a chord must agree on its size');
+      }
+      final alone = chart.taps.firstWhere((t) => t.beat == 2);
+      expect(alone.fingers, 1);
+    });
+
+    test('hard plays the same notes as normal', () {
+      final normal = Chart.build(withChord, difficulty: Difficulty.normal);
+      final hard = Chart.build(withChord, difficulty: Difficulty.hard);
+      expect(hard.autoNotes, isEmpty);
+      expect(hard.taps.length, normal.taps.length,
+          reason: 'hard is the same chart, judged more tightly');
     });
 
     test('a note is never both played and auto-played', () {
@@ -150,12 +158,10 @@ void main() {
             reason: song.title);
       }
 
-      // In a song whose harmony moves between the melody notes, hard is a real
-      // step up. Where the harmony only ever lands with the melody — as in a
-      // hymn-like setting — normal already hands the player everything, and
-      // that is the right answer rather than a missing level.
+      // Normal already hands over the whole piece, so the step up to hard is
+      // in the judging rather than in the notes.
       expect(played(SongLibrary.preludeInC, Difficulty.hard),
-          greaterThan(played(SongLibrary.preludeInC, Difficulty.normal)));
+          played(SongLibrary.preludeInC, Difficulty.normal));
     });
 
     test('real songs give the player chords to press', () {
@@ -258,11 +264,15 @@ void main() {
   });
 
   test('the accompaniment can be read back for a stretch of the song', () {
-    final chart = Chart.build(songOf([
-      note(0, 40, hand: Hand.left),
-      note(2, 41, hand: Hand.left),
-      note(4, 42, hand: Hand.left),
-    ]));
+    // Easy is the level that still plays part of the song for the player.
+    final chart = Chart.build(
+      songOf([
+        note(0, 40, hand: Hand.left),
+        note(2, 41, hand: Hand.left),
+        note(4, 42, hand: Hand.left),
+      ]),
+      difficulty: Difficulty.easy,
+    );
     expect(chart.accompanimentBetween(0, 3).map((n) => n.midi), [40, 41]);
     expect(chart.accompanimentBetween(3, 10).map((n) => n.midi), [42]);
   });

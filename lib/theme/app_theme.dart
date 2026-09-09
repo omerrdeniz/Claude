@@ -12,38 +12,28 @@ abstract final class AppTheme {
   static const Color textPrimary = Color(0xFFF2F2F7);
   static const Color textMuted = Color(0xFF9A9AB0);
 
-  /// Pitch as colour, lowest to highest.
+  /// How many fingers a moment needs, as colour.
   ///
-  /// The stops climb the colour wheel in one direction — blue through violet
-  /// and magenta to a warm pink — so blending between any two of them stays
-  /// vivid. A ramp that crosses the wheel the other way passes through olive
-  /// on its way from teal to amber, and a note the colour of mud reads as a
-  /// mistake rather than a pitch.
-  static const List<Color> beamColors = [
-    Color(0xFF4C6BFF), // blue
-    Color(0xFF7B5CFF), // violet
-    Color(0xFFA855F7), // purple
-    Color(0xFFD94FB0), // magenta
-    Color(0xFFFF5C8A), // pink
-    Color(0xFFFF8A6B), // coral
+  /// This is the one thing the player has to read ahead of time, and reading
+  /// it from the count of dots is too slow at speed. One colour per chord
+  /// size, shared by every note in that chord, says "one finger" or "three
+  /// fingers" at a glance and before the hand has to be there.
+  static const List<Color> chordColors = [
+    Color(0xFF9B6BFF), // one finger — violet
+    Color(0xFFFFC048), // two — amber
+    Color(0xFF3FA9FF), // three — blue
+    Color(0xFF3DD68C), // four or more — green
   ];
 
-  /// The colour at [across] of the pitch range, 0 lowest and 1 highest.
-  ///
-  /// Blended through HSV rather than RGB: mixing two saturated colours by
-  /// their channels drains the life out of whatever sits between them.
-  static Color colorAcross(double across) {
-    final position = across.clamp(0.0, 1.0) * (beamColors.length - 1);
-    final index = position.floor().clamp(0, beamColors.length - 2);
-    return HSVColor.lerp(
-      HSVColor.fromColor(beamColors[index]),
-      HSVColor.fromColor(beamColors[index + 1]),
-      position - index,
-    )!
-        .toColor();
-  }
+  static Color chordColor(int fingers) =>
+      chordColors[(fingers - 1).clamp(0, chordColors.length - 1)];
 
-  /// The colour of [beam] out of [beamCount].
+  /// Kept for the keyboard's key highlight and other accents.
+  static const List<Color> beamColors = chordColors;
+
+  static Color colorAcross(double across) =>
+      chordColors[(across.clamp(0.0, 1.0) * (chordColors.length - 1)).round()];
+
   static Color beamColor(int beam, [int beamCount = 4]) => colorAcross(
       beamCount <= 1 ? 0.5 : beam.clamp(0, beamCount - 1) / (beamCount - 1));
 

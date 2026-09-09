@@ -17,11 +17,13 @@ const Size phoneLandscape = Size(844, 390);
 ui.Picture paintFrame(Song song, double beat,
     {double window = 4,
     Map<int, double> litBeams = const {},
-    Size size = phone}) {
+    Size size = phone,
+    Difficulty difficulty = Difficulty.normal}) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder, Offset.zero & size);
   StagePainter(
-    chart: Chart.build(song, beamCount: Chart.beamsForWidth(size.width)),
+    chart: Chart.build(song,
+        beamCount: Chart.beamsForWidth(size.width), difficulty: difficulty),
     beat: beat,
     windowInBeats: window,
     litBeams: litBeams,
@@ -33,8 +35,11 @@ ui.Picture paintFrame(Song song, double beat,
 /// looked at. There is no device here to look at it on, so it is rendered to
 /// file the same way the synthesiser is rendered to WAV.
 Future<int> savePng(Song song, double beat, String name,
-    {Map<int, double> litBeams = const {}, Size size = phone}) async {
-  final picture = paintFrame(song, beat, litBeams: litBeams, size: size);
+    {Map<int, double> litBeams = const {},
+    Size size = phone,
+    Difficulty difficulty = Difficulty.normal}) async {
+  final picture = paintFrame(song, beat,
+      litBeams: litBeams, size: size, difficulty: difficulty);
   final image = await picture.toImage(size.width.toInt(), size.height.toInt());
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   final file = File('build/screens/$name.png');
@@ -44,22 +49,17 @@ Future<int> savePng(Song song, double beat, String name,
 }
 
 void main() {
-  test('no two beams share a colour, whatever the layout', () {
-    for (final count in [3, 4, 5, 6]) {
-      final colours = [
-        for (var beam = 0; beam < count; beam++)
-          AppTheme.beamColor(beam, count).toARGB32()
-      ];
-      expect(colours.toSet(), hasLength(count),
-          reason: 'two beams the same colour with $count beams');
-    }
+  test('each chord size has its own colour', () {
+    // Colour says how many fingers a moment needs; two sizes sharing one
+    // colour would make that unreadable.
+    final colours = [for (var n = 1; n <= 4; n++) AppTheme.chordColor(n).toARGB32()];
+    expect(colours.toSet(), hasLength(4));
   });
 
-  test('the outer beams keep the extreme hues at any beam count', () {
-    for (final count in [3, 4, 5, 6]) {
-      expect(AppTheme.beamColor(0, count), AppTheme.beamColors.first);
-      expect(AppTheme.beamColor(count - 1, count), AppTheme.beamColors.last);
-    }
+  test('bigger chords than the palette still get a colour', () {
+    expect(AppTheme.chordColor(9), AppTheme.chordColor(4));
+    expect(AppTheme.chordColor(0), AppTheme.chordColor(1),
+        reason: 'never off the end of the palette');
   });
 
   test('notes stay clear of each other on a short screen', () {
@@ -114,6 +114,11 @@ void main() {
       // A beam still glowing from a hit a moment ago.
       'vurus-ani': await savePng(SongLibrary.odeToJoy, 6.05, 'vurus-ani',
           litBeams: {2: 0.8}),
+      // Chords: colour by finger count, with a band tying each one together.
+      'akorlar': await savePng(SongLibrary.odeToJoy, 5.0, 'akorlar'),
+      'akorlar-yatay': await savePng(
+          SongLibrary.odeToJoy, 5.0, 'akorlar-yatay',
+          size: phoneLandscape),
       // Sideways: more beams, so the hands can divide the keyboard.
       'yatay-ode-to-joy': await savePng(
           SongLibrary.odeToJoy, 6.0, 'yatay-ode-to-joy',
