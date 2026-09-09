@@ -159,7 +159,7 @@ class StagePainter extends CustomPainter {
       final departed = tap.isHold ? tailProgress : progress;
 
       final colour = AppTheme.chordColor(tap.voices);
-      final radius = g.noteRadiusAt(progress);
+      final radius = g.noteRadius;
 
       // Distant notes are dimmer; ones past the line drop away quickly, so
       // the eye is never asked whether a note below the line still counts.
@@ -171,7 +171,7 @@ class StagePainter extends CustomPainter {
       // Every note that sounds at this moment in this hand, wherever its
       // pitch puts it. A chord is drawn as its notes even when one finger
       // takes them all: the picture is of the music, not of the input.
-      final dots = <({double across, double endBeat, bool isHold})>[];
+      var dots = <({double across, double endBeat, bool isHold})>[];
       for (final member in group) {
         for (var i = 0; i < member.notes.length; i++) {
           dots.add((
@@ -181,27 +181,74 @@ class StagePainter extends CustomPainter {
           ));
         }
       }
+      dots = _spreadChord(dots, g, radius, tap.hand);
+
+      // A note being held stops at the line and waits there.
+      //
+      // It used to sail on down with its bar trailing behind, which said the
+      // note was over while the finger was still supposed to be on it. Pinned
+      // to the line, with the bar shortening as its end catches up, the
+      // picture says the one thing that matters while a note is held: how
+      // much longer.
+      double headOf(bool isHold) =>
+          StageGeometry.headProgressFor(progress, isHold: isHold);
 
       if (dots.length > 1) {
-        _paintChordBand(canvas, g, dots, progress, colour, fade);
+        _paintChordBand(canvas, g, dots, headOf(tap.isHold), colour, fade);
       }
 
       for (final dot in dots) {
+        final head = headOf(dot.isHold);
         if (dot.isHold) {
           _paintHoldBar(
             canvas,
             g,
             dot.across,
-            progress,
+            head,
             StageGeometry.progressFor(dot.endBeat - beat, windowInBeats),
             radius,
             colour,
             fade,
           );
         }
-        _paintNote(canvas, g, dot.across, progress, radius, colour, fade);
+        _paintNote(canvas, g, dot.across, head, radius, colour, fade);
       }
     }
+  }
+
+  /// Lays a chord's notes out so they do not overlap. See
+  /// [StageGeometry.spreadChord] for what is and is not moved.
+  List<({double across, double endBeat, bool isHold})> _spreadChord(
+    List<({double across, double endBeat, bool isHold})> dots,
+    StageGeometry g,
+    double radius,
+    Hand hand,
+  ) {
+    if (dots.length < 2 || g.size.width <= 0) return dots;
+
+    final sorted = [...dots]..sort((a, b) => a.across.compareTo(b.across));
+    final (zoneStart, zoneEnd) = chart.separatesHands
+        ? (hand == Hand.left
+            ? (Chart.leftZoneStart, Chart.leftZoneEnd)
+            : (Chart.rightZoneStart, Chart.rightZoneEnd))
+        : (Chart.leftZoneStart, Chart.rightZoneEnd);
+
+    final places = StageGeometry.spreadChord(
+      [for (final dot in sorted) dot.across],
+      // Edge to edge plus a little daylight, in the 0..1 the chart works in.
+      minGap: radius * 2.3 / g.size.width,
+      zoneStart: zoneStart,
+      zoneEnd: zoneEnd,
+    );
+
+    return [
+      for (var i = 0; i < sorted.length; i++)
+        (
+          across: places[i],
+          endBeat: sorted[i].endBeat,
+          isHold: sorted[i].isHold,
+        ),
+    ];
   }
 
   /// The band tying a chord's notes together.
@@ -225,7 +272,7 @@ class StagePainter extends CustomPainter {
 
     final left = g.positionAtPosition(lowest, progress);
     final right = g.positionAtPosition(highest, progress);
-    final thickness = g.noteRadiusAt(progress) * 1.35;
+    final thickness = g.noteRadius * 1.35;
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -249,10 +296,10 @@ class StagePainter extends CustomPainter {
       double fade) {
     if (tailProgress >= progress) return;
 
-    // The bar is exactly as long as the note: it starts at the head and
-    // reaches back the distance the note lasts, and it keeps travelling until
-    // its far end has crossed the line. However long it looks is how long the
-    // finger stays down.
+    // The bar reaches from the head back the distance the note lasts. Once
+    // the head has stopped at the line the bar can only shorten, its far end
+    // sliding down to meet it — so however long it looks is how much of the
+    // note is still to come.
     final head = g.positionAtPosition(across, progress);
     final tail = g.positionAtPosition(across, tailProgress);
     final width = radius * 0.72;

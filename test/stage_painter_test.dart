@@ -65,8 +65,7 @@ void main() {
   test('notes stay clear of each other on a short screen', () {
     const landscape = StageGeometry(size: phoneLandscape);
     // A note must not be so large that consecutive ones overlap vertically.
-    expect(landscape.noteRadiusAt(1.0) * 2,
-        lessThan(phoneLandscape.height * 0.15));
+    expect(landscape.noteRadius * 2, lessThan(phoneLandscape.height * 0.15));
   });
 
   test('the playfield paints in landscape too', () {
@@ -120,7 +119,7 @@ void main() {
   test('no note is drawn off the edge of the screen', () {
     for (final size in [phone, phoneLandscape, const Size(320, 568)]) {
       final g = StageGeometry(size: size);
-      final radius = g.noteRadiusAt(1.0);
+      final radius = g.noteRadius;
       for (final difficulty in Difficulty.values) {
         for (final song in SongLibrary.all) {
           for (final tap in Chart.build(song, difficulty: difficulty).taps) {

@@ -39,8 +39,20 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   - Kolay: tek alan, akor tek parmakla, seyreltme var.
   - Normal: eller ayrı, akor her elde tek parmakla.
   - Zor: eller ayrı, akorun her notası ayrı parmakla.
-- **Basılı tutma** mekaniği var. Tutma çubuğu, tutulması gereken süre kadar
-  uzundur ve kuyruğu çizgiyi geçene kadar ekranda kalır.
+- **Basılı tutma** Guitar Hero gibi: nota vuruş çizgisine gelince **orada
+  durur**, arkasındaki çubuk kuyruğu yetiştikçe kısalır. Eskiden nota çizgiyi
+  geçip aşağı süzülüyordu, bu da parmak hâlâ basılıyken notanın bitmiş
+  olduğunu söylüyordu. `StageGeometry.headProgressFor`.
+- **Nota boyutu sabit.** Eskiden yaklaşırken büyüyüp çizgiyi geçince
+  küçülüyordu; oyuncu sabit olmasını istedi. Uzaklık artık yalnız solgunlukla
+  anlatılıyor — "ne zaman" demeye çalışan bir resimde bir şeyin daha
+  kıpırdaması fazlaydı. `StageGeometry.noteRadius` (artık parametresiz).
+- **Akorun notaları üst üste binmez.** Yer perdeden geliyor, yakın aralıklı
+  bir akor (üçlü, beşli) notaları ekranın yüzde birkaçı içine sıkıştırıyor ve
+  tek bir leke gibi çiziliyordu. `StageGeometry.spreadChord` yalnızca
+  **asgari** aralığı zorluyor: zaten açık duran bir akor (oktav, onlu) perdenin
+  koyduğu yerde kalıyor, sıra hiç değişmiyor, hiçbir nota diğer elin yarısına
+  itilmiyor.
 - **Tolerans bir ayardır.** `TimingTolerance { wide, normal, tight }` —
   çarpanlar 1.8 / 1.0 / 0.6. Erken basışlar kuyruğa alınıp **kendi vuruşunda**
   seslendirilir (quantize anahtarı), geç basışlar hemen çalar.
@@ -252,7 +264,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 248 test geçiyor
+flutter test        # 258 test geçiyor
 ```
 
 ## Cihazsız doğrulama

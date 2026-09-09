@@ -36,22 +36,81 @@ class StageGeometry {
   Offset positionAtPosition(double across, double progress) =>
       Offset(xAtPosition(across), yAt(progress));
 
-  /// Notes swell as they approach, then shrink once past the line so a note
-  /// that has had its moment stops looking like one still waiting.
-  double noteRadiusAt(double progress) {
-    // Bounded by both dimensions: a wide, short screen has room across but not
-    // down, and notes sized only by width would collide as they travel.
-    final maxRadius =
-        (size.width * 0.075).clamp(10.0, 30.0).clamp(10.0, size.height * 0.05);
-    if (progress <= 1) {
-      return lerpDouble(maxRadius * 0.3, maxRadius, progress.clamp(0.0, 1.0))!;
-    }
-    return lerpDouble(maxRadius, maxRadius * 0.5,
-        ((progress - 1) / 0.2).clamp(0.0, 1.0))!;
-  }
+  /// How big a note is drawn. The same wherever it is on its way down.
+  ///
+  /// Notes used to swell as they approached and shrink once past the line.
+  /// It read as depth, but a note changing size while it travels is one more
+  /// thing moving in a picture whose whole job is to say *when* — and the
+  /// player said as much. Distance is carried by fading instead, which the
+  /// eye reads without the shape moving under it.
+  ///
+  /// Bounded by both dimensions: a wide, short screen has room across but not
+  /// down, and notes sized only by width would collide as they travel. Small
+  /// enough, too, that three of them fit side by side in one hand's zone,
+  /// which is what a triad needs.
+  double get noteRadius =>
+      (size.width * 0.055).clamp(9.0, 26.0).clamp(9.0, size.height * 0.048);
 
   /// Progress of a tap that is [beatsAway] beats from being played, given a
   /// view that looks [window] beats ahead. 1 means it is on the line.
   static double progressFor(double beatsAway, double window) =>
       1 - beatsAway / window;
+
+  /// Opens out the notes of a chord so they can be told apart.
+  ///
+  /// Where a note sits comes from its pitch, and a close chord — a third, a
+  /// triad — puts its notes within a few percent of the screen of each other.
+  /// Drawn at that spacing they overlapped into one smudge and the player
+  /// could not see how many fingers the moment wanted.
+  ///
+  /// Only the minimum is enforced. A chord already spread out — an octave, a
+  /// tenth — is left exactly where its pitches put it, so the picture still
+  /// says which note is higher and by how much. Order is never changed, and
+  /// nothing is pushed out of [zoneStart]..[zoneEnd], which is the hand's own
+  /// half of the screen.
+  ///
+  /// [places] must be sorted. Returns positions in the same order.
+  static List<double> spreadChord(
+    List<double> places, {
+    required double minGap,
+    required double zoneStart,
+    required double zoneEnd,
+  }) {
+    if (places.length < 2) return List.of(places);
+    final out = List.of(places);
+
+    for (var i = 1; i < out.length; i++) {
+      final least = out[i - 1] + minGap;
+      if (out[i] < least) out[i] = least;
+    }
+
+    // Pushing right may have run the top note out of the hand's half; bring
+    // the whole chord back rather than let one note stray into the other's.
+    final overflow = out.last - zoneEnd;
+    if (overflow > 0) {
+      for (var i = 0; i < out.length; i++) {
+        out[i] -= overflow;
+      }
+    }
+
+    if (out.first < zoneStart) {
+      // More notes than the zone can hold apart. Share it out evenly: some
+      // overlap is then unavoidable, and even overlap reads better than a
+      // pile at one end.
+      final step = (zoneEnd - zoneStart) / (out.length - 1);
+      for (var i = 0; i < out.length; i++) {
+        out[i] = zoneStart + i * step;
+      }
+    }
+    return out;
+  }
+
+  /// Where a note's head is drawn, given how far along it is.
+  ///
+  /// An ordinary note keeps going and leaves. A held one stops at the line
+  /// and stays there for as long as the finger is meant to be down, its bar
+  /// shortening behind it as the end of the note catches up. Carrying on past
+  /// the line would say the note was over while it was still being asked for.
+  static double headProgressFor(double progress, {required bool isHold}) =>
+      isHold && progress > 1 ? 1.0 : progress;
 }

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/game/stage_geometry.dart';
 
 void main() {
@@ -83,15 +84,26 @@ void main() {
     expect(StageGeometry.progressFor(-1, 4), greaterThan(1.0));
   });
 
-  test('notes grow as they approach and shrink once past', () {
-    expect(g.noteRadiusAt(0.2), lessThan(g.noteRadiusAt(0.8)));
-    expect(g.noteRadiusAt(0.8), lessThan(g.noteRadiusAt(1.0)));
-    expect(g.noteRadiusAt(1.2), lessThan(g.noteRadiusAt(1.0)));
+  test('a triad fits across one hand without piling up', () {
+    // Three notes side by side is what a chord asks for, and the hand's zone
+    // is a third of the screen. Bigger notes than this and a triad cannot be
+    // drawn as three things however they are spaced.
+    for (final screen in [
+      const Size(320, 568),
+      const Size(390, 844),
+      const Size(844, 390),
+    ]) {
+      final any = StageGeometry(size: screen);
+      final zone =
+          (Chart.rightZoneEnd - Chart.rightZoneStart) * screen.width;
+      expect(any.noteRadius * 2 * 3, lessThanOrEqualTo(zone),
+          reason: 'three notes do not fit in one hand at $screen');
+    }
   });
 
   test('notes stay clear of each other on a short screen', () {
     const landscape = StageGeometry(size: Size(844, 390));
-    expect(landscape.noteRadiusAt(1.0) * 2, lessThan(390 * 0.15));
+    expect(landscape.noteRadius * 2, lessThan(390 * 0.15));
   });
 
   test('the layout holds up at any shape of screen', () {
@@ -103,7 +115,93 @@ void main() {
     ]) {
       final any = StageGeometry(size: screen);
       expect(any.hitLineY, lessThan(screen.height));
-      expect(any.noteRadiusAt(1.0), greaterThan(8));
+      expect(any.noteRadius, greaterThan(8));
     }
+  });
+
+  group('a held note waits at the line', () {
+    test('an ordinary note carries on past it', () {
+      expect(StageGeometry.headProgressFor(1.4, isHold: false), 1.4);
+      expect(StageGeometry.headProgressFor(0.5, isHold: false), 0.5);
+    });
+
+    test('a held one stops there', () {
+      expect(StageGeometry.headProgressFor(1.4, isHold: true), 1.0);
+      expect(StageGeometry.headProgressFor(3.0, isHold: true), 1.0);
+    });
+
+    test('but travels normally on the way in', () {
+      expect(StageGeometry.headProgressFor(0.4, isHold: true), 0.4);
+      expect(StageGeometry.headProgressFor(1.0, isHold: true), 1.0);
+    });
+
+    test('so its bar can only shorten once it has arrived', () {
+      const g = StageGeometry(size: Size(390, 844));
+      double barLength(double progress, double tailProgress) {
+        final head = g.yAt(StageGeometry.headProgressFor(progress, isHold: true));
+        return head - g.yAt(tailProgress);
+      }
+      // Head on the line, tail closing in: shorter every time.
+      final lengths = [
+        barLength(1.0, 0.4),
+        barLength(1.4, 0.7),
+        barLength(1.8, 0.9),
+        barLength(2.0, 1.0),
+      ];
+      for (var i = 1; i < lengths.length; i++) {
+        expect(lengths[i], lessThan(lengths[i - 1]));
+      }
+      expect(lengths.last, 0);
+    });
+  });
+
+  group('a chord is opened out so its notes can be counted', () {
+    List<double> spread(List<double> places, {double gap = 0.12}) =>
+        StageGeometry.spreadChord(places,
+            minGap: gap, zoneStart: 0.58, zoneEnd: 0.91);
+
+    test('notes on top of each other are pushed apart', () {
+      final out = spread([0.60, 0.62, 0.64]);
+      for (var i = 1; i < out.length; i++) {
+        expect(out[i] - out[i - 1], greaterThanOrEqualTo(0.12 - 1e-9));
+      }
+    });
+
+    test('a chord already spread out is left where its pitches put it', () {
+      final wide = [0.60, 0.75, 0.90];
+      expect(spread(wide), wide);
+    });
+
+    test('the order of the notes is never changed', () {
+      final out = spread([0.60, 0.605, 0.61, 0.615]);
+      for (var i = 1; i < out.length; i++) {
+        expect(out[i], greaterThan(out[i - 1]));
+      }
+    });
+
+    test('nothing is pushed into the other hand', () {
+      // Pressed hard against the top of the zone.
+      final out = spread([0.88, 0.89, 0.90]);
+      expect(out.first, greaterThanOrEqualTo(0.58 - 1e-9));
+      expect(out.last, lessThanOrEqualTo(0.91 + 1e-9));
+    });
+
+    test('more notes than the zone can hold share it out evenly', () {
+      // Five notes needing 0.12 each would want 0.48; the zone is 0.33.
+      final out = spread([0.60, 0.61, 0.62, 0.63, 0.64]);
+      expect(out.first, closeTo(0.58, 1e-9));
+      expect(out.last, closeTo(0.91, 1e-9));
+      final steps = [
+        for (var i = 1; i < out.length; i++) out[i] - out[i - 1]
+      ];
+      for (final step in steps) {
+        expect(step, closeTo(steps.first, 1e-9), reason: 'evenly, not piled');
+      }
+    });
+
+    test('a single note is left alone', () {
+      expect(spread([0.7]), [0.7]);
+      expect(spread([]), isEmpty);
+    });
   });
 }
