@@ -8,6 +8,11 @@ Akan notalara dokunarak piyano çalınan bir ritim oyunu. Flutter; iOS ve Androi
 
 ## Durum
 
+> Yeni bir oturuma başlıyorsanız önce **[docs/DURUM.md](docs/DURUM.md)**
+> dosyasını okuyun: nerede kalındığı, alınan ve reddedilen tasarım kararları,
+> ortam kurulumu ve yayınlama adımları orada.
+
+
 Oynanabilir çekirdek hazır: notalar akıyor, dokunuş notayı çalıyor, zamanlama
 değerlendiriliyor, seri ve puan işliyor.
 
