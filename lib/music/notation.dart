@@ -46,14 +46,17 @@ String midiToNote(int midi) =>
 
 /// Parse a sequence into notes with absolute onsets.
 ///
-/// [gate] shortens each note slightly against its written length so that a
-/// repeated pitch re-articulates instead of fusing into one long tone.
+/// [gate] shortens each note against its written length. It is 1 — a note
+/// lasts as long as it is written — and wants a reason to be anything else.
+/// It used to be 0.92, to make a repeated pitch re-articulate; that is not
+/// needed, because striking a pitch that is already sounding restarts it, and
+/// all the shortening did was put a gap under every note in the piece.
 List<Note> seq(
   String source, {
   double start = 0,
   double velocity = 0.75,
   Hand hand = Hand.right,
-  double gate = 0.92,
+  double gate = 1.0,
 }) {
   final notes = <Note>[];
   var cursor = start;

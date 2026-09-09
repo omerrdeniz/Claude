@@ -49,6 +49,10 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   durur**, arkasındaki çubuk kuyruğu yetiştikçe kısalır. Eskiden nota çizgiyi
   geçip aşağı süzülüyordu, bu da parmak hâlâ basılıyken notanın bitmiş
   olduğunu söylüyordu. `StageGeometry.headProgressFor`.
+  **Ama yalnızca gerçekten basıldıysa.** Yakalanmayan uzun nota çizgide
+  beklemez; diğer notalar gibi akıp gider, kuyruğuyla birlikte kaybolur.
+  Hangi notanın basılı olduğunu `PlaySession.heldNotes` söylüyor
+  (`(beat, midi)` kümesi), `StagePainter.heldNotes` olarak geçiyor.
 - **Nota boyutu sabit.** Eskiden yaklaşırken büyüyüp çizgiyi geçince
   küçülüyordu; oyuncu sabit olmasını istedi. Uzaklık artık yalnız solgunlukla
   anlatılıyor — "ne zaman" demeye çalışan bir resimde bir şeyin daha
@@ -131,6 +135,24 @@ böyle duyulur.
 
 `SynthEngine.trebleGain` **yalnız sentez yedeğinde** geçerli. Kayıtta
 uygulanmıyor: kaydın kendi eğrisi zaten daha dik ve daha doğru.
+
+### Notaların birbirine bağlanması
+
+- **Kapı (gate) kaldırıldı.** Her nota yazılı uzunluğunun %92-95'ine
+  kısaltılıyordu; gerekçesi "aynı perde tekrar basılınca yeniden seslensin"di.
+  O gerekçe geçersiz: `SynthEngine.noteOn` zaten çalmakta olan bir perdeyi
+  yeniden başlatıyor. Tek yaptığı, parçadaki **her notanın altına bir boşluk
+  koymak**tı — ölçüldü, ardışık nota çiftlerinin ~%100'ünde 30-211 ms.
+- **Bırakma pedallı piyano gibi** (`_Voice._pedalTau`): 80 ms yerine 350 ms
+  (tizde) / 550 ms (baste). Bu repertuvar pedal için yazılmış.
+
+**Ölçemediğim şey, ve neden peşine düşmeyin:** "notalar arası düşüş"
+diye bir ölçüt yazdım (zarfın vuruş tepesine göre ne kadar çukura indiği).
+Nokturn'de ortanca −13.6 dB çıkıyordu, kulağa "kesik" gelmesinin sebebi bu
+sanıldı. Ama **hiç `noteOff` göndermeden** render alınca −10.6 çıktı, yani
+neredeyse aynı. Ölçtüğüm şey piyanonun kendi vuruş tepesiyle sürdürmesi
+arasındaki fark; bir kusur değil. Bırakma süresini uzatmak bu sayıyı
+kurtarmaz, uğraşmayın.
 
 ### Yükleme ve yedek
 
@@ -339,7 +361,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 266 test geçiyor
+flutter test        # 271 test geçiyor
 ```
 
 ## Cihazsız doğrulama
@@ -469,10 +491,31 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
    her zorlukta `autoNotes`'a al; (c) şarkı başına tempo düşür. (b) DURUM'daki
    "normalde hiçbir şey kendi çalmaz" kararına dokunduğu için oyuncuya
    sorulmalı.
-2. Normal zorlukta akor parmaklama sorusu yanıtlanacak.
-3. MIDI içe aktarma **arayüzü** (yol haritası adım 8) — okuyucu ve dönüştürücü
+2. **Kaçırılan nota hiç seslenmiyor — parçada delik açıyor.** Oyuncu
+   "doğru çalsam bile akıcı hissettirmiyor, notalar kesik" dedi. Sebep ses
+   yolunda değil (yukarıya bakın), burada: Normal ve Zor'da `autoNotes` boş,
+   yani basılmayan nota sessiz kalıyor. Normal'de her parçanın ne kadarı
+   *öteki* el:
+
+   | Şarkı | Sol elin payı |
+   |---|---|
+   | Nokturn | **%63** |
+   | Neşeye Övgü | %58 |
+   | Für Elise | %42 |
+   | Prelüd | %24 |
+
+   Yani sadece melodiyi çalan biri Nokturn'ün üçte ikisini duymuyor.
+
+   Önerilen çözüm: **kaçırılan nota yine de çalsın, ama kısık.** Puan hâlâ
+   kaçırdığını söyler, müzik bütün kalır. Bu, "normalde hiçbir şey kendi
+   kendine çalmaz" kararına dokunduğu için **oyuncuya sorulmadan
+   yapılmamalı** — ama o karar "şarkının benim çalmadığım kısımları var"
+   şikâyetinden gelmişti, bu ise farklı: her nota hâlâ oyuncunun, sadece
+   kaçırınca müzikte delik açılmıyor.
+3. Normal zorlukta akor parmaklama sorusu yanıtlanacak.
+4. MIDI içe aktarma **arayüzü** (yol haritası adım 8) — okuyucu ve dönüştürücü
    hazır, eksik olan yalnızca dosya seçme ekranı. Oyuncu kendi MIDI'lerini
    ekleyebilsin diye.
-4. Kolay moddaki seyreltme (`Chart._divideVoices`, `minGap = 0.5` vuruş) vuruş
+5. Kolay moddaki seyreltme (`Chart._divideVoices`, `minGap = 0.5` vuruş) vuruş
    birimine bağlı: Für Elise'de vuruş sekizlik olduğu için 0.5 vuruş bir
    on altılığa denk geliyor ve pek seyreltmiyor. Saniyeye çevrilmesi gerekebilir.

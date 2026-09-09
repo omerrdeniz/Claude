@@ -42,9 +42,7 @@ abstract final class ScoreImport {
       final duration = _snap(note.duration) * beatsPerQuarter;
       notes.add(Note(
         beat: beat,
-        // Lifting the finger a hair early is what lets a repeated pitch
-        // sound twice instead of fusing into one long tone.
-        duration: duration * _gate,
+        duration: duration,
         midi: note.midi,
         velocity: note.hand == Hand.left ? leftVelocity : rightVelocity,
         hand: note.hand,
@@ -79,9 +77,6 @@ abstract final class ScoreImport {
   /// notes land a few floating-point ticks apart would be drawn — and asked
   /// for — as several separate touches.
   static const double _grid = 48;
-
-  /// How much of its written length a note actually sounds for.
-  static const double _gate = 0.95;
 
   static double _snap(double quarters) {
     final steps = (quarters * _grid).roundToDouble();

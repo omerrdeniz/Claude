@@ -63,11 +63,19 @@ void main() {
       expect(seq('C4:1 | D4:1').map((n) => n.beat), [0, 1]);
     });
 
-    test('notes are gated short so a repeated pitch re-articulates', () {
+    test('a note lasts as long as it is written', () {
+      // It used to be cut to 92% so a repeated pitch would re-articulate.
+      // That was not needed — striking a sounding pitch restarts it — and it
+      // put a gap under every note in every piece, which the player heard as
+      // the music being chopped up.
       final repeated = seq('C4:1 C4:1');
-      expect(repeated.first.duration, lessThan(1.0));
-      expect(repeated.first.endBeat, lessThan(repeated.last.beat),
-          reason: 'the first note must end before the second begins');
+      expect(repeated.first.duration, 1.0);
+      expect(repeated.first.endBeat, repeated.last.beat,
+          reason: 'one note runs straight into the next');
+    });
+
+    test('but can still be shortened on purpose', () {
+      expect(seq('C4:1', gate: 0.5).single.duration, 0.5);
     });
 
     test('a hand can be assigned to the whole sequence', () {

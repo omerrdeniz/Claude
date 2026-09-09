@@ -7,6 +7,36 @@ import '../music/note.dart';
 import '../game/stage_geometry.dart';
 import '../theme/app_theme.dart';
 
+/// One note as it is drawn: where it sits across the screen, when it ends,
+/// and whether the finger is meant to be — and actually is — on it.
+class _Dot {
+  const _Dot({
+    required this.across,
+    required this.midi,
+    required this.endBeat,
+    required this.isHold,
+    required this.isHeld,
+  });
+
+  final double across;
+  final int midi;
+  final double endBeat;
+
+  /// Long enough that the player is asked to keep a finger down.
+  final bool isHold;
+
+  /// And is doing so right now.
+  final bool isHeld;
+
+  _Dot movedTo(double newAcross) => _Dot(
+        across: newAcross,
+        midi: midi,
+        endBeat: endBeat,
+        isHold: isHold,
+        isHeld: isHeld,
+      );
+}
+
 /// Draws the playfield: the beams, the hit line, and the notes travelling down
 /// toward it.
 ///
@@ -19,6 +49,7 @@ class StagePainter extends CustomPainter {
     required this.windowInBeats,
     this.litHands = const {},
     this.holding = false,
+    this.heldNotes = const {},
   });
 
   final Chart chart;
@@ -34,6 +65,13 @@ class StagePainter extends CustomPainter {
 
   /// Whether a long note is being held right now.
   final bool holding;
+
+  /// The notes a finger is actually on, as (beat, pitch).
+  ///
+  /// Only these stop at the line. A long note nobody caught is not being
+  /// held, and pinning it there would draw a promise the player never made —
+  /// it carries on down and leaves, tail and all, like any other missed note.
+  final Set<(double, int)> heldNotes;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -151,15 +189,32 @@ class StagePainter extends CustomPainter {
       if (progress < -0.05) continue;
 
       // A held note is not finished when its head crosses the line — the
-      // finger is meant to stay down until its end does. So a hold is judged
-      // gone by its tail, and stays on screen for as long as it is still
-      // being asked for.
+      // finger is meant to stay down until its end does.
       final tailProgress =
           StageGeometry.progressFor(tap.endBeat - beat, windowInBeats);
-      final departed = tap.isHold ? tailProgress : progress;
 
-      final colour = AppTheme.chordColor(tap.voices);
-      final radius = g.noteRadius;
+      // Every note that sounds at this moment in this hand, wherever its
+      // pitch puts it. A chord is drawn as its notes even when one finger
+      // takes them all: the picture is of the music, not of the input.
+      var dots = <_Dot>[];
+      for (final member in group) {
+        for (var i = 0; i < member.notes.length; i++) {
+          final note = member.notes[i];
+          dots.add(_Dot(
+            across: member.noteAcross[i],
+            midi: note.midi,
+            endBeat: member.beat + note.duration,
+            isHold: member.isHold,
+            isHeld: heldNotes.contains((member.beat, note.midi)),
+          ));
+        }
+      }
+
+      // A note being held stops at the line and waits there; one nobody
+      // caught carries on down and leaves, tail and all. Only a finger that
+      // is actually down earns the pause.
+      final held = dots.any((dot) => dot.isHold && dot.isHeld);
+      final departed = held ? tailProgress : progress;
 
       // Distant notes are dimmer; ones past the line drop away quickly, so
       // the eye is never asked whether a note below the line still counts.
@@ -168,37 +223,19 @@ class StagePainter extends CustomPainter {
           : (0.35 + progress.clamp(0.0, 1.0) * 0.65).clamp(0.0, 1.0);
       if (fade <= 0.01) continue;
 
-      // Every note that sounds at this moment in this hand, wherever its
-      // pitch puts it. A chord is drawn as its notes even when one finger
-      // takes them all: the picture is of the music, not of the input.
-      var dots = <({double across, double endBeat, bool isHold})>[];
-      for (final member in group) {
-        for (var i = 0; i < member.notes.length; i++) {
-          dots.add((
-            across: member.noteAcross[i],
-            endBeat: member.beat + member.notes[i].duration,
-            isHold: member.isHold,
-          ));
-        }
-      }
+      final colour = AppTheme.chordColor(tap.voices);
+      final radius = g.noteRadius;
       dots = _spreadChord(dots, g, radius, tap.hand);
 
-      // A note being held stops at the line and waits there.
-      //
-      // It used to sail on down with its bar trailing behind, which said the
-      // note was over while the finger was still supposed to be on it. Pinned
-      // to the line, with the bar shortening as its end catches up, the
-      // picture says the one thing that matters while a note is held: how
-      // much longer.
-      double headOf(bool isHold) =>
-          StageGeometry.headProgressFor(progress, isHold: isHold);
+      double headOf(_Dot dot) => StageGeometry.headProgressFor(progress,
+          isHold: dot.isHold && dot.isHeld);
 
       if (dots.length > 1) {
-        _paintChordBand(canvas, g, dots, headOf(tap.isHold), colour, fade);
+        _paintChordBand(canvas, g, dots, headOf(dots.first), colour, fade);
       }
 
       for (final dot in dots) {
-        final head = headOf(dot.isHold);
+        final head = headOf(dot);
         if (dot.isHold) {
           _paintHoldBar(
             canvas,
@@ -224,8 +261,8 @@ class StagePainter extends CustomPainter {
   /// it into the chart was measured and left alone: the whole painter costs
   /// 314 µs a frame against a budget of 16700, and moving this would mean
   /// giving [Chart] a screen size it is deliberately free of.
-  List<({double across, double endBeat, bool isHold})> _spreadChord(
-    List<({double across, double endBeat, bool isHold})> dots,
+  List<_Dot> _spreadChord(
+    List<_Dot> dots,
     StageGeometry g,
     double radius,
     Hand hand,
@@ -248,12 +285,7 @@ class StagePainter extends CustomPainter {
     );
 
     return [
-      for (var i = 0; i < sorted.length; i++)
-        (
-          across: places[i],
-          endBeat: sorted[i].endBeat,
-          isHold: sorted[i].isHold,
-        ),
+      for (var i = 0; i < sorted.length; i++) sorted[i].movedTo(places[i]),
     ];
   }
 
@@ -265,7 +297,7 @@ class StagePainter extends CustomPainter {
   void _paintChordBand(
       Canvas canvas,
       StageGeometry g,
-      List<({double across, double endBeat, bool isHold})> dots,
+      List<_Dot> dots,
       double progress,
       Color colour,
       double fade) {

@@ -34,7 +34,11 @@ class TapOutcome {
 
 /// A note being held down.
 class _Hold {
-  _Hold({required this.midis, required this.endBeat});
+  _Hold({required this.beat, required this.midis, required this.endBeat});
+
+  /// Which moment in the song this is, so the screen can tell which drawn
+  /// note the finger is on.
+  final double beat;
   final List<int> midis;
   final double endBeat;
 }
@@ -310,6 +314,7 @@ class PlaySession {
     if (tapTarget.isHold) {
       holdId = _nextHoldId++;
       _holds[holdId] = _Hold(
+        beat: tapTarget.beat,
         midis: tapTarget.notes.map((n) => n.midi).toList(),
         endBeat: tapTarget.endBeat,
       );
@@ -330,6 +335,17 @@ class PlaySession {
 
   /// Whether a long note is being held right now — for the screen to show.
   bool get isHolding => _holds.isNotEmpty;
+
+  /// The notes a finger is on at this moment, keyed the same way as
+  /// everything else here: which beat, which pitch.
+  ///
+  /// The screen needs this to know which long notes to stop at the line. One
+  /// that nobody caught is not being held, and should carry on down and leave
+  /// like any other missed note rather than sitting on the line pretending.
+  Set<(double, int)> get heldNotes => {
+        for (final hold in _holds.values)
+          for (final midi in hold.midis) (hold.beat, midi),
+      };
 
   /// The finger came off a long note.
   ///

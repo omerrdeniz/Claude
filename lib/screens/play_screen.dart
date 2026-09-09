@@ -195,6 +195,7 @@ class _PlayScreenState extends State<PlayScreen>
                       windowInBeats: _session.windowInBeats,
                       litHands: Map.of(_litHands),
                       holding: _session.isHolding,
+                      heldNotes: _session.heldNotes,
                     ),
                   ),
                 ),

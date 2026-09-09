@@ -314,9 +314,7 @@ class _Voice {
   void release() {
     releasing = true;
     if (_sample != null) {
-      // The damper falls on a recording the same way it does on a string.
-      final tau = midi < 48 ? 0.15 : 0.08;
-      _sampleDecay = math.exp(-1.0 / (tau * sampleRate));
+      _sampleDecay = math.exp(-1.0 / (_pedalTau(midi) * sampleRate));
       return;
     }
     // A damper mutes the string in a couple of tenths of a second; bass
@@ -329,6 +327,27 @@ class _Voice {
     }
     _noiseAmp = 0;
   }
+
+  /// How long a released note takes to fade, in seconds.
+  ///
+  /// A damper alone stops a string in about a tenth of a second, and that is
+  /// what this used to do. But this music is written for a pedal: Chopin's
+  /// nocturne and Bach's prelude both hold a harmony across a bar while the
+  /// hand has long since moved on. Damping every note the instant its written
+  /// length ran out left a dip between every pair of notes — measured at
+  /// thirteen decibels in the nocturne — and the player heard it as the piece
+  /// being chopped up.
+  ///
+  /// So a released note is let down gently instead, which is what a pedalled
+  /// piano does.
+  ///
+  /// Kept moderate on purpose. Rendering a whole piece with no releases at
+  /// all barely moved the envelope — the dip between notes turned out to be
+  /// the piano's own attack against its own sustain, not anything being cut
+  /// short — so there is no measurement saying a longer tail is better, only
+  /// the argument that this music is written for a pedal. Anything bolder
+  /// would be guessing with someone else's ears.
+  static double _pedalTau(int midi) => midi < 48 ? 0.55 : 0.35;
 
   void kill() {
     active = false;

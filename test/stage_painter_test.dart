@@ -19,6 +19,7 @@ ui.Picture paintFrame(Song song, double beat,
     {double window = 4,
     Map<Hand, double> litHands = const {},
     Size size = phone,
+    Set<(double, int)> heldNotes = const {},
     Difficulty difficulty = Difficulty.normal}) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder, Offset.zero & size);
@@ -27,6 +28,7 @@ ui.Picture paintFrame(Song song, double beat,
     beat: beat,
     windowInBeats: window,
     litHands: litHands,
+    heldNotes: heldNotes,
   ).paint(canvas, size);
   return recorder.endRecording();
 }
@@ -37,9 +39,13 @@ ui.Picture paintFrame(Song song, double beat,
 Future<int> savePng(Song song, double beat, String name,
     {Map<Hand, double> litHands = const {},
     Size size = phone,
+    Set<(double, int)> heldNotes = const {},
     Difficulty difficulty = Difficulty.normal}) async {
   final picture = paintFrame(song, beat,
-      litHands: litHands, size: size, difficulty: difficulty);
+      litHands: litHands,
+      size: size,
+      heldNotes: heldNotes,
+      difficulty: difficulty);
   final image = await picture.toImage(size.width.toInt(), size.height.toInt());
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   final file = File('build/screens/$name.png');
@@ -48,7 +54,23 @@ Future<int> savePng(Song song, double beat, String name,
   return file.lengthSync();
 }
 
+/// Every note of the moment at [beat], as the session would report it while
+/// a finger was on them.
+Set<(double, int)> heldAt(Song song, double beat) => {
+      for (final note in song.notes)
+        if ((note.beat - beat).abs() < 0.01) (note.beat, note.midi),
+    };
+
 void main() {
+  test('a long note only waits at the line if it is being held', () {
+    final song = SongLibrary.odeToJoy;
+    // Well past the line, so a pinned head and a falling one differ.
+    expect(
+        () => paintFrame(song, 7.6, heldNotes: heldAt(song, 6.0)),
+        returnsNormally);
+    expect(() => paintFrame(song, 7.6), returnsNormally);
+  });
+
   test('each chord size has its own colour', () {
     // Colour says how many fingers a moment needs; two sizes sharing one
     // colour would make that unreadable.
@@ -180,9 +202,13 @@ void main() {
       // One finger, three notes: the pips have to say so.
       'kolay-akor': await savePng(SongLibrary.odeToJoy, 5.0, 'kolay-akor',
           difficulty: Difficulty.easy),
-      // A held note halfway through: the bar should still be on screen.
-      'tutma-ortasi': await savePng(SongLibrary.odeToJoy, 6.6, 'tutma-ortasi',
-          difficulty: Difficulty.normal),
+      // The same held note, caught and not caught. Caught, it waits on the
+      // line with its bar shortening above it; missed, it falls past and
+      // goes, tail and all.
+      'tutma-basili': await savePng(SongLibrary.odeToJoy, 6.6, 'tutma-basili',
+          heldNotes: heldAt(SongLibrary.odeToJoy, 6.0)),
+      'tutma-basilmadi': await savePng(
+          SongLibrary.odeToJoy, 6.6, 'tutma-basilmadi'),
       'zor-parmaklama': await savePng(
           SongLibrary.odeToJoy, 5.0, 'zor-parmaklama',
           difficulty: Difficulty.hard),

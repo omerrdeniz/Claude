@@ -205,6 +205,38 @@ void main() {
       expect(session.isHolding, isTrue);
     });
 
+    test('the screen is told which notes a finger is on', () {
+      // Only a note actually caught stops at the line; one nobody held has
+      // to carry on down and leave like any other missed note.
+      final session = sessionFor(heldNote());
+      expect(session.heldNotes, isEmpty, reason: 'nothing touched yet');
+
+      seek(session, 0);
+      final id = session.tap(right)!.holdId!;
+      expect(session.heldNotes, contains((0.0, 60)));
+
+      session.releaseHold(id);
+      expect(session.heldNotes, isEmpty);
+    });
+
+    test('a long note nobody catches is never reported as held', () {
+      final session = sessionFor(heldNote());
+      // Let it go by untouched.
+      seek(session, 3);
+      expect(session.heldNotes, isEmpty);
+    });
+
+    test('a chord under one finger reports all of its notes', () {
+      final session = sessionFor(songOf([
+        note(0, 60, duration: 2),
+        note(0, 64, duration: 2),
+        note(0, 67, duration: 2),
+      ]));
+      seek(session, 0);
+      session.tap(right);
+      expect(session.heldNotes, containsAll([(0.0, 60), (0.0, 64), (0.0, 67)]));
+    });
+
     test('a short note does not', () {
       final session = sessionFor(songOf([note(0, 60, duration: 0.5)]));
       seek(session, 0);
