@@ -131,6 +131,20 @@ void main() {
       expect(SongLibrary.odeToJoy.lengthInBeats / 4, closeTo(16, 0.5));
     });
 
+    test('the canon opens on its ground bass, alone', () {
+      final song = SongLibrary.canonInD;
+      // Two bars of the ground before any voice enters: D A B F# G D G A.
+      expect(
+          song.accompaniment.take(8).map((n) => n.midi),
+          [50, 45, 47, 42, 43, 38, 43, 45],
+          reason: 'the bass everyone knows');
+      expect(song.melody.where((n) => n.beat < 8), isEmpty,
+          reason: 'the violins wait two bars');
+      // And it is the whole piece, not the first page.
+      expect(song.duration.inMinutes, greaterThanOrEqualTo(3));
+      expect(song.bpm, 55, reason: 'the edition marks the quarter at 55');
+    });
+
     test('the Chopin nocturne is the whole piece, cadenza and all', () {
       final song = SongLibrary.nocturneOp9No2;
       expect(song.bpm, 132, reason: 'the edition marks the eighth at 132');

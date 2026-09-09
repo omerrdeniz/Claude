@@ -12,24 +12,25 @@ import 'scores.g.dart' as scores;
 /// behind a paywall, which is the single loudest complaint against the game
 /// this one takes after.
 ///
-/// Three of the four are read from engraved editions rather than written out
-/// here: [furElise], [preludeInC] and [nocturneOp9No2] come from the Mutopia
-/// Project's LilyPond sources, rendered to MIDI with every repeat played out
-/// and embedded by `tool/fetch_scores.dart`. They are therefore the complete
+/// All but [odeToJoy] are read from published LilyPond sources rather than
+/// written out here, rendered to MIDI with every repeat played out and
+/// embedded by `tool/fetch_scores.dart`. They are therefore the complete
 /// pieces, note for note, instead of the fragments that stood here before —
 /// and the octave the Bach was written in from memory turned out to be wrong.
 ///
-/// Tempos are the ones the pieces are actually played at. The game plays a
-/// song at the speed it is written at; there is no speed control.
+/// The engravings are not all on the same terms; each one says which.
+///
+/// Tempos are the ones the pieces are written at. The game can play a song
+/// slower, but the data is always at speed.
 abstract final class SongLibrary {
   /// Built once, on first use, and shared from then on.
   ///
   /// Fields rather than getters, for a reason. As getters every read rebuilt
-  /// all four songs — base64 decoded, MIDI parsed, some two and a half
+  /// every song — base64 decoded, MIDI parsed, some two and a half
   /// thousand notes allocated — and the song list reads them inside `build`,
   /// so a tap on any setting paid for the whole library again.
-  static final List<Song> all =
-      List.unmodifiable([odeToJoy, furElise, preludeInC, nocturneOp9No2]);
+  static final List<Song> all = List.unmodifiable(
+      [odeToJoy, canonInD, furElise, preludeInC, nocturneOp9No2]);
 
   static final Map<String, Song> _byId = {
     for (final song in all) song.id: song,
@@ -127,6 +128,24 @@ abstract final class SongLibrary {
       beatsPerBar: 4,
       source: 'Kamu malı (BWV 846, 1722). Mutopia Project baskısı '
           '(Tobias Erbsland), tam eser.',
+  );
+
+  /// Pachelbel's canon, whole: the ground bass round twenty-eight times with
+  /// the three voices chasing each other over it.
+  ///
+  /// Not originally a keyboard piece — it is written for three violins and a
+  /// bass — so unlike the others this is somebody's arrangement rather than
+  /// an edition. The left hand is the ground, the right hand the three
+  /// voices folded onto one staff.
+  static final Song canonInD = ScoreImport.read(
+    scores.canonInD,
+    id: 'canon-in-d',
+    title: 'Kanon, Re Majör',
+    composer: 'Johann Pachelbel',
+    bpm: 55,
+    beatsPerBar: 4,
+    source: 'Kamu malı (P. 37, 1694). Mutopia Project baskısı (Michael '
+        'Fischer v. Mollard), piyano düzenlemesi Isaac David, CC BY 4.0.',
   );
 
   /// Chopin's first well-known nocturne, whole, cadenza and all.

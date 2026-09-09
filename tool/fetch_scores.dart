@@ -8,6 +8,9 @@
 //
 //     apt-get install -y lilypond
 //
+// Needs unzip and patch as well, for the one score that arrives as an
+// archive with a transcription patched over it.
+//
 // For each score it downloads the LilyPond source, brings it up to the local
 // LilyPond's syntax with convert-ly, renders MIDI with every repeat written
 // out in full, and writes the bytes into a Dart file as base64. Embedding
@@ -23,12 +26,26 @@ class _Score {
     required this.url,
     required this.reference,
     required this.staffAnchor,
+    this.patchUrl,
+    this.entry,
   });
 
   /// Name of the Dart constant to write.
   final String constant;
 
+  /// A `.ly` to render, or a `.zip` of sources when [entry] says which one.
   final String url;
+
+  /// A patch to apply over the unpacked archive.
+  ///
+  /// Pachelbel's canon is written for three violins and a bass, so there is
+  /// no keyboard edition to take — every piano version of it is somebody's
+  /// arrangement. This is one, published as a patch against the Mutopia
+  /// sources rather than as a copy of them.
+  final String? patchUrl;
+
+  /// Which file to render, relative to the unpacked archive.
+  final String? entry;
 
   /// Mutopia's own citation for the edition, and the terms it carries.
   ///
@@ -43,7 +60,8 @@ class _Score {
   /// the notes a performer actually plays.
   final String staffAnchor;
 
-  String get name => url.split('/').last.replaceAll('.ly', '');
+  String get name =>
+      (entry ?? url.split('/').last).split('/').last.replaceAll('.ly', '');
 }
 
 const _scores = [
@@ -63,6 +81,19 @@ const _scores = [
     staffAnchor: r'\context PianoStaff',
   ),
   _Score(
+    constant: 'canonInD',
+    url: 'https://www.mutopiaproject.org/ftp/PachelbelJ/'
+        'Canon_per_3_Violini_e_Basso/Canon_per_3_Violini_e_Basso-lys.zip',
+    patchUrl: 'https://isacdaavid.info/log/'
+        'pachelbels-canon-piano-transcription.d/'
+        'Canone_per_tre_violini_e_basso_(piano_transcription).patch',
+    entry: 'new/piano_transcription.ly',
+    reference: 'Mutopia-2015/09/02-2047, typeset by Michael Fischer v. '
+        'Mollard; piano transcription by Isaac David. Both CC BY 4.0 — '
+        'https://creativecommons.org/licenses/by/4.0',
+    staffAnchor: r'\new PianoStaff',
+  ),
+  _Score(
     constant: 'nocturneOp9No2',
     url: 'https://www.mutopiaproject.org/ftp/ChopinFF/O9/'
         'chopin_nocturne_op9_n2/chopin_nocturne_op9_n2.ly',
@@ -79,40 +110,63 @@ Future<void> main() async {
 
   try {
     for (final score in _scores) {
+      final room = Directory('${work.path}/${score.constant}')
+        ..createSync(recursive: true);
+
       stdout.writeln('${score.name}: downloading');
-      final source = File('${work.path}/${score.name}.ly');
-      await source.writeAsBytes(await _download(score.url));
+      final File entry;
+      if (score.entry == null) {
+        entry = File('${room.path}/${score.name}.ly');
+        await entry.writeAsBytes(await _download(score.url));
+      } else {
+        final archive = File('${room.path}/sources.zip');
+        await archive.writeAsBytes(await _download(score.url));
+        await _run('unzip', ['-q', '-o', archive.path], room.path);
 
+        final patch = File('${room.path}/transcription.patch');
+        await patch.writeAsBytes(await _download(score.patchUrl!));
+        // The patch is written against the unpacked folder, which the
+        // archive drops beside it.
+        final unpacked = room
+            .listSync()
+            .whereType<Directory>()
+            .firstWhere((d) => d.path.endsWith('-lys'));
+        await _run('patch', ['-p0', '-i', patch.path], unpacked.path);
+        entry = File('${unpacked.path}/${score.entry}');
+        if (!entry.existsSync()) {
+          throw StateError('${score.name}: the patch produced no '
+              '${score.entry}');
+        }
+      }
+
+      // Every file, not only the one being rendered: LilyPond sources
+      // include each other, and a stale `\layout` two files away still
+      // pulls the engraver in.
       stdout.writeln('${score.name}: convert-ly');
-      await _run('convert-ly', ['-e', source.path], work.path);
+      final sources = entry.parent
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.ly') || f.path.endsWith('.ily'))
+          .toList();
+      for (final file in sources) {
+        await _run('convert-ly', ['-e', file.path], entry.parent.path);
+        await file.writeAsString(_shapeForMidi(await file.readAsString()));
+      }
 
-      var text = await source.readAsString();
+      var text = await entry.readAsString();
       if (!text.contains(score.staffAnchor)) {
         throw StateError('${score.name}: no "${score.staffAnchor}" to unfold '
             'repeats around — the upstream file has changed shape');
       }
-      text = text.replaceFirst(
-          score.staffAnchor, r'\unfoldRepeats ' + score.staffAnchor);
-
-      // Engraving would take far longer than the MIDI and produce a PDF
-      // nothing here reads, so the layout is dropped. It also sidesteps a
-      // pile of old engraving syntax that no longer compiles.
-      text = _stripLayout(text);
-
-      // `set-octavation` is a Scheme call convert-ly leaves alone in files
-      // that already claim a recent version. It draws the 8va bracket and
-      // moves the printed notes under it; the sounding pitch is what the
-      // source says either way, so this cannot change a note.
-      text = text.replaceAllMapped(
-          RegExp(r'#\(set-octavation\s+(-?\d+)\)'), (m) => r'\ottava #' + m[1]!);
-
-      await source.writeAsString(text);
+      await entry.writeAsString(text.replaceFirst(
+          score.staffAnchor, r'\unfoldRepeats ' + score.staffAnchor));
 
       stdout.writeln('${score.name}: lilypond');
       await _run('lilypond',
-          ['-dno-point-and-click', '-o', score.name, source.path], work.path);
+          ['-dno-point-and-click', '-o', score.name, entry.path],
+          entry.parent.path);
 
-      final midi = File('${work.path}/${score.name}.midi');
+      final midi = File('${entry.parent.path}/${score.name}.midi');
       if (!midi.existsSync()) {
         throw StateError('${score.name}: LilyPond produced no MIDI');
       }
@@ -128,8 +182,8 @@ Future<void> main() async {
     ..writeln('//')
     ..writeln('// Standard MIDI files rendered from the LilyPond sources on')
     ..writeln('// the Mutopia Project, with every repeat written out in full.')
-    ..writeln('// The music is public domain and the engravings are released')
-    ..writeln('// into the public domain by their typesetters.')
+    ..writeln('// The music is all public domain. The engravings are not all')
+    ..writeln('// on the same terms — see the note over each one.')
     ..writeln('//')
     ..writeln('// Run the tool again to refresh them.')
     ..writeln('library;')
@@ -153,6 +207,22 @@ Future<void> main() async {
   final target = File('lib/data/scores.g.dart');
   await target.writeAsString(out.toString());
   stdout.writeln('wrote ${target.path}');
+}
+
+/// Strip a source of everything that only matters when engraving.
+///
+/// Rendering the picture takes far longer than the MIDI and produces a PDF
+/// nothing here reads. It also sidesteps a pile of old engraving syntax that
+/// no longer compiles.
+String _shapeForMidi(String text) {
+  var out = _stripLayout(text);
+  // `set-octavation` is a Scheme call convert-ly leaves alone in files that
+  // already claim a recent version. It draws the 8va bracket and moves the
+  // printed notes under it; the sounding pitch is what the source says
+  // either way, so this cannot change a note.
+  out = out.replaceAllMapped(
+      RegExp(r'#\(set-octavation\s+(-?\d+)\)'), (m) => r'\ottava #' + m[1]!);
+  return out;
 }
 
 /// Cut every `\layout { ... }` block out of [text], braces matched.
