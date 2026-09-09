@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../audio/piano_audio.dart';
 import '../game/chart.dart';
+import '../music/note.dart';
 import '../game/judgement.dart';
 import '../game/play_session.dart';
 import '../music/song.dart';
@@ -16,7 +17,6 @@ class PlayScreen extends StatefulWidget {
   const PlayScreen({
     super.key,
     required this.song,
-    this.beamCount,
     this.difficulty = Difficulty.normal,
     this.speed = 1.0,
     this.tolerance = TimingTolerance.wide,
@@ -36,9 +36,6 @@ class PlayScreen extends StatefulWidget {
   /// Whether notes sound on their beat rather than under the finger.
   final bool quantize;
 
-  /// Fixed number of beams, or null to let the screen decide from its width.
-  final int? beamCount;
-
   /// How long a note takes to travel from the top of the screen to the line.
   ///
   /// Held in seconds rather than beats deliberately: the eye needs the same
@@ -56,12 +53,11 @@ class _PlayScreenState extends State<PlayScreen>
   late final PlaySession _session;
   late final Ticker _ticker = createTicker(_onTick);
 
-  /// Beams still glowing from a recent hit, and how fresh each one is.
-  final Map<int, double> _litBeams = {};
+  /// Hands still glowing from a recent hit, and how fresh each one is.
+  final Map<Hand, double> _litHands = {};
 
-  /// How many beams the current layout uses. Set before the first build from
-  /// the widget's own setting, then kept in step with the screen width.
-  int _beamCount = Chart.defaultBeamCount;
+  /// Which note each finger currently on the screen is holding down.
+  final Map<int, int> _heldByPointer = {};
 
   TapOutcome? _lastOutcome;
   Duration _lastOutcomeAt = Duration.zero;
@@ -70,10 +66,8 @@ class _PlayScreenState extends State<PlayScreen>
   @override
   void initState() {
     super.initState();
-    _beamCount = widget.beamCount ?? Chart.defaultBeamCount;
     _session = PlaySession(
-      chart: Chart.build(widget.song,
-          beamCount: _beamCount, difficulty: widget.difficulty),
+      chart: Chart.build(widget.song, difficulty: widget.difficulty),
       audio: _audio,
       // The hard level is the same notes judged more tightly; everything else
       // about it is identical, so this is the only place it differs.
@@ -102,45 +96,38 @@ class _PlayScreenState extends State<PlayScreen>
     }
   }
 
-  /// A hit lights its beam, which then dies away over a moment.
+  /// A hit lights its side of the screen, which then dies away.
   void _fadeBeamGlow() {
-    _litBeams.updateAll((_, value) => value - 0.06);
-    _litBeams.removeWhere((_, value) => value <= 0);
+    _litHands.updateAll((_, value) => value - 0.06);
+    _litHands.removeWhere((_, value) => value <= 0);
   }
 
-  /// Follow the screen: turning the device sideways makes room for more
-  /// beams, which is the whole point of playing in landscape.
-  void _matchLayout(Size size) {
-    if (widget.beamCount != null) return;
-    final wanted = Chart.beamsForWidth(size.width);
-    if (wanted == _beamCount) return;
-    _beamCount = wanted;
-    _session.rebindChart(Chart.build(widget.song,
-        beamCount: wanted, difficulty: widget.difficulty));
-    _litBeams.clear();
-  }
-
-  void _onTapDown(Offset position, Size size) {
+  void _onTapDown(int pointer, Offset position, Size size) {
     // The first touch on the playfield is the game's real chance to start
     // audio: a browser will only allow it from inside a gesture.
     _audio.nudge();
 
-    // At the hit line the beams are evenly spaced across the full width, so
-    // the whole column belongs to its beam — the player aims at a lane, not at
-    // the note itself.
-    final beam = (position.dx / (size.width / _beamCount))
-        .floor()
-        .clamp(0, _beamCount - 1);
-
-    final outcome = _session.tap(beam);
+    final across = (position.dx / size.width).clamp(0.0, 1.0);
+    final outcome = _session.tap(across);
     if (outcome == null) return;
+
+    if (outcome.holdId != null) _heldByPointer[pointer] = outcome.holdId!;
+
     setState(() {
-      // A near miss reports itself but does not light the beam: nothing
+      // A near miss reports itself but does not light anything: nothing
       // sounded, so nothing should look as though it did.
-      if (outcome.scored) _litBeams[beam] = 1.0;
+      if (outcome.scored) _litHands[outcome.hand] = 1.0;
       _lastOutcome = outcome;
       _lastOutcomeAt = _now;
     });
+  }
+
+  /// A finger came off the screen. If it was holding a long note, that note
+  /// stops here.
+  void _onTapUp(int pointer) {
+    final holdId = _heldByPointer.remove(pointer);
+    if (holdId == null) return;
+    if (_session.releaseHold(holdId)) setState(() {});
   }
 
   void _togglePause() {
@@ -158,7 +145,8 @@ class _PlayScreenState extends State<PlayScreen>
     setState(() {
       _session.restart();
       _lastOutcome = null;
-      _litBeams.clear();
+      _litHands.clear();
+      _heldByPointer.clear();
     });
     if (!_ticker.isActive) _ticker.start();
   }
@@ -178,10 +166,12 @@ class _PlayScreenState extends State<PlayScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
-          _matchLayout(size);
           return Listener(
             behavior: HitTestBehavior.opaque,
-            onPointerDown: (event) => _onTapDown(event.localPosition, size),
+            onPointerDown: (event) =>
+                _onTapDown(event.pointer, event.localPosition, size),
+            onPointerUp: (event) => _onTapUp(event.pointer),
+            onPointerCancel: (event) => _onTapUp(event.pointer),
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -191,7 +181,8 @@ class _PlayScreenState extends State<PlayScreen>
                       chart: _session.chart,
                       beat: _session.beat,
                       windowInBeats: _session.windowInBeats,
-                      litBeams: Map.of(_litBeams),
+                      litHands: Map.of(_litHands),
+                      holding: _session.isHolding,
                     ),
                   ),
                 ),

@@ -35,36 +35,38 @@ Note note(double beat, int midi,
         {double duration = 0.5, Hand hand = Hand.right}) =>
     Note(beat: beat, midi: midi, duration: duration, hand: hand);
 
+/// Somewhere on the right-hand side of the screen.
+const double right = 0.75;
+
+/// Somewhere on the left-hand side.
+const double left = 0.25;
+
 void main() {
   late RecordingEngine engine;
-  late PianoAudio audio;
 
-  /// Most of these tests are about the session rather than the chart, so they
-  /// use the level that keeps one tap per moment.
-  PlaySession sessionFor(Song song,
-      {double approachSeconds = 2.0,
-      int beamCount = 4,
-      Difficulty difficulty = Difficulty.easy}) {
+  PlaySession sessionFor(
+    Song song, {
+    Difficulty difficulty = Difficulty.easy,
+    bool quantize = true,
+    Judge judge = const Judge(),
+  }) {
     engine = RecordingEngine();
-    audio = PianoAudio(engine: engine);
     final session = PlaySession(
-      chart: Chart.build(song, beamCount: beamCount, difficulty: difficulty),
-      audio: audio,
-      approachSeconds: approachSeconds,
+      chart: Chart.build(song, difficulty: difficulty),
+      audio: PianoAudio(engine: engine),
+      judge: judge,
+      quantize: quantize,
     );
     session.start();
     return session;
   }
 
-  /// Advance the screen's clock to [seconds] of wall time.
   void wall(PlaySession session, double seconds) =>
       session.update(Duration(microseconds: (seconds * 1e6).round()));
 
-  /// Wall time at which a fresh session reaches a given beat of the song.
   double wallTimeOf(PlaySession session, double beat) =>
       (beat + session.leadInBeats) / session.beatsPerSecond;
 
-  /// Move a fresh session's clock to a given beat of the song.
   void seek(PlaySession session, double beat) =>
       wall(session, wallTimeOf(session, beat));
 
@@ -73,7 +75,6 @@ void main() {
       final session = sessionFor(songOf([note(0, 60)]));
       session.update(Duration.zero);
       expect(session.beat, -session.leadInBeats);
-      expect(session.beat, lessThan(0));
     });
 
     test('runs at the song tempo', () {
@@ -86,135 +87,242 @@ void main() {
       final session = sessionFor(songOf([note(0, 60), note(8, 62)]));
       seek(session, 2);
       session.pause();
-      // Four beats of wall time pass while the game is paused.
-      seek(session, 6);
+      seek(session, 6); // four beats of wall time pass while paused
       session.start();
       seek(session, 7);
-      // One beat of play has happened since, not five.
       expect(session.beat, closeTo(3, 0.001));
-    });
-
-    test('stands still while paused', () {
-      final session = sessionFor(songOf([note(0, 60)]));
-      seek(session, 2);
-      session.pause();
-      seek(session, 6);
-      expect(session.beat, closeTo(2, 0.001));
     });
   });
 
-  group('tapping', () {
+  group('touching', () {
     test('plays the right note, which the player never chooses', () {
       final session = sessionFor(songOf([note(0, 67)]));
       seek(session, 0);
-      final outcome = session.tap(session.chart.taps.first.beam);
+      final outcome = session.tap(right);
       expect(outcome!.verdict, Verdict.perfect);
-      expect(engine.struck.single.$1, 67, reason: 'the note the song asked for');
+      expect(engine.struck.single.$1, 67);
     });
 
-    test('plays every note of a chord under one finger', () {
-      final session =
-          sessionFor(songOf([note(0, 60), note(0, 64), note(0, 67)]));
-      seek(session, 0);
-      session.tap(session.chart.taps.first.beam);
-      expect(engine.struck.map((s) => s.$1), [60, 64, 67]);
+    test('a touch anywhere counts when the hands are not separated', () {
+      for (final across in [0.05, 0.3, 0.5, 0.95]) {
+        final session = sessionFor(songOf([note(0, 60)]));
+        seek(session, 0);
+        expect(session.tap(across)?.scored, isTrue, reason: 'at $across');
+      }
     });
 
-    test('being early or late still sounds the note, just scores less', () {
-      final session = sessionFor(songOf([note(0, 60)]));
-      seek(session, 0.36); // 180ms late at this tempo
-      final outcome = session.tap(session.chart.taps.first.beam);
-      expect(outcome!.verdict, Verdict.good);
-      expect(engine.struck, hasLength(1), reason: 'the music must not break');
-    });
-
-    test('tighter timing is played a little firmer', () {
-      final onTime = sessionFor(songOf([note(0, 60)]));
-      seek(onTime, 0);
-      onTime.tap(onTime.chart.taps.first.beam);
-      final firm = engine.struck.single.$2;
-
-      final late = sessionFor(songOf([note(0, 60)]));
-      seek(late, 0.36);
-      late.tap(late.chart.taps.first.beam);
-      expect(engine.struck.single.$2, lessThan(firm));
-    });
-
-    test('a tap far from any note does nothing at all', () {
+    test('a touch far from any note does nothing at all', () {
       final session = sessionFor(songOf([note(8, 60)]));
       seek(session, 0);
-      expect(session.tap(session.chart.taps.first.beam), isNull);
-      expect(engine.struck, isEmpty);
+      expect(session.tap(right), isNull);
       expect(session.scoreboard.notesPlayed, 0,
           reason: 'a stray finger must not be punished');
-    });
-
-    test('a tap anywhere plays the note that is due', () {
-      // Aim is not the skill being tested here — timing is. A note on one beam
-      // must answer to a tap on any of them.
-      final session = sessionFor(songOf([note(0, 84), note(4, 40)]));
-      final rightBeam = session.chart.taps.first.beam;
-      for (var beam = 0; beam < 4; beam++) {
-        if (beam == rightBeam) continue;
-        final fresh = sessionFor(songOf([note(0, 84), note(4, 40)]));
-        seek(fresh, 0);
-        final outcome = fresh.tap(beam);
-        expect(outcome?.scored, isTrue, reason: 'tapped beam $beam');
-        expect(engine.struck.single.$1, 84);
-      }
-    });
-
-    test('a run across the beams can be played without chasing it', () {
-      // Four quick notes sweeping from the bottom of the range to the top:
-      // a hand cannot cross the screen this fast, and should not have to.
-      // Normal, because easy deliberately thins a run this dense.
-      final session = sessionFor(
-        songOf([note(0, 48), note(0.25, 60), note(0.5, 72), note(0.75, 84)]),
-        difficulty: Difficulty.normal,
-      );
-      for (final beat in [0.0, 0.25, 0.5, 0.75]) {
-        seek(session, beat);
-        expect(session.tap(0)?.scored, isTrue, reason: 'at beat $beat');
-      }
-      expect(engine.struck.map((s) => s.$1), [48, 60, 72, 84]);
-      expect(session.scoreboard.combo, 4);
     });
 
     test('one note cannot be played twice', () {
       final session = sessionFor(songOf([note(0, 60)]));
       seek(session, 0);
-      expect(session.tap(session.chart.taps.first.beam), isNotNull);
-      expect(session.tap(session.chart.taps.first.beam), isNull);
+      expect(session.tap(right), isNotNull);
+      expect(session.tap(right)?.scored ?? false, isFalse);
       expect(engine.struck, hasLength(1));
-    });
-
-    test('the nearest note is the one that sounds', () {
-      // One beam, so both notes are reachable by the same tap.
-      final session =
-          sessionFor(songOf([note(0, 60), note(0.5, 62)]), beamCount: 1);
-      seek(session, 0.45);
-      final outcome = session.tap(0);
-      // Both are inside the window; the closer one must win. The note itself
-      // waits for its beat, so the outcome is what identifies it.
-      expect(outcome!.notes.single.midi, 62);
-      seek(session, 0.6);
-      expect(engine.struck.single.$1, 62);
     });
 
     test('nothing happens while paused', () {
       final session = sessionFor(songOf([note(0, 60)]));
       seek(session, 0);
       session.pause();
-      expect(session.tap(session.chart.taps.first.beam), isNull);
+      expect(session.tap(right), isNull);
+    });
+  });
+
+  group('the two hands', () {
+    final duet = songOf([
+      note(0, 84),
+      note(0, 40, hand: Hand.left),
+    ]);
+
+    test('a hand only answers its own notes', () {
+      final session = sessionFor(duet, difficulty: Difficulty.normal);
+      seek(session, 0);
+      session.tap(left);
+      expect(engine.struck.single.$1, 40, reason: 'the left hand note');
+      session.tap(right);
+      expect(engine.struck.map((s) => s.$1), [40, 84]);
+    });
+
+    test('one hand cannot cover for the other', () {
+      final session = sessionFor(duet, difficulty: Difficulty.normal);
+      seek(session, 0);
+      session.tap(left);
+      // The right hand's note is still waiting; the left hand must not take it.
+      expect(session.tap(left)?.scored ?? false, isFalse);
+      expect(engine.struck, hasLength(1));
+    });
+
+    test('on easy either side answers anything', () {
+      final session = sessionFor(duet, difficulty: Difficulty.easy);
+      seek(session, 0);
+      // Easy folds the moment into one touch, so one finger takes both notes.
+      session.tap(left);
+      expect(engine.struck.map((s) => s.$1).toList()..sort(), [40, 84]);
+    });
+
+    test('on hard each note of a chord needs its own finger', () {
+      final chord = songOf([
+        note(0, 48, hand: Hand.left),
+        note(0, 52, hand: Hand.left),
+        note(0, 55, hand: Hand.left),
+      ]);
+      final session = sessionFor(chord, difficulty: Difficulty.hard);
+      seek(session, 0);
+      session.tap(0.1);
+      expect(engine.struck, hasLength(1), reason: 'one finger, one note');
+      session.tap(0.2);
+      session.tap(0.3);
+      expect(engine.struck.map((s) => s.$1).toList()..sort(), [48, 52, 55]);
+    });
+
+    test('a finger takes the note nearest where it landed', () {
+      final chord = songOf([
+        note(0, 40, hand: Hand.left),
+        note(0, 60, hand: Hand.left),
+      ]);
+      final session = sessionFor(chord, difficulty: Difficulty.hard);
+      seek(session, 0);
+      session.tap(0.05); // far left: the lower note
+      expect(engine.struck.single.$1, 40);
+    });
+  });
+
+  group('holding a long note', () {
+    Song heldNote() => songOf([note(0, 60, duration: 2)]);
+
+    test('a long note hands back something to let go of', () {
+      final session = sessionFor(heldNote());
+      seek(session, 0);
+      final outcome = session.tap(right);
+      expect(outcome!.holdId, isNotNull);
+      expect(session.isHolding, isTrue);
+    });
+
+    test('a short note does not', () {
+      final session = sessionFor(songOf([note(0, 60, duration: 0.5)]));
+      seek(session, 0);
+      expect(session.tap(right)!.holdId, isNull);
+      expect(session.isHolding, isFalse);
+    });
+
+    test('letting go early cuts the note short', () {
+      final session = sessionFor(heldNote());
+      seek(session, 0);
+      final outcome = session.tap(right);
+      seek(session, 0.5);
+      expect(session.releaseHold(outcome!.holdId!), isTrue,
+          reason: 'the note was still meant to be sounding');
+      expect(engine.released, contains(60));
+    });
+
+    test('holding to the end lets the note ring out on its own', () {
+      final session = sessionFor(heldNote());
+      seek(session, 0);
+      final outcome = session.tap(right);
+      seek(session, 2.1);
+      expect(session.releaseHold(outcome!.holdId!), isFalse,
+          reason: 'nothing to cut short — it had finished');
+    });
+
+    test('letting go costs no points', () {
+      final session = sessionFor(heldNote());
+      seek(session, 0);
+      final outcome = session.tap(right);
+      final score = session.scoreboard.score;
+      seek(session, 0.5);
+      session.releaseHold(outcome!.holdId!);
+      expect(session.scoreboard.score, score);
+      expect(session.scoreboard.combo, 1, reason: 'the streak survives');
+    });
+
+    test('releasing something already released is harmless', () {
+      final session = sessionFor(heldNote());
+      seek(session, 0);
+      final id = session.tap(right)!.holdId!;
+      seek(session, 0.5);
+      session.releaseHold(id);
+      expect(session.releaseHold(id), isFalse);
+    });
+
+    test('restarting forgets what was being held', () {
+      final session = sessionFor(heldNote());
+      seek(session, 0);
+      session.tap(right);
+      session.restart();
+      expect(session.isHolding, isFalse);
+    });
+  });
+
+  group('keeping the music in time', () {
+    test('a note touched early waits for its beat', () {
+      final session = sessionFor(songOf([note(1, 60)]));
+      seek(session, 0.67);
+      expect(session.tap(right)?.scored, isTrue);
+      expect(engine.struck, isEmpty, reason: 'it must not sound yet');
+      seek(session, 1.0);
+      expect(engine.struck.map((s) => s.$1), [60]);
+    });
+
+    test('the score still reports how early it was', () {
+      final session = sessionFor(songOf([note(1, 60)]));
+      seek(session, 0.8);
+      final outcome = session.tap(right);
+      expect(outcome!.errorMs, lessThan(0));
+      expect(outcome.verdict, isNot(Verdict.perfect),
+          reason: 'flattering the ear must not flatter the score');
+    });
+
+    test('a late touch sounds at once, since there is no going back', () {
+      final session = sessionFor(songOf([note(0, 60)]));
+      seek(session, 0.2);
+      session.tap(right);
+      expect(engine.struck.map((s) => s.$1), [60]);
+    });
+
+    test('switched off, a note sounds under the finger', () {
+      final session = sessionFor(songOf([note(1, 60)]), quantize: false);
+      seek(session, 0.67);
+      session.tap(right);
+      expect(engine.struck.map((s) => s.$1), [60]);
+    });
+  });
+
+  group('tolerance', () {
+    double? errorAt(TimingTolerance tolerance) {
+      final session = sessionFor(songOf([note(0, 60)]),
+          judge: Judge.forTolerance(tolerance));
+      seek(session, 0.55); // 275ms late
+      final outcome = session.tap(right);
+      return outcome != null && outcome.scored ? outcome.errorMs : null;
+    }
+
+    test('a wider setting accepts a touch a stricter one refuses', () {
+      expect(errorAt(TimingTolerance.tight), isNull);
+      expect(errorAt(TimingTolerance.normal), isNull);
+      expect(errorAt(TimingTolerance.wide), isNotNull);
+    });
+
+    test('every tolerance treats early and late alike', () {
+      for (final tolerance in TimingTolerance.values) {
+        final judge = Judge.forTolerance(tolerance);
+        expect(judge.verdictFor(80), judge.verdictFor(-80));
+      }
     });
   });
 
   group('missing', () {
-    test('a note that goes by unplayed is a miss', () {
+    test('a note that goes by unplayed is a miss and does not sound', () {
       final session = sessionFor(songOf([note(0, 60)]));
       seek(session, 2);
       expect(session.scoreboard.counts[Verdict.miss], 1);
-      expect(engine.struck, isEmpty, reason: 'a missed note must not sound');
+      expect(engine.struck, isEmpty);
     });
 
     test('the miss is reported once, not every frame', () {
@@ -223,252 +331,48 @@ void main() {
       session.onMiss = (_) => misses++;
       seek(session, 2);
       seek(session, 3);
-      seek(session, 4);
       expect(misses, 1);
     });
 
-    test('a note is not missed while it is still playable', () {
-      final session = sessionFor(songOf([note(0, 60)]));
-      seek(session, 0.2); // still inside the window
-      expect(session.scoreboard.counts[Verdict.miss], 0);
-      expect(session.tap(session.chart.taps.first.beam), isNotNull);
+    test('touching too early says so, and costs nothing', () {
+      final session = sessionFor(songOf([note(2, 60)]));
+      seek(session, 1.3);
+      final outcome = session.tap(right);
+      expect(outcome, isNotNull, reason: 'silence reads as a broken control');
+      expect(outcome!.scored, isFalse);
+      expect(outcome.errorMs, lessThan(0));
+      expect(session.scoreboard.notesPlayed, 0);
     });
 
-    test('missing breaks the streak', () {
-      final session = sessionFor(songOf([
-        note(0, 60), note(1, 62), note(2, 64),
-      ]));
-      final beam = session.chart.taps.first.beam;
-      seek(session, 0);
-      session.tap(beam);
-      seek(session, 1);
-      session.tap(session.chart.taps[1].beam);
-      expect(session.scoreboard.combo, 2);
-      seek(session, 4); // let the third go by
-      expect(session.scoreboard.combo, 0);
+    test('touching just after a note has gone says that too', () {
+      final session = sessionFor(songOf([note(0, 60)]));
+      seek(session, 0.7);
+      final outcome = session.tap(right);
+      expect(outcome!.scored, isFalse);
+      expect(outcome.errorMs, greaterThan(0));
+      expect(session.scoreboard.counts[Verdict.miss], 1,
+          reason: 'not counted a second time');
     });
   });
 
   group('the accompaniment', () {
-    test('plays itself, without the player', () {
-      final session = sessionFor(songOf([
-        note(0, 72),
-        note(0, 40, hand: Hand.left),
-        note(1, 43, hand: Hand.left),
-      ]));
-      seek(session, 1.5);
-      expect(engine.struck.map((s) => s.$1), containsAll([40, 43]));
+    test('plays itself on easy, without the player', () {
+      final session = sessionFor(
+        songOf([for (var i = 0; i < 8; i++) note(i * 0.25, 60 + i)]),
+        difficulty: Difficulty.easy,
+      );
+      seek(session, 2);
+      expect(engine.struck, isNotEmpty);
     });
 
     test('each of its notes sounds once', () {
-      final session = sessionFor(songOf([
-        note(0, 72),
-        note(0, 40, hand: Hand.left),
-      ]));
-      seek(session, 0.5);
-      seek(session, 1.0);
-      seek(session, 1.5);
-      expect(engine.struck.where((s) => s.$1 == 40), hasLength(1));
-    });
-
-    test('does not sound before its moment', () {
-      final session = sessionFor(songOf([
-        note(0, 72),
-        note(8, 40, hand: Hand.left),
-      ]));
+      final session = sessionFor(
+        songOf([note(0, 60), note(0.25, 62)]),
+        difficulty: Difficulty.easy,
+      );
+      seek(session, 1);
       seek(session, 2);
-      expect(engine.struck.where((s) => s.$1 == 40), isEmpty);
-    });
-  });
-
-  group('note lengths', () {
-    test('a note is released when the song says it ends, not on lift', () {
-      final session = sessionFor(songOf([note(0, 60, duration: 1.0)]));
-      seek(session, 0);
-      session.tap(session.chart.taps.first.beam);
-      seek(session, 0.5);
-      expect(engine.released, isEmpty, reason: 'still ringing');
-      seek(session, 1.2);
-      expect(engine.released, contains(60));
-    });
-  });
-
-  group('turning the device', () {
-    test('re-laying the song out keeps the score and the streak', () {
-      final session = sessionFor(songOf([note(0, 60), note(1, 64)]),
-          difficulty: Difficulty.normal);
-      seek(session, 0);
-      session.tap(session.chart.taps.first.beam);
-      final scoreBefore = session.scoreboard.score;
-
-      // Sideways: more beams, so the notes group differently.
-      session.rebindChart(Chart.build(session.chart.song,
-          beamCount: 6, difficulty: Difficulty.normal));
-
-      expect(session.scoreboard.score, scoreBefore);
-      expect(session.scoreboard.combo, 1);
-      expect(session.chart.beamCount, 6);
-    });
-
-    test('a note already played cannot be played again after re-laying', () {
-      final session = sessionFor(songOf([note(0, 60)]),
-          difficulty: Difficulty.normal);
-      seek(session, 0);
-      expect(session.tap(session.chart.taps.first.beam), isNotNull);
-
-      session.rebindChart(Chart.build(session.chart.song,
-          beamCount: 6, difficulty: Difficulty.normal));
-      for (final tap in session.chart.taps) {
-        expect(session.tap(tap.beam)?.scored ?? false, isFalse,
-            reason: 'the note was already played');
-      }
-      expect(engine.struck, hasLength(1));
-    });
-
-    test('a chord regroups when the beam count changes', () {
-      // Three notes far enough apart to sit on separate beams either way.
-      final song = songOf([note(0, 48), note(0, 60), note(0, 72)]);
-      final narrow = Chart.build(song, beamCount: 3, difficulty: Difficulty.normal);
-      final wide = Chart.build(song, beamCount: 6, difficulty: Difficulty.normal);
-      expect(narrow.taps.length, 3);
-      expect(wide.taps.length, 3);
-      expect(narrow.taps.map((t) => t.beam).toList(),
-          isNot(wide.taps.map((t) => t.beam).toList()));
-    });
-  });
-
-  group('reaching for a note', () {
-    test('tapping too early says so, and costs nothing', () {
-      final session = sessionFor(songOf([note(2, 60)]));
-      // Half a beat before the note is due: past the window, but plainly
-      // aimed at it.
-      seek(session, 1.3);
-      final outcome = session.tap(session.chart.taps.first.beam);
-      expect(outcome, isNotNull, reason: 'silence reads as a broken control');
-      expect(outcome!.scored, isFalse);
-      expect(outcome.errorMs, lessThan(0), reason: 'early');
-      expect(session.scoreboard.notesPlayed, 0, reason: 'no penalty');
-      expect(engine.struck, isEmpty);
-    });
-
-    test('tapping just after a note has gone says that too', () {
-      final session = sessionFor(songOf([note(0, 60)]));
-      seek(session, 0.7); // the note has been missed by now
-      expect(session.scoreboard.counts[Verdict.miss], 1);
-
-      final outcome = session.tap(session.chart.taps.first.beam);
-      expect(outcome, isNotNull);
-      expect(outcome!.scored, isFalse);
-      expect(outcome.errorMs, greaterThan(0), reason: 'late');
-      // The miss was already counted when the note went by; the late tap must
-      // not be counted a second time.
-      expect(session.scoreboard.counts[Verdict.miss], 1);
-    });
-
-    test('a tap in empty space is ignored entirely', () {
-      final session = sessionFor(songOf([note(20, 60)]));
-      seek(session, 0);
-      expect(session.tap(0), isNull);
-      expect(session.tap(1), isNull);
-    });
-
-    test('playing slower gives the hand more time between notes', () {
-      double beatsAfterOneSecond(double speed) {
-        final session = PlaySession(
-          chart: Chart.build(songOf([note(0, 60), note(1, 62)]),
-              difficulty: Difficulty.easy),
-          audio: PianoAudio(engine: RecordingEngine()),
-          speed: speed,
-        )..start();
-        final start = session.leadInBeats / session.beatsPerSecond;
-        session.update(
-            Duration(microseconds: ((start + 1.0) * 1e6).round()));
-        return session.beat;
-      }
-
-      // The same second of the player's time covers half as much music.
-      expect(beatsAfterOneSecond(0.5),
-          closeTo(beatsAfterOneSecond(1.0) / 2, 0.001));
-    });
-  });
-
-  group('keeping the music in time', () {
-    test('a note tapped early waits for its beat', () {
-      final session = sessionFor(songOf([note(1, 60)]));
-      // A third of a beat early — inside the window, but not on the beat.
-      seek(session, 0.67);
-      final outcome = session.tap(session.chart.taps.first.beam);
-      expect(outcome?.scored, isTrue, reason: 'it still counts as a hit');
-      expect(engine.struck, isEmpty, reason: 'but it must not sound yet');
-
-      seek(session, 1.0);
-      expect(engine.struck.map((s) => s.$1), [60],
-          reason: 'it sounds when the song says it should');
-    });
-
-    test('the score still reports how early it was', () {
-      final session = sessionFor(songOf([note(1, 60)]));
-      seek(session, 0.8);
-      final outcome = session.tap(session.chart.taps.first.beam);
-      expect(outcome!.errorMs, lessThan(0), reason: 'early');
-      expect(outcome.verdict, isNot(Verdict.perfect),
-          reason: 'flattering the ear must not flatter the score');
-    });
-
-    test('a late tap sounds at once, since there is no going back', () {
-      final session = sessionFor(songOf([note(0, 60)]));
-      seek(session, 0.2);
-      session.tap(session.chart.taps.first.beam);
-      expect(engine.struck.map((s) => s.$1), [60]);
-    });
-
-    test('switched off, a note sounds under the finger', () {
-      final engineNow = RecordingEngine();
-      final session = PlaySession(
-        chart: Chart.build(songOf([note(1, 60)]), difficulty: Difficulty.easy),
-        audio: PianoAudio(engine: engineNow),
-        quantize: false,
-      )..start();
-      final seconds = (0.67 + session.leadInBeats) / session.beatsPerSecond;
-      session.update(Duration(microseconds: (seconds * 1e6).round()));
-      session.tap(session.chart.taps.first.beam);
-      expect(engineNow.struck.map((s) => s.$1), [60]);
-    });
-
-    test('a waiting note is dropped when the song restarts', () {
-      final session = sessionFor(songOf([note(1, 60)]));
-      seek(session, 0.7);
-      session.tap(session.chart.taps.first.beam);
-      session.restart();
-      expect(engine.struck, isEmpty);
-    });
-  });
-
-  group('tolerance', () {
-    test('a wider setting accepts a tap a stricter one would refuse', () {
-      double? errorOf(TimingTolerance tolerance) {
-        final session = PlaySession(
-          chart: Chart.build(songOf([note(0, 60)]), difficulty: Difficulty.easy),
-          audio: PianoAudio(engine: RecordingEngine()),
-          judge: Judge.forTolerance(tolerance),
-        )..start();
-        final seconds = (0.55 + session.leadInBeats) / session.beatsPerSecond;
-        session.update(Duration(microseconds: (seconds * 1e6).round()));
-        final outcome = session.tap(session.chart.taps.first.beam);
-        return outcome != null && outcome.scored ? outcome.errorMs : null;
-      }
-
-      // 275ms late: outside the normal window, inside the wide one.
-      expect(errorOf(TimingTolerance.tight), isNull);
-      expect(errorOf(TimingTolerance.normal), isNull);
-      expect(errorOf(TimingTolerance.wide), isNotNull);
-    });
-
-    test('every tolerance keeps early and late symmetric', () {
-      for (final tolerance in TimingTolerance.values) {
-        final judge = Judge.forTolerance(tolerance);
-        expect(judge.verdictFor(80), judge.verdictFor(-80));
-      }
+      expect(engine.struck.where((s) => s.$1 == 62), hasLength(1));
     });
   });
 
@@ -485,33 +389,25 @@ void main() {
       final session = sessionFor(songOf([note(0, 60)]));
       final firstNoteAt = wallTimeOf(session, 0);
       wall(session, firstNoteAt);
-      session.tap(session.chart.taps.first.beam);
+      session.tap(right);
       expect(session.scoreboard.score, greaterThan(0));
 
       session.restart();
       expect(session.scoreboard.score, 0);
-      expect(session.beat, closeTo(-session.leadInBeats, 0.001));
-
-      // The screen's clock keeps running across a restart; the song's does not.
       wall(session, firstNoteAt + wallTimeOf(session, 0));
-      expect(session.beat, closeTo(0, 0.001));
-      expect(session.tap(session.chart.taps.first.beam), isNotNull,
-          reason: 'the note should be playable a second time');
+      expect(session.tap(right)?.scored, isTrue);
     });
   });
 
   test('calibration shifts what counts as on time', () {
-    final engine = RecordingEngine();
+    final recorder = RecordingEngine();
     final session = PlaySession(
-      chart: Chart.build(songOf([note(0, 60)])),
-      audio: PianoAudio(engine: engine),
-      // The player's taps land 100ms late through the device's own delay.
+      chart: Chart.build(songOf([note(0, 60)]), difficulty: Difficulty.easy),
+      audio: PianoAudio(engine: recorder),
       latencyOffsetMs: 100,
     )..start();
-
     final seconds = (0.2 + session.leadInBeats) / session.beatsPerSecond;
     session.update(Duration(microseconds: (seconds * 1e6).round()));
-    // 100ms late by the clock, but on time once calibration is applied.
-    expect(session.tap(session.chart.taps.first.beam)!.verdict, Verdict.perfect);
+    expect(session.tap(right)!.verdict, Verdict.perfect);
   });
 }

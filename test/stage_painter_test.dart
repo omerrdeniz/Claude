@@ -7,6 +7,7 @@ import 'package:piano_flow/data/song_library.dart';
 import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/song.dart';
 import 'package:piano_flow/game/stage_geometry.dart';
+import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/render/stage_painter.dart';
 import 'package:piano_flow/theme/app_theme.dart';
 
@@ -16,17 +17,16 @@ const Size phoneLandscape = Size(844, 390);
 /// Paint one frame straight onto a canvas — no widget tree, no clock.
 ui.Picture paintFrame(Song song, double beat,
     {double window = 4,
-    Map<int, double> litBeams = const {},
+    Map<Hand, double> litHands = const {},
     Size size = phone,
     Difficulty difficulty = Difficulty.normal}) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder, Offset.zero & size);
   StagePainter(
-    chart: Chart.build(song,
-        beamCount: Chart.beamsForWidth(size.width), difficulty: difficulty),
+    chart: Chart.build(song, difficulty: difficulty),
     beat: beat,
     windowInBeats: window,
-    litBeams: litBeams,
+    litHands: litHands,
   ).paint(canvas, size);
   return recorder.endRecording();
 }
@@ -35,11 +35,11 @@ ui.Picture paintFrame(Song song, double beat,
 /// looked at. There is no device here to look at it on, so it is rendered to
 /// file the same way the synthesiser is rendered to WAV.
 Future<int> savePng(Song song, double beat, String name,
-    {Map<int, double> litBeams = const {},
+    {Map<Hand, double> litHands = const {},
     Size size = phone,
     Difficulty difficulty = Difficulty.normal}) async {
   final picture = paintFrame(song, beat,
-      litBeams: litBeams, size: size, difficulty: difficulty);
+      litHands: litHands, size: size, difficulty: difficulty);
   final image = await picture.toImage(size.width.toInt(), size.height.toInt());
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   final file = File('build/screens/$name.png');
@@ -63,20 +63,10 @@ void main() {
   });
 
   test('notes stay clear of each other on a short screen', () {
-    const landscape =
-        StageGeometry(size: phoneLandscape, beamCount: 6);
+    const landscape = StageGeometry(size: phoneLandscape);
     // A note must not be so large that consecutive ones overlap vertically.
     expect(landscape.noteRadiusAt(1.0) * 2,
         lessThan(phoneLandscape.height * 0.15));
-  });
-
-  test('turning sideways makes room for more beams', () {
-    expect(Chart.beamsForWidth(phone.width), 4);
-    expect(Chart.beamsForWidth(phoneLandscape.width), 6);
-    expect(Chart.beamsForWidth(320), 3,
-        reason: 'the smallest phones give up a beam to keep them reachable');
-    expect(Chart.beamsForWidth(2000), lessThanOrEqualTo(6),
-        reason: 'a tablet must not sprout unreachable beams');
   });
 
   test('the playfield paints in landscape too', () {
@@ -85,8 +75,57 @@ void main() {
         returnsNormally);
   });
 
+  test('a chord band never crosses the divide between the hands', () {
+    // Both hands playing chords at once: the two bands must stay on their own
+    // sides, which is what grouping by hand as well as by moment guarantees.
+    final chart = Chart.build(SongLibrary.odeToJoy, difficulty: Difficulty.hard);
+    final moments = <double, List<Tap>>{};
+    for (final tap in chart.taps) {
+      (moments[tap.beat] ??= []).add(tap);
+    }
+    for (final group in moments.values) {
+      for (final hand in Hand.values) {
+        final ofHand = group.where((t) => t.hand == hand);
+        if (ofHand.isEmpty) continue;
+        final low = ofHand.map((t) => t.across).reduce((a, b) => a < b ? a : b);
+        final high = ofHand.map((t) => t.across).reduce((a, b) => a > b ? a : b);
+        expect(hand == Hand.left ? high < 0.5 : low > 0.5, isTrue,
+            reason: 'a band would cross the middle');
+      }
+    }
+  });
+
+  test('no note is drawn off the edge of the screen', () {
+    for (final size in [phone, phoneLandscape, const Size(320, 568)]) {
+      final g = StageGeometry(size: size);
+      final radius = g.noteRadiusAt(1.0);
+      for (final difficulty in Difficulty.values) {
+        for (final song in SongLibrary.all) {
+          for (final tap in Chart.build(song, difficulty: difficulty).taps) {
+            final x = g.xAtPosition(tap.across);
+            expect(x - radius, greaterThanOrEqualTo(0),
+                reason: '${song.title} clipped on the left at $size');
+            expect(x + radius, lessThanOrEqualTo(size.width),
+                reason: '${song.title} clipped on the right at $size');
+          }
+        }
+      }
+    }
+  });
+
+  test('the hand divide is drawn only when the hands are separated', () {
+    // Not an appearance test so much as a promise: the line must never be
+    // there on easy, where a touch on either side counts for anything.
+    expect(
+        () => paintFrame(SongLibrary.odeToJoy, 5, difficulty: Difficulty.easy),
+        returnsNormally);
+    expect(
+        () => paintFrame(SongLibrary.odeToJoy, 5, difficulty: Difficulty.hard),
+        returnsNormally);
+  });
+
   test('a beam lit by a hit still paints', () {
-    expect(() => paintFrame(SongLibrary.odeToJoy, 6.0, litBeams: {0: 1.0, 3: 0.2}),
+    expect(() => paintFrame(SongLibrary.odeToJoy, 6.0, litHands: {Hand.left: 1.0, Hand.right: 0.2}),
         returnsNormally);
   });
 
@@ -113,9 +152,13 @@ void main() {
       'prelude-in-c': await savePng(SongLibrary.preludeInC, 5.0, 'prelude-in-c'),
       // A beam still glowing from a hit a moment ago.
       'vurus-ani': await savePng(SongLibrary.odeToJoy, 6.05, 'vurus-ani',
-          litBeams: {2: 0.8}),
+          litHands: {Hand.right: 0.8}),
       // Chords: colour by finger count, with a band tying each one together.
       'akorlar': await savePng(SongLibrary.odeToJoy, 5.0, 'akorlar'),
+      'eller-ayri': await savePng(SongLibrary.preludeInC, 5.0, 'eller-ayri'),
+      'zor-parmaklama': await savePng(
+          SongLibrary.odeToJoy, 5.0, 'zor-parmaklama',
+          difficulty: Difficulty.hard),
       'akorlar-yatay': await savePng(
           SongLibrary.odeToJoy, 5.0, 'akorlar-yatay',
           size: phoneLandscape),

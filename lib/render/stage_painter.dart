@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../game/chart.dart';
+import '../music/note.dart';
 import '../game/stage_geometry.dart';
 import '../theme/app_theme.dart';
 
@@ -16,7 +17,8 @@ class StagePainter extends CustomPainter {
     required this.chart,
     required this.beat,
     required this.windowInBeats,
-    this.litBeams = const {},
+    this.litHands = const {},
+    this.holding = false,
   });
 
   final Chart chart;
@@ -27,14 +29,18 @@ class StagePainter extends CustomPainter {
   /// How far ahead the player can see.
   final double windowInBeats;
 
-  /// Beams flashing from a recent hit, mapped to how fresh it is (1 to 0).
-  final Map<int, double> litBeams;
+  /// Hands flashing from a recent hit, mapped to how fresh it is (1 to 0).
+  final Map<Hand, double> litHands;
+
+  /// Whether a long note is being held right now.
+  final bool holding;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final geometry = StageGeometry(size: size, beamCount: chart.beamCount);
+    final geometry = StageGeometry(size: size);
 
     _paintBackground(canvas, size, geometry);
+    if (chart.separatesHands) _paintHandDivide(canvas, size, geometry);
     _paintHitLine(canvas, size, geometry);
     _paintNotes(canvas, geometry);
   }
@@ -69,9 +75,32 @@ class StagePainter extends CustomPainter {
   }
 
   /// The line where notes are due.
+  /// The line down the middle, where one hand's territory ends and the
+  /// other's begins.
+  ///
+  /// Faint on purpose: it is a reminder of which side to answer on, not
+  /// something to look at. The notes themselves carry the information.
+  void _paintHandDivide(Canvas canvas, Size size, StageGeometry g) {
+    final x = size.width / 2;
+    canvas.drawRect(
+      Rect.fromLTWH(x - 1, 0, 2, size.height),
+      Paint()
+        ..shader = ui.Gradient.linear(
+          Offset(x, 0),
+          Offset(x, size.height),
+          [
+            Colors.white.withValues(alpha: 0.0),
+            Colors.white.withValues(alpha: 0.10),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+          const [0.0, 0.55, 1.0],
+        ),
+    );
+  }
+
   void _paintHitLine(Canvas canvas, Size size, StageGeometry g) {
     final y = g.hitLineY;
-    final flash = litBeams.values.fold(0.0, (max, v) => v > max ? v : max);
+    final flash = litHands.values.fold(0.0, (max, v) => v > max ? v : max);
 
     // A soft band rather than a blurred line: a blur filter here costs more
     // per frame than everything else on screen put together, and on a phone
@@ -106,11 +135,12 @@ class StagePainter extends CustomPainter {
     final visible = chart.visibleAt(beat, windowInBeats).toList()
       ..sort((a, b) => b.beat.compareTo(a.beat));
 
-    // Notes struck together, grouped so the band behind them can be drawn
-    // before any of them.
-    final moments = <double, List<Tap>>{};
+    // Notes struck together *by the same hand*, grouped so the band behind
+    // them can be drawn first. Grouping by moment alone would run the band
+    // across the divide and paint one hand in the other's colour.
+    final moments = <(double, Hand), List<Tap>>{};
     for (final tap in visible) {
-      final key = (tap.beat * 1000).roundToDouble();
+      final key = ((tap.beat * 1000).roundToDouble(), tap.hand);
       (moments[key] ??= []).add(tap);
     }
 
@@ -131,13 +161,17 @@ class StagePainter extends CustomPainter {
           : (0.35 + progress * 0.65).clamp(0.0, 1.0);
       if (fade <= 0.01) continue;
 
-      if (group.length > 1) _paintChordBand(canvas, g, group, progress, colour, fade);
+      if (group.length > 1) {
+        _paintChordBand(canvas, g, group, progress, colour, fade);
+      }
 
-      // Long notes are not drawn with a trail behind them. The trail said
-      // "hold this" — a promise the game does not keep, since a tap is a
-      // moment here and the note's length comes from the song, not the
-      // finger. Better to draw nothing than to draw an instruction.
       for (final member in group) {
+        // A long note is drawn as a bar reaching back the way it came: the
+        // finger is meant to stay down for its length, and the bar is how
+        // long. Struck notes stay plain circles, so the two never look alike.
+        if (member.isHold) {
+          _paintHoldBar(canvas, g, member, progress, radius, colour, fade);
+        }
         _paintNote(canvas, g, member, progress, radius, colour, fade);
       }
     }
@@ -173,6 +207,37 @@ class StagePainter extends CustomPainter {
           colour.withValues(alpha: 0.46 * fade),
           colour.withValues(alpha: 0.30 * fade),
         ], const [0.0, 0.5, 1.0]),
+    );
+  }
+
+  /// The body of a note that has to be held down, drawn as a bar as long as
+  /// the note lasts.
+  void _paintHoldBar(Canvas canvas, StageGeometry g, Tap tap, double progress,
+      double radius, Color colour, double fade) {
+    final tailProgress = StageGeometry.progressFor(
+        tap.endBeat - beat, windowInBeats);
+    if (tailProgress >= progress) return;
+
+    final head = g.positionAtPosition(tap.across, progress);
+    final tail = g.positionAtPosition(tap.across, tailProgress);
+    final width = radius * 0.72;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(head.dx - width, tail.dy, head.dx + width, head.dy),
+        Radius.circular(width),
+      ),
+      Paint()..color = colour.withValues(alpha: 0.35 * fade),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(head.dx - width, tail.dy, head.dx + width, head.dy),
+        Radius.circular(width),
+      ),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = Colors.white.withValues(alpha: 0.28 * fade),
     );
   }
 
@@ -226,5 +291,6 @@ class StagePainter extends CustomPainter {
       old.beat != beat ||
       old.chart != chart ||
       old.windowInBeats != windowInBeats ||
-      old.litBeams != litBeams;
+      old.holding != holding ||
+      old.litHands != litHands;
 }

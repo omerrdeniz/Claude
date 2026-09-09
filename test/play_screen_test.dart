@@ -82,6 +82,38 @@ void main() {
     expect(find.text('İsabet'), findsOneWidget);
   });
 
+  testWidgets('a finger can press and lift without anything breaking',
+      (tester) async {
+    // The lift is what ends a held note, so the wiring for it has to exist.
+    await tester.pumpWidget(MaterialApp(
+        home: PlayScreen(song: SongLibrary.odeToJoy, speed: 0.6)));
+    await play(tester, const Duration(milliseconds: 2200), frames: 40);
+
+    final stage = tester.getRect(find.byType(PlayScreen));
+    final gesture = await tester.startGesture(stage.center);
+    await tester.pump(const Duration(milliseconds: 300));
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('both sides of the screen accept a finger', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: PlayScreen(song: SongLibrary.odeToJoy, speed: 0.6)));
+    await play(tester, const Duration(milliseconds: 2200), frames: 40);
+
+    final stage = tester.getRect(find.byType(PlayScreen));
+    final left = await tester.startGesture(
+        Offset(stage.left + stage.width * 0.25, stage.center.dy));
+    final right = await tester.startGesture(
+        Offset(stage.left + stage.width * 0.75, stage.center.dy));
+    await tester.pump(const Duration(milliseconds: 60));
+    await left.up();
+    await right.up();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('leaving the screen shuts the game down cleanly', (tester) async {
     await tester.pumpWidget(MaterialApp(home: PlayScreen(song: SongLibrary.furElise)));
     await play(tester, const Duration(seconds: 2));

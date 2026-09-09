@@ -15,51 +15,26 @@ import 'dart:ui';
 class StageGeometry {
   const StageGeometry({
     required this.size,
-    required this.beamCount,
     this.hitLineFraction = 0.68,
-    this.margin = 0.09,
-  })  : assert(beamCount > 0),
-        assert(hitLineFraction > 0 && hitLineFraction < 1);
+  }) : assert(hitLineFraction > 0 && hitLineFraction < 1);
 
   final Size size;
-
-  /// Only used to group a chord onto separate fingers; the player never aims
-  /// at a beam.
-  final int beamCount;
 
   /// Height of the hit line, as a fraction of the screen. Two thirds down
   /// leaves the approach visible while keeping the line clear of the thumbs.
   final double hitLineFraction;
 
-  /// Kept clear at each edge, so an outermost note is not clipped or hidden
-  /// under the hand holding the phone.
-  final double margin;
-
   double get hitLineY => size.height * hitLineFraction;
 
   double yAt(double progress) => hitLineY * progress;
 
-  /// Where a note at [across] sits — 0 the lowest pitch in the song, 1 the
-  /// highest.
+  /// Where a note sits horizontally. [across] is already a screen fraction,
+  /// placed by the chart within whichever hand's zone the note belongs to.
   double xAtPosition(double across, [double progress = 1]) =>
-      size.width * (margin + across.clamp(0.0, 1.0) * (1 - margin * 2));
+      size.width * across.clamp(0.0, 1.0);
 
   Offset positionAtPosition(double across, double progress) =>
       Offset(xAtPosition(across), yAt(progress));
-
-  /// The centre of [beam] as a position across the screen.
-  double acrossOfBeam(int beam) =>
-      beamCount <= 1 ? 0.5 : (beam + 0.5) / beamCount;
-
-  Offset positionAt(int beam, double progress) =>
-      positionAtPosition(acrossOfBeam(beam), progress);
-
-  double xAt(int beam, double progress) => positionAt(beam, progress).dx;
-
-  /// How far apart notes would be if the width were divided evenly.
-  double get beamSpacing => size.width * (1 - margin * 2) / beamCount;
-
-  double beamWidthAt(double progress) => beamSpacing;
 
   /// Notes swell as they approach, then shrink once past the line so a note
   /// that has had its moment stops looking like one still waiting.
@@ -67,7 +42,7 @@ class StageGeometry {
     // Bounded by both dimensions: a wide, short screen has room across but not
     // down, and notes sized only by width would collide as they travel.
     final maxRadius =
-        (beamSpacing * 0.3).clamp(10.0, 34.0).clamp(10.0, size.height * 0.05);
+        (size.width * 0.075).clamp(10.0, 30.0).clamp(10.0, size.height * 0.05);
     if (progress <= 1) {
       return lerpDouble(maxRadius * 0.3, maxRadius, progress.clamp(0.0, 1.0))!;
     }

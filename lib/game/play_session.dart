@@ -7,14 +7,19 @@ import 'judgement.dart';
 class TapOutcome {
   const TapOutcome({
     required this.verdict,
-    required this.beam,
+    required this.hand,
     required this.errorMs,
     required this.notes,
     this.scored = true,
+    this.holdId,
   });
 
   final Verdict verdict;
-  final int beam;
+  final Hand hand;
+
+  /// Set when this touch began a note the finger is expected to keep down.
+  /// Hand it back to [PlaySession.releaseHold] when the finger lifts.
+  final int? holdId;
 
   /// How early (negative) or late (positive) the tap was.
   final double errorMs;
@@ -25,6 +30,13 @@ class TapOutcome {
   /// nothing; it exists so the player is told *why* nothing sounded instead of
   /// being met with silence.
   final bool scored;
+}
+
+/// A note being held down.
+class _Hold {
+  _Hold({required this.midis, required this.endBeat});
+  final List<int> midis;
+  final double endBeat;
 }
 
 /// Runs one performance: keeps the clock, matches taps to notes, plays the
@@ -113,7 +125,7 @@ class PlaySession {
   /// Notes that have just gone by unplayed, kept only long enough to explain a
   /// late tap. Without this a tap that arrives moments after the note would
   /// find nothing at all and read as a dead control rather than a late hand.
-  final List<({double beat, int beam})> _justMissed = [];
+  final List<({double beat, Hand hand})> _justMissed = [];
 
   /// The song clock starts before the first note, so it arrives travelling.
   late double _beat = -leadInBeats;
@@ -200,7 +212,7 @@ class PlaySession {
       if (tap.beat >= deadline) break; // taps are in time order
       if (!_isPending(tap)) continue;
       _resolve(tap);
-      _justMissed.add((beat: tap.beat, beam: tap.beam));
+      _justMissed.add((beat: tap.beat, hand: tap.hand));
       scoreboard.register(Verdict.miss);
       onMiss?.call(tap);
     }
@@ -224,22 +236,23 @@ class PlaySession {
     });
   }
 
-  /// The player tapped [beam]. Returns what happened, or null if there was no
-  /// note there to play.
+  /// The player touched the screen at [across], 0 at the left edge and 1 at
+  /// the right. Returns what happened, or null if there was no note there.
   ///
-  /// A tap with nothing under it is ignored rather than punished: this game
+  /// A touch with nothing under it is ignored rather than punished: this game
   /// invites people who cannot play, and charging them for a stray finger
   /// would teach exactly the wrong lesson.
-  TapOutcome? tap(int beam) {
+  TapOutcome? tap(double across) {
     if (!_running) return null;
+    final hand = Chart.handAt(across);
 
-    final index = _nearestPending(beam);
+    final index = _nearestPending(across, hand);
     if (index == null) {
-      final near = _nearMiss(beam);
+      final near = _nearMiss(across, hand);
       if (near == null) return null;
       return TapOutcome(
         verdict: Verdict.miss,
-        beam: beam,
+        hand: hand,
         errorMs: near,
         notes: const [],
         scored: false,
@@ -277,49 +290,86 @@ class PlaySession {
       }
     }
 
+    int? holdId;
+    if (tapTarget.isHold) {
+      holdId = _nextHoldId++;
+      _holds[holdId] = _Hold(
+        midis: tapTarget.notes.map((n) => n.midi).toList(),
+        endBeat: tapTarget.endBeat,
+      );
+    }
+
     return TapOutcome(
       verdict: verdict,
-      beam: beam,
+      hand: tapTarget.hand,
       errorMs: errorMs,
       notes: tapTarget.notes,
+      holdId: holdId,
     );
   }
 
-  /// The pending tap this touch should count as.
+  /// Notes the finger is currently keeping down.
+  final Map<int, _Hold> _holds = {};
+  int _nextHoldId = 1;
+
+  /// Whether a long note is being held right now — for the screen to show.
+  bool get isHolding => _holds.isNotEmpty;
+
+  /// The finger came off a long note.
   ///
-  /// Timing decides it, not aim. A beam says what pitch a note is, and that is
-  /// worth showing — but making the player also land on the right one turns a
-  /// game about *when* into a game about hand-eye coordination, and a run of
-  /// fast notes across four beams becomes a race the hand cannot win. So a tap
-  /// anywhere takes the note that is due.
+  /// Letting go before the note is written to end cuts it short. Nothing is
+  /// deducted for it: the music itself is the correction, which is a better
+  /// teacher than a number going down.
   ///
-  /// Where several notes fall together — a chord — the tapped beam breaks the
-  /// tie, so several fingers land on several notes instead of all taking the
-  /// same one.
-  int? _nearestPending(int beam) {
+  /// Returns true if the note was cut short.
+  bool releaseHold(int holdId) {
+    final hold = _holds.remove(holdId);
+    if (hold == null) return false;
+    if (_beat >= hold.endBeat - 0.05) return false; // held to the end
+
+    for (final midi in hold.midis) {
+      audio.noteOff(midi);
+      _releaseAt.remove(midi);
+      _waiting.removeWhere((n) => n.midi == midi);
+    }
+    return true;
+  }
+
+  /// The pending touch this one should count as.
+  ///
+  /// Timing decides it, not aim. Position says which pitch a note is, and —
+  /// once the hands are separated — which hand it belongs to; but making the
+  /// player land on the note itself would turn a game about *when* into one
+  /// about hand-eye coordination.
+  ///
+  /// Where several notes fall together, the touched position breaks the tie,
+  /// so several fingers land on several notes instead of all taking the same
+  /// one.
+  int? _nearestPending(double across, Hand hand) {
     final windowBeats = judge.windowMs / 1000 * beatsPerSecond;
     const simultaneous = 0.001;
 
     int? best;
     var bestDistance = double.infinity;
-    var bestBeamGap = 1 << 20;
+    var bestGap = double.infinity;
 
     for (var i = 0; i < chart.taps.length; i++) {
       final tap = chart.taps[i];
       if (tap.beat - _beat > windowBeats) break; // taps are in time order
       if (!_isPending(tap)) continue;
+      if (chart.separatesHands && tap.hand != hand) continue;
 
       final distance = (tap.beat - _beat).abs();
       if (distance > windowBeats) continue;
 
-      final beamGap = (tap.beam - beam).abs();
+      final gap = (tap.across - across).abs();
       final closerInTime = distance < bestDistance - simultaneous;
       final sameMoment = (distance - bestDistance).abs() <= simultaneous;
 
-      if (closerInTime || (sameMoment && beamGap < bestBeamGap)) {
+      if (closerInTime || (sameMoment && gap < bestGap)) {
         best = i;
         bestDistance = distance;
-        bestBeamGap = beamGap;
+        bestGap = gap;
       }
     }
     return best;
@@ -327,9 +377,10 @@ class PlaySession {
 
   /// How far off a tap was from the nearest note it could plausibly have been
   /// aimed at, or null if there was nothing anywhere near.
-  double? _nearMiss(int beam) {
+  double? _nearMiss(double across, Hand hand) {
     double? closest;
-    void consider(double beat, int tapBeam) {
+    void consider(double beat, Hand tapHand) {
+      if (chart.separatesHands && tapHand != hand) return;
       final delta = beat - _beat;
       if (delta.abs() > _reachBeats) return;
       if (closest == null || delta.abs() < closest!.abs()) closest = delta;
@@ -338,11 +389,11 @@ class PlaySession {
     // Notes still to come — the player was early.
     for (final tap in chart.taps) {
       if (tap.beat - _beat > _reachBeats) break;
-      if (_isPending(tap)) consider(tap.beat, tap.beam);
+      if (_isPending(tap)) consider(tap.beat, tap.hand);
     }
     // Notes just gone — the player was late.
     for (final missed in _justMissed) {
-      consider(missed.beat, missed.beam);
+      consider(missed.beat, missed.hand);
     }
 
     return closest == null ? null : -closest! / beatsPerSecond * 1000;
@@ -374,6 +425,7 @@ class PlaySession {
     _releaseAt.clear();
     _justMissed.clear();
     _waiting.clear();
+    _holds.clear();
     audio.engine.allNotesOff();
   }
 

@@ -5,7 +5,7 @@ import 'package:piano_flow/game/stage_geometry.dart';
 
 void main() {
   const size = Size(390, 844);
-  const g = StageGeometry(size: size, beamCount: 4);
+  const g = StageGeometry(size: size);
 
   test('the hit line sits two thirds down the screen', () {
     expect(g.hitLineY, closeTo(844 * 0.68, 0.01));
@@ -30,15 +30,12 @@ void main() {
     expect(b, greaterThan(a));
   });
 
-  test('the outermost notes stay clear of the screen edge', () {
-    // A note at the very edge would have its glow clipped and sit under the
-    // thumb holding the phone.
-    expect(g.xAtPosition(0), greaterThan(size.width * 0.04));
-    expect(g.xAtPosition(1), lessThan(size.width * 0.96));
-  });
-
-  test('the layout uses most of the width', () {
-    expect(g.xAtPosition(1) - g.xAtPosition(0), greaterThan(size.width * 0.7));
+  test('a position is a fraction of the width', () {
+    // Where a note sits is decided by the chart, which keeps its own margins
+    // and hand zones; the geometry only turns that into pixels.
+    expect(g.xAtPosition(0), 0);
+    expect(g.xAtPosition(0.5), size.width / 2);
+    expect(g.xAtPosition(1), size.width);
   });
 
   test('a note keeps its place across the screen as it falls', () {
@@ -58,9 +55,8 @@ void main() {
 
   test('the layout is symmetric about the centre', () {
     for (final across in [0.0, 0.25, 0.5]) {
-      final left = g.xAtPosition(across);
-      final right = g.xAtPosition(1 - across);
-      expect(left + right, closeTo(size.width, 0.01));
+      expect(g.xAtPosition(across) + g.xAtPosition(1 - across),
+          closeTo(size.width, 0.01));
     }
   });
 
@@ -94,7 +90,7 @@ void main() {
   });
 
   test('notes stay clear of each other on a short screen', () {
-    const landscape = StageGeometry(size: Size(844, 390), beamCount: 6);
+    const landscape = StageGeometry(size: Size(844, 390));
     expect(landscape.noteRadiusAt(1.0) * 2, lessThan(390 * 0.15));
   });
 
@@ -105,9 +101,7 @@ void main() {
       const Size(844, 390),
       const Size(1024, 300),
     ]) {
-      final any = StageGeometry(size: screen, beamCount: 4);
-      expect(any.xAtPosition(0), greaterThan(0));
-      expect(any.xAtPosition(1), lessThan(screen.width));
+      final any = StageGeometry(size: screen);
       expect(any.hitLineY, lessThan(screen.height));
       expect(any.noteRadiusAt(1.0), greaterThan(8));
     }

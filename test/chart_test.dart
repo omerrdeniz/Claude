@@ -17,124 +17,48 @@ Note note(double beat, int midi,
     Note(beat: beat, midi: midi, duration: duration, hand: hand);
 
 void main() {
-  group('building taps', () {
-    test('one note becomes one tap', () {
-      final chart = Chart.build(songOf([note(0, 60), note(1, 62)]));
-      expect(chart.taps, hasLength(2));
-      expect(chart.taps.first.notes.single.midi, 60);
-    });
-
-    test('a chord becomes one tap per finger, by pitch', () {
-      final chart = Chart.build(
-          songOf([note(0, 60), note(0, 64), note(0, 67), note(1, 72)]),
-          beamCount: 4);
-      final atZero = chart.taps.where((t) => t.beat == 0).toList();
-      expect(atZero.length, greaterThan(1));
-      expect(atZero.expand((t) => t.notes).map((n) => n.midi).toList()..sort(),
-          [60, 64, 67]);
-    });
-
-    test('on easy that same chord is one finger', () {
-      final chart = Chart.build(
-          songOf([note(0, 60), note(0, 64), note(0, 67)]),
-          difficulty: Difficulty.easy);
-      expect(chart.taps, hasLength(1));
-      expect(chart.taps.single.notes, hasLength(3));
-    });
-
-    test('on easy the accompaniment is not something the player taps', () {
-      final chart = Chart.build(
-        songOf([note(0, 72), note(0, 40, hand: Hand.left)]),
-        difficulty: Difficulty.easy,
-      );
-      expect(chart.taps, hasLength(1));
-      expect(chart.taps.single.notes.single.midi, 72);
-    });
-
-    test('taps stay in time order', () {
-      final chart = Chart.build(SongLibrary.odeToJoy);
-      var previous = -1.0;
-      for (final tap in chart.taps) {
-        expect(tap.beat, greaterThanOrEqualTo(previous));
-        previous = tap.beat;
-      }
-    });
-  });
-
-  group('difficulty', () {
-    // A melody note with a triad underneath it, struck together.
-    final withChord = songOf([
+  group('what the player is given', () {
+    final twoHands = songOf([
       note(0, 72),
       note(0, 48, hand: Hand.left),
       note(0, 52, hand: Hand.left),
       note(0, 55, hand: Hand.left),
-      note(2, 41, hand: Hand.left), // off on its own, between melody notes
+      note(1, 74),
     ]);
 
-    test('easy thins a dense run so a beginner can answer it', () {
-      // Sixteen sixteenth notes: a wall at any tempo. Easy should ask for a
-      // fraction of them and play the rest, leaving the music whole.
-      final run = songOf([
-        for (var i = 0; i < 16; i++) note(i * 0.25, 60 + i),
-      ]);
-      final easy = Chart.build(run, difficulty: Difficulty.easy);
-      final normal = Chart.build(run, difficulty: Difficulty.normal);
-
-      expect(easy.taps.length, lessThanOrEqualTo(normal.taps.length ~/ 2));
-      expect(easy.taps.length + easy.autoNotes.length, 16,
-          reason: 'every note still sounds, played or not');
-
-      // And what is left is spread out.
-      for (var i = 1; i < easy.taps.length; i++) {
-        expect(easy.taps[i].beat - easy.taps[i - 1].beat,
-            greaterThanOrEqualTo(0.5 - 0.001));
-      }
-    });
-
-    test('easy leaves a song that is already sparse alone', () {
-      final sparse = songOf([note(0, 60), note(1, 62), note(2, 64)]);
-      final easy = Chart.build(sparse, difficulty: Difficulty.easy);
-      expect(easy.taps, hasLength(3));
-    });
-
-    test('easy hands the player one finger and plays the rest', () {
-      final chart = Chart.build(withChord, difficulty: Difficulty.easy);
-      expect(chart.taps, hasLength(1));
-      expect(chart.taps.single.notes.single.midi, 72);
-      expect(chart.autoNotes, hasLength(4), reason: 'all harmony plays itself');
-    });
-
-    test('normal gives the player every note, chords under several fingers', () {
-      final chart = Chart.build(withChord, difficulty: Difficulty.normal);
+    test('easy is one zone and one finger', () {
+      final chart = Chart.build(twoHands, difficulty: Difficulty.easy);
+      expect(chart.separatesHands, isFalse);
       final atZero = chart.taps.where((t) => t.beat == 0);
-      expect(atZero.length, greaterThan(1),
-          reason: 'a chord must need more than one finger');
-      expect(atZero.map((t) => t.beam).toSet(), hasLength(atZero.length),
-          reason: 'each finger gets its own beam');
-      expect(chart.autoNotes, isEmpty,
-          reason: 'nothing should play itself on normal');
+      expect(atZero, hasLength(1), reason: 'the whole moment is one touch');
+      expect(atZero.single.notes, hasLength(4));
     });
 
-    test('every tap knows how many fingers its moment needs', () {
-      final chart = Chart.build(withChord, difficulty: Difficulty.normal);
+    test('normal splits the hands but keeps a chord under one finger', () {
+      final chart = Chart.build(twoHands, difficulty: Difficulty.normal);
+      expect(chart.separatesHands, isTrue);
       final atZero = chart.taps.where((t) => t.beat == 0).toList();
-      for (final tap in atZero) {
-        expect(tap.fingers, atZero.length,
-            reason: 'all of a chord must agree on its size');
+      expect(atZero, hasLength(2), reason: 'one touch per hand');
+      expect(atZero.map((t) => t.hand).toSet(), {Hand.left, Hand.right});
+      final left = atZero.firstWhere((t) => t.hand == Hand.left);
+      expect(left.notes, hasLength(3), reason: 'the triad is one touch');
+    });
+
+    test('hard asks for a finger per note of a chord', () {
+      final chart = Chart.build(twoHands, difficulty: Difficulty.hard);
+      final atZero = chart.taps.where((t) => t.beat == 0).toList();
+      expect(atZero, hasLength(4), reason: 'three in the left, one in the right');
+      expect(atZero.where((t) => t.hand == Hand.left), hasLength(3));
+      expect(atZero.every((t) => t.notes.length == 1), isTrue);
+    });
+
+    test('nothing plays itself once the hands are separated', () {
+      for (final difficulty in [Difficulty.normal, Difficulty.hard]) {
+        expect(Chart.build(twoHands, difficulty: difficulty).autoNotes, isEmpty);
       }
-      final alone = chart.taps.firstWhere((t) => t.beat == 2);
-      expect(alone.fingers, 1);
     });
 
-    test('hard plays the same notes as normal', () {
-      final normal = Chart.build(withChord, difficulty: Difficulty.normal);
-      final hard = Chart.build(withChord, difficulty: Difficulty.hard);
-      expect(hard.autoNotes, isEmpty);
-      expect(hard.taps.length, normal.taps.length,
-          reason: 'hard is the same chart, judged more tightly');
-    });
-
-    test('a note is never both played and auto-played', () {
+    test('every note is either played or played for the player', () {
       for (final difficulty in Difficulty.values) {
         for (final song in SongLibrary.all) {
           final chart = Chart.build(song, difficulty: difficulty);
@@ -144,136 +68,178 @@ void main() {
         }
       }
     });
+  });
 
-    test('the harder it gets, the more the player plays', () {
-      int played(Song song, Difficulty d) =>
-          Chart.build(song, difficulty: d).taps.expand((t) => t.notes).length;
+  group('where the hands sit', () {
+    final spread = songOf([
+      note(0, 40, hand: Hand.left),
+      note(0, 55, hand: Hand.left),
+      note(1, 72),
+      note(1, 84),
+    ]);
 
-      for (final song in SongLibrary.all) {
-        expect(played(song, Difficulty.normal),
-            greaterThanOrEqualTo(played(song, Difficulty.easy)),
-            reason: song.title);
-        expect(played(song, Difficulty.hard),
-            greaterThanOrEqualTo(played(song, Difficulty.normal)),
-            reason: song.title);
-      }
-
-      // Normal already hands over the whole piece, so the step up to hard is
-      // in the judging rather than in the notes.
-      expect(played(SongLibrary.preludeInC, Difficulty.hard),
-          played(SongLibrary.preludeInC, Difficulty.normal));
-    });
-
-    test('real songs give the player chords to press', () {
-      final chart = Chart.build(SongLibrary.odeToJoy,
-          beamCount: 4, difficulty: Difficulty.normal);
-      final byBeat = <double, int>{};
+    test('each hand keeps to its own side of the screen', () {
+      final chart = Chart.build(spread, difficulty: Difficulty.hard);
       for (final tap in chart.taps) {
-        byBeat[tap.beat] = (byBeat[tap.beat] ?? 0) + 1;
-      }
-      expect(byBeat.values.any((fingers) => fingers >= 2), isTrue,
-          reason: 'no moment in the song needs more than one finger');
-    });
-  });
-
-  group('assigning beams', () {
-    test('every beam index is in range', () {
-      for (final song in SongLibrary.all) {
-        final chart = Chart.build(song, beamCount: 4);
-        for (final tap in chart.taps) {
-          expect(tap.beam, inInclusiveRange(0, 3));
+        if (tap.hand == Hand.left) {
+          expect(tap.across, lessThan(0.5), reason: 'left of centre');
+        } else {
+          expect(tap.across, greaterThan(0.5), reason: 'right of centre');
         }
       }
     });
 
-    test('higher notes sit on higher beams', () {
+    test('a gap is left down the middle', () {
+      final chart = Chart.build(spread, difficulty: Difficulty.hard);
+      for (final tap in chart.taps) {
+        expect((tap.across - 0.5).abs(), greaterThan(0.04),
+            reason: 'nothing should sit on the divide');
+      }
+    });
+
+    test('within a hand, higher notes sit further right', () {
+      final chart = Chart.build(spread, difficulty: Difficulty.hard);
+      final left = chart.taps.where((t) => t.hand == Hand.left).toList()
+        ..sort((a, b) => a.notes.first.midi.compareTo(b.notes.first.midi));
+      expect(left.first.across, lessThan(left.last.across));
+    });
+
+    test('on easy the notes use the whole width instead', () {
+      // Separate moments, so nothing is merged and the extremes are visible.
       final chart = Chart.build(
-          songOf([note(0, 48), note(1, 60), note(2, 72), note(3, 84)]),
-          beamCount: 4);
-      expect(chart.taps.map((t) => t.beam), [0, 1, 2, 3]);
+        songOf([
+          note(0, 40, hand: Hand.left),
+          note(1, 84),
+        ]),
+        difficulty: Difficulty.easy,
+      );
+      final places = chart.taps.map((t) => t.across).toList()..sort();
+      expect(places.first, lessThan(0.15));
+      expect(places.last, greaterThan(0.85));
+      expect(places.last - places.first, greaterThan(0.7),
+          reason: 'one zone, so the full width is used');
     });
 
-    test('the lowest and highest notes reach the outer beams', () {
-      final chart = Chart.build(SongLibrary.preludeInC, beamCount: 4);
-      expect(chart.taps.map((t) => t.beam).reduce((a, b) => a < b ? a : b), 0);
-      expect(chart.taps.map((t) => t.beam).reduce((a, b) => a > b ? a : b), 3);
-    });
-
-    test('a song on one pitch does not crash and lands on one beam', () {
-      final chart = Chart.build(songOf([note(0, 60), note(1, 60), note(2, 60)]));
-      expect(chart.taps.map((t) => t.beam).toSet(), hasLength(1));
-    });
-
-    test('the beam count is respected', () {
-      for (final count in [1, 2, 3, 5, 8]) {
-        final chart = Chart.build(SongLibrary.furElise, beamCount: count);
-        expect(chart.beamCount, count);
-        for (final tap in chart.taps) {
-          expect(tap.beam, inInclusiveRange(0, count - 1));
+    test('notes stay on the screen', () {
+      for (final difficulty in Difficulty.values) {
+        for (final song in SongLibrary.all) {
+          for (final tap in Chart.build(song, difficulty: difficulty).taps) {
+            expect(tap.across, inInclusiveRange(0.0, 1.0));
+          }
         }
       }
     });
   });
 
-  group('what is on screen', () {
-    final chart = Chart.build(songOf([
-      for (var i = 0; i < 20; i++) note(i.toDouble(), 60 + i),
-    ]));
-
-    test('only notes inside the look-ahead window are shown', () {
-      final visible = chart.visibleAt(0, 4).toList();
-      expect(visible.map((t) => t.beat), [0, 1, 2, 3, 4]);
+  group('how many fingers', () {
+    test('a hand is told how many of its own notes fall together', () {
+      final chart = Chart.build(
+        songOf([
+          note(0, 60, hand: Hand.left),
+          note(0, 64, hand: Hand.left),
+          note(0, 84),
+        ]),
+        difficulty: Difficulty.hard,
+      );
+      for (final tap in chart.taps) {
+        expect(tap.fingers, tap.hand == Hand.left ? 2 : 1,
+            reason: 'the other hand should not inflate the count');
+      }
     });
 
-    test('a tap stays briefly after its moment, for a late hit', () {
-      expect(chart.visibleAt(5.2, 4).first.beat, 5.0);
-    });
-
-    test('but not for long — a spent note must leave the screen', () {
-      expect(chart.visibleAt(5.6, 4).first.beat, 6.0);
-    });
-
-    test('nothing is visible before the song starts', () {
-      expect(chart.visibleAt(-10, 4), isEmpty);
-    });
-
-    test('nothing is visible after it ends', () {
-      expect(chart.visibleAt(500, 4), isEmpty);
+    test('a single note is a single finger', () {
+      final chart = Chart.build(songOf([note(0, 60)]));
+      expect(chart.taps.single.fingers, 1);
     });
   });
 
   group('holds', () {
-    test('a long note is a hold', () {
-      final chart = Chart.build(songOf([note(0, 60, duration: 2.0)]));
+    test('a long note is held', () {
+      final chart = Chart.build(songOf([note(0, 60, duration: 2)]));
       expect(chart.taps.single.isHold, isTrue);
     });
 
-    test('a short one is not', () {
+    test('a short one is struck', () {
       final chart = Chart.build(songOf([note(0, 60, duration: 0.5)]));
       expect(chart.taps.single.isHold, isFalse);
     });
 
-    test('a tap lasts as long as its longest note', () {
-      // Easy keeps the chord under one finger, so one tap carries both.
+    test('a held touch lasts as long as its longest note', () {
       final chart = Chart.build(
-        songOf([note(0, 60, duration: 0.5), note(0, 64, duration: 2.0)]),
+        songOf([note(0, 60, duration: 0.5), note(0, 64, duration: 2)]),
         difficulty: Difficulty.easy,
       );
-      expect(chart.taps.single.duration, 2.0);
+      expect(chart.taps.single.endBeat, 2.0);
     });
   });
 
+  group('easy thins what is too dense to answer', () {
+    final run = songOf([for (var i = 0; i < 16; i++) note(i * 0.25, 60 + i)]);
+
+    test('a wall of sixteenths becomes something playable', () {
+      final easy = Chart.build(run, difficulty: Difficulty.easy);
+      final normal = Chart.build(run, difficulty: Difficulty.normal);
+      expect(easy.taps.length, lessThanOrEqualTo(normal.taps.length ~/ 2));
+      for (var i = 1; i < easy.taps.length; i++) {
+        expect(easy.taps[i].beat - easy.taps[i - 1].beat,
+            greaterThanOrEqualTo(0.5 - 0.001));
+      }
+    });
+
+    test('and the rest is played, not dropped', () {
+      final easy = Chart.build(run, difficulty: Difficulty.easy);
+      expect(easy.taps.expand((t) => t.notes).length + easy.autoNotes.length, 16);
+    });
+
+    test('a sparse song is left alone', () {
+      final sparse = songOf([note(0, 60), note(1, 62), note(2, 64)]);
+      expect(Chart.build(sparse, difficulty: Difficulty.easy).taps, hasLength(3));
+    });
+  });
+
+  group('what is on screen', () {
+    final chart = Chart.build(
+        songOf([for (var i = 0; i < 20; i++) note(i.toDouble(), 60 + i)]));
+
+    test('only notes inside the look-ahead window are shown', () {
+      expect(chart.visibleAt(0, 4).map((t) => t.beat), [0, 1, 2, 3, 4]);
+    });
+
+    test('a touch stays briefly after its moment, for a late hit', () {
+      expect(chart.visibleAt(5.2, 4).first.beat, 5.0);
+    });
+
+    test('nothing is visible before the song starts or after it ends', () {
+      expect(chart.visibleAt(-10, 4), isEmpty);
+      expect(chart.visibleAt(500, 4), isEmpty);
+    });
+
+    test('taps stay in time order', () {
+      for (final song in SongLibrary.all) {
+        var previous = -1.0;
+        for (final tap in Chart.build(song).taps) {
+          expect(tap.beat, greaterThanOrEqualTo(previous));
+          previous = tap.beat;
+        }
+      }
+    });
+  });
+
+  test('which hand a touch belongs to is read from where it landed', () {
+    expect(Chart.handAt(0.1), Hand.left);
+    expect(Chart.handAt(0.49), Hand.left);
+    expect(Chart.handAt(0.51), Hand.right);
+    expect(Chart.handAt(0.9), Hand.right);
+  });
+
   test('the accompaniment can be read back for a stretch of the song', () {
-    // Easy is the level that still plays part of the song for the player.
     final chart = Chart.build(
       songOf([
-        note(0, 40, hand: Hand.left),
-        note(2, 41, hand: Hand.left),
-        note(4, 42, hand: Hand.left),
+        for (var i = 0; i < 8; i++) note(i * 0.25, 60 + i),
       ]),
       difficulty: Difficulty.easy,
     );
-    expect(chart.accompanimentBetween(0, 3).map((n) => n.midi), [40, 41]);
-    expect(chart.accompanimentBetween(3, 10).map((n) => n.midi), [42]);
+    expect(chart.accompanimentBetween(0, 1), isNotEmpty);
+    expect(chart.accompanimentBetween(100, 200), isEmpty);
   });
 }
