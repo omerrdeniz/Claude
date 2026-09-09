@@ -5,6 +5,7 @@ import '../data/song_library.dart';
 import '../game/chart.dart';
 import '../game/judgement.dart';
 import '../theme/app_theme.dart';
+import 'calibration_screen.dart';
 import 'song_list/settings.dart';
 import 'song_list/song_tile.dart';
 
@@ -62,6 +63,16 @@ class _SongListScreenState extends State<SongListScreen> {
   /// should flatter a beginner before it tests one.
   TimingTolerance _tolerance = TimingTolerance.wide;
   bool _quantize = true;
+
+  void _setLatency(double value) => setState(
+      () => _latencyOffsetMs = value.clamp(-_latencyLimit, _latencyLimit));
+
+  Future<void> _measureLatency() async {
+    final measured = await Navigator.of(context).push<double>(
+      MaterialPageRoute(builder: (_) => const CalibrationScreen()),
+    );
+    if (measured != null) _setLatency(measured);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,9 +148,9 @@ class _SongListScreenState extends State<SongListScreen> {
             const SizedBox(height: 14),
             LatencyPicker(
               offsetMs: _latencyOffsetMs,
-              onChanged: (value) => setState(() => _latencyOffsetMs =
-                  value.clamp(-_latencyLimit, _latencyLimit)),
+              onChanged: _setLatency,
               step: _latencyStep,
+              onMeasure: _measureLatency,
             ),
             const SizedBox(height: 24),
             for (final song in SongLibrary.all)

@@ -223,7 +223,18 @@ buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
 - Cihazın bildirdiği hiçbir zaman tam değil (Bluetooth'u, oyuncunun kendi elini
   bilemez). Bu yüzden şarkı listesinde **elle zamanlama ayarı** var
   (`song_list/settings.dart` içindeki `LatencyPicker` →
-  `PlayScreen.latencyOffsetMs` → `PlaySession`).
+  `PlayScreen.latencyOffsetMs` → `PlaySession`), yanında da **"Ölç"** düğmesi:
+  `CalibrationScreen` metronoma vurdurup gerçek değeri ölçüyor.
+- **Kalibrasyon ekranı kendi saatini okur, karenin saatini değil.** Kare 16 ms
+  geniş, ölçülen şey ondan küçük; ikisi için de karenin damgasını almak
+  cevaba bir kare kayma koyardı. Saat bu yüzden `Stopwatch`. Ama widget
+  testinde `pump` sahte bir saati ilerletir, `Stopwatch` kıpırdamaz — o
+  yüzden `CalibrationScreen.nowMs` diye bir dikiş var. Onsuz ekranın hiçbir
+  parçası test edilemiyordu.
+- **Kalibrasyon ekranında `pumpAndSettle` kullanmayın.** Ekran durduğu sürece
+  bir ticker çalışıyor, hiçbir zaman durulmuyor; test zaman aşımına uğrar.
+  Açık `pump` ile ilerletin (`test/calibration_screen_test.dart`'taki
+  `settleRoute`).
 - iOS'ta ses için her `onPointerDown`'da `_audio.nudge()` çağrılır (AudioContext
   kullanıcı hareketiyle uyanmalı).
 - **`SongLibrary` alanları getter olmamalı.** Getter'ken her okuyuş dört
@@ -328,7 +339,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 247 test geçiyor
+flutter test        # 266 test geçiyor
 ```
 
 ## Cihazsız doğrulama
@@ -428,7 +439,7 @@ altında yazıyor; oyuncudan "ekranda hangi kod yazıyor" diye teyit alın.
 | 4. Dokunuş, değerlendirme, puan | ✅ |
 | 5. Adaptif tempo + eşlik | ⏳ |
 | 6. Zorluk kademeleri | ✅ (eller/parmaklar olarak) |
-| 7. Cila: efektler, temalar, gecikme kalibrasyonu | ⏳ |
+| 7. Cila: efektler, temalar, gecikme kalibrasyonu | ⏳ (kalibrasyon ✅) |
 | 8. Şarkı kütüphanesi ekranı + MIDI içe aktarma | ⏳ |
 | 9. App Store hazırlığı | ⏳ |
 
@@ -437,10 +448,6 @@ altında yazıyor; oyuncudan "ekranda hangi kod yazıyor" diye teyit alın.
 Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yeniden
 "keşfedilmesin" diye burada:
 
-- **Gecikme kalibrasyon ekranı** (yol haritası adım 7). Şu anki elle ±10 ms
-  ayarı körlemesine; doğrusu ritim oyunlarının yaptığı gibi metronoma
-  vurdurup ortalama sapmayı ölçmek. `PlaySession` tarafında gereken her şey
-  hazır (`latencyOffsetMs`), eksik olan yalnızca ekran.
 - **Silinen klavye arayüzü.** `SoundCheckScreen` ve `PianoKeyboard` hiçbir
   yerden erişilemediği için silindi; gerçekten istenirse `4fa9039^`
   commit'inden çıkarılır.

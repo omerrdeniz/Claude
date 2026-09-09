@@ -118,11 +118,17 @@ class LatencyPicker extends StatelessWidget {
     required this.offsetMs,
     required this.onChanged,
     required this.step,
+    required this.onMeasure,
   });
 
   final double offsetMs;
   final ValueChanged<double> onChanged;
   final double step;
+
+  /// Opens the screen that works the number out by ear, which is the only
+  /// way anyone finds it: a perfect hit is a window 55 ms wide, and the
+  /// buttons either side of this move in tens.
+  final VoidCallback onMeasure;
 
   @override
   Widget build(BuildContext context) {
@@ -172,9 +178,25 @@ class LatencyPicker extends StatelessWidget {
           style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
         ),
         const SizedBox(height: 2),
-        const Text(
-          'Her şey geç sayılıyorsa artırın',
-          style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Her şey geç sayılıyorsa artırın',
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+            ),
+            TextButton(
+              onPressed: onMeasure,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('Ölç',
+                  style: TextStyle(fontSize: 13, color: AppTheme.accentSoft)),
+            ),
+          ],
         ),
       ],
     );
