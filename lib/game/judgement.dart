@@ -1,3 +1,31 @@
+/// How forgiving the judging is.
+///
+/// A setting rather than a fixed choice: how tight a window feels depends on
+/// the player, the device's own audio delay, and whether they are learning the
+/// piece or performing it.
+enum TimingTolerance { wide, normal, tight }
+
+extension TimingToleranceLabel on TimingTolerance {
+  String get label => switch (this) {
+        TimingTolerance.wide => 'Geniş',
+        TimingTolerance.normal => 'Normal',
+        TimingTolerance.tight => 'Dar',
+      };
+
+  /// Multiplier applied to every judging window.
+  double get factor => switch (this) {
+        TimingTolerance.wide => 1.8,
+        TimingTolerance.normal => 1.0,
+        TimingTolerance.tight => 0.6,
+      };
+
+  String get description => switch (this) {
+        TimingTolerance.wide => 'Erken ve geç basışlar da doğru sayılır',
+        TimingTolerance.normal => 'Dengeli',
+        TimingTolerance.tight => 'Vuruşa yakın basmak gerekir',
+      };
+}
+
 /// How well a tap landed.
 enum Verdict { perfect, great, good, miss }
 
@@ -53,12 +81,16 @@ class Judge {
   double quality(double errorMs) =>
       (1 - errorMs.abs() / goodMs).clamp(0.0, 1.0);
 
-  /// The same judge with every window tightened by [factor].
+  /// The same judge with every window scaled by [factor].
   Judge tightened(double factor) => Judge(
         perfectMs: perfectMs * factor,
         greatMs: greatMs * factor,
         goodMs: goodMs * factor,
       );
+
+  /// A judge set to a given tolerance.
+  factory Judge.forTolerance(TimingTolerance tolerance) =>
+      const Judge().tightened(tolerance.factor);
 }
 
 /// Running score for one performance.

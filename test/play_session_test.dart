@@ -193,8 +193,11 @@ void main() {
       final session =
           sessionFor(songOf([note(0, 60), note(0.5, 62)]), beamCount: 1);
       seek(session, 0.45);
-      session.tap(0);
-      // Both are inside the window; the closer one must win.
+      final outcome = session.tap(0);
+      // Both are inside the window; the closer one must win. The note itself
+      // waits for its beat, so the outcome is what identifies it.
+      expect(outcome!.notes.single.midi, 62);
+      seek(session, 0.6);
       expect(engine.struck.single.$1, 62);
     });
 
@@ -386,6 +389,86 @@ void main() {
       // The same second of the player's time covers half as much music.
       expect(beatsAfterOneSecond(0.5),
           closeTo(beatsAfterOneSecond(1.0) / 2, 0.001));
+    });
+  });
+
+  group('keeping the music in time', () {
+    test('a note tapped early waits for its beat', () {
+      final session = sessionFor(songOf([note(1, 60)]));
+      // A third of a beat early — inside the window, but not on the beat.
+      seek(session, 0.67);
+      final outcome = session.tap(session.chart.taps.first.beam);
+      expect(outcome?.scored, isTrue, reason: 'it still counts as a hit');
+      expect(engine.struck, isEmpty, reason: 'but it must not sound yet');
+
+      seek(session, 1.0);
+      expect(engine.struck.map((s) => s.$1), [60],
+          reason: 'it sounds when the song says it should');
+    });
+
+    test('the score still reports how early it was', () {
+      final session = sessionFor(songOf([note(1, 60)]));
+      seek(session, 0.8);
+      final outcome = session.tap(session.chart.taps.first.beam);
+      expect(outcome!.errorMs, lessThan(0), reason: 'early');
+      expect(outcome.verdict, isNot(Verdict.perfect),
+          reason: 'flattering the ear must not flatter the score');
+    });
+
+    test('a late tap sounds at once, since there is no going back', () {
+      final session = sessionFor(songOf([note(0, 60)]));
+      seek(session, 0.2);
+      session.tap(session.chart.taps.first.beam);
+      expect(engine.struck.map((s) => s.$1), [60]);
+    });
+
+    test('switched off, a note sounds under the finger', () {
+      final engineNow = RecordingEngine();
+      final session = PlaySession(
+        chart: Chart.build(songOf([note(1, 60)]), difficulty: Difficulty.easy),
+        audio: PianoAudio(engine: engineNow),
+        quantize: false,
+      )..start();
+      final seconds = (0.67 + session.leadInBeats) / session.beatsPerSecond;
+      session.update(Duration(microseconds: (seconds * 1e6).round()));
+      session.tap(session.chart.taps.first.beam);
+      expect(engineNow.struck.map((s) => s.$1), [60]);
+    });
+
+    test('a waiting note is dropped when the song restarts', () {
+      final session = sessionFor(songOf([note(1, 60)]));
+      seek(session, 0.7);
+      session.tap(session.chart.taps.first.beam);
+      session.restart();
+      expect(engine.struck, isEmpty);
+    });
+  });
+
+  group('tolerance', () {
+    test('a wider setting accepts a tap a stricter one would refuse', () {
+      double? errorOf(TimingTolerance tolerance) {
+        final session = PlaySession(
+          chart: Chart.build(songOf([note(0, 60)]), difficulty: Difficulty.easy),
+          audio: PianoAudio(engine: RecordingEngine()),
+          judge: Judge.forTolerance(tolerance),
+        )..start();
+        final seconds = (0.55 + session.leadInBeats) / session.beatsPerSecond;
+        session.update(Duration(microseconds: (seconds * 1e6).round()));
+        final outcome = session.tap(session.chart.taps.first.beam);
+        return outcome != null && outcome.scored ? outcome.errorMs : null;
+      }
+
+      // 275ms late: outside the normal window, inside the wide one.
+      expect(errorOf(TimingTolerance.tight), isNull);
+      expect(errorOf(TimingTolerance.normal), isNull);
+      expect(errorOf(TimingTolerance.wide), isNotNull);
+    });
+
+    test('every tolerance keeps early and late symmetric', () {
+      for (final tolerance in TimingTolerance.values) {
+        final judge = Judge.forTolerance(tolerance);
+        expect(judge.verdictFor(80), judge.verdictFor(-80));
+      }
     });
   });
 

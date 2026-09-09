@@ -19,6 +19,8 @@ class PlayScreen extends StatefulWidget {
     this.beamCount,
     this.difficulty = Difficulty.normal,
     this.speed = 1.0,
+    this.tolerance = TimingTolerance.wide,
+    this.quantize = true,
     this.approachSeconds = 1.9,
   });
 
@@ -27,6 +29,12 @@ class PlayScreen extends StatefulWidget {
 
   /// Fraction of the written tempo to play at.
   final double speed;
+
+  /// How forgiving the judging is.
+  final TimingTolerance tolerance;
+
+  /// Whether notes sound on their beat rather than under the finger.
+  final bool quantize;
 
   /// Fixed number of beams, or null to let the screen decide from its width.
   final int? beamCount;
@@ -69,9 +77,11 @@ class _PlayScreenState extends State<PlayScreen>
       audio: _audio,
       // The hard level is the same notes judged more tightly; everything else
       // about it is identical, so this is the only place it differs.
-      judge: widget.difficulty == Difficulty.hard
-          ? const Judge().tightened(0.6)
-          : const Judge(),
+      // Hard tightens whatever tolerance the player chose, rather than
+      // replacing it.
+      judge: Judge.forTolerance(widget.tolerance)
+          .tightened(widget.difficulty == Difficulty.hard ? 0.6 : 1.0),
+      quantize: widget.quantize,
       approachSeconds: widget.approachSeconds,
       speed: widget.speed,
     )..onMiss = (_) => setState(() {});

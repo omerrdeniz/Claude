@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/song_library.dart';
 import '../game/chart.dart';
+import '../game/judgement.dart';
 import '../music/song.dart';
 import '../theme/app_theme.dart';
 import 'play_screen.dart';
@@ -33,6 +34,11 @@ class _SongListScreenState extends State<SongListScreen> {
   /// able to play it, and can speed it up once they can.
   double _speed = 0.6;
 
+  /// Forgiving by default, and the music kept in time by default: the game
+  /// should flatter a beginner before it tests one.
+  TimingTolerance _tolerance = TimingTolerance.wide;
+  bool _quantize = true;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,11 +57,16 @@ class _SongListScreenState extends State<SongListScreen> {
             const SizedBox(height: 6),
             Row(
               children: [
-                const Text(
-                  'Işığa dokun, notayı çal',
-                  style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                // Flexible, not fixed: on a narrow phone the tagline has to
+                // give way rather than push the build stamp off the screen.
+                const Flexible(
+                  child: Text(
+                    'Işığa dokun, notayı çal',
+                    style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 12),
                 // Which build this is. Without it there is no way to tell a
                 // fix that did not work from a fix that never arrived.
                 Text(
@@ -78,12 +89,24 @@ class _SongListScreenState extends State<SongListScreen> {
               selected: _speed,
               onChanged: (value) => setState(() => _speed = value),
             ),
+            const SizedBox(height: 20),
+            _TolerancePicker(
+              selected: _tolerance,
+              onChanged: (value) => setState(() => _tolerance = value),
+            ),
+            const SizedBox(height: 14),
+            _QuantizeSwitch(
+              value: _quantize,
+              onChanged: (value) => setState(() => _quantize = value),
+            ),
             const SizedBox(height: 24),
             for (final song in SongLibrary.all)
               _SongTile(
                 song: song,
                 difficulty: _difficulty,
                 speed: _speed,
+                tolerance: _tolerance,
+                quantize: _quantize,
               ),
           ],
         ),
@@ -221,16 +244,96 @@ class _Chip extends StatelessWidget {
   }
 }
 
+/// Chooses how forgiving the judging is.
+class _TolerancePicker extends StatelessWidget {
+  const _TolerancePicker({required this.selected, required this.onChanged});
+
+  final TimingTolerance selected;
+  final ValueChanged<TimingTolerance> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            for (final tolerance in TimingTolerance.values)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _Chip(
+                    label: tolerance.label,
+                    selected: tolerance == selected,
+                    onTap: () => onChanged(tolerance),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Tolerans — ${selected.description.toLowerCase()}',
+          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+/// Whether the music is kept in time regardless of the hand.
+class _QuantizeSwitch extends StatelessWidget {
+  const _QuantizeSwitch({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Notalar tam zamanında çalsın',
+                style: TextStyle(fontSize: 14, color: AppTheme.textPrimary),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value
+                    ? 'Erken basarsan nota vuruşu bekler'
+                    : 'Nota parmağın değdiği anda çalar',
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+            ],
+          ),
+        ),
+        Switch(
+          value: value,
+          activeThumbColor: AppTheme.accentSoft,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
 class _SongTile extends StatelessWidget {
   const _SongTile({
     required this.song,
     required this.difficulty,
     required this.speed,
+    required this.tolerance,
+    required this.quantize,
   });
 
   final Song song;
   final Difficulty difficulty;
   final double speed;
+  final TimingTolerance tolerance;
+  final bool quantize;
 
   @override
   Widget build(BuildContext context) {
@@ -251,6 +354,8 @@ class _SongTile extends StatelessWidget {
                 song: song,
                 difficulty: difficulty,
                 speed: speed,
+                tolerance: tolerance,
+                quantize: quantize,
               ),
             ),
           ),

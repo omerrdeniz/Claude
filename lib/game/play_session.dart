@@ -43,6 +43,7 @@ class PlaySession {
     this.latencyOffsetMs = 0,
     this.approachSeconds = 1.9,
     this.speed = 1.0,
+    this.quantize = true,
   })  : assert(speed > 0),
         _chart = chart;
 
@@ -72,6 +73,20 @@ class PlaySession {
   /// for notes arriving faster than a beginner's hand: the music stays itself,
   /// there is just more room between its notes.
   final double speed;
+
+  /// Whether a note sounds at the moment the song says, rather than the moment
+  /// the finger landed.
+  ///
+  /// This is the difference between a game that reports your mistakes and one
+  /// that makes you sound good. A tap that comes early waits for its beat; the
+  /// score still says how close you were, but the music comes out in time. A
+  /// late tap can only sound at once — there is no going back — so lateness is
+  /// the one error that is still heard.
+  final bool quantize;
+
+  /// Notes tapped early, waiting for their moment.
+  final List<({double beat, int midi, double velocity, double duration})>
+      _waiting = [];
 
   final Scoreboard scoreboard = Scoreboard();
 
@@ -156,6 +171,7 @@ class PlaySession {
         leadInBeats;
 
     _playAccompaniment();
+    _playWaitingNotes();
     _expireMissedTaps();
     _releaseFinishedNotes();
   }
@@ -165,6 +181,16 @@ class PlaySession {
       audio.noteOn(note.midi, velocity: note.velocity);
       _scheduleRelease(note.midi, note.endBeat);
     }
+  }
+
+  /// Sound the notes whose moment has now come.
+  void _playWaitingNotes() {
+    _waiting.removeWhere((note) {
+      if (_beat < note.beat) return false;
+      audio.noteOn(note.midi, velocity: note.velocity);
+      _scheduleRelease(note.midi, note.beat + note.duration);
+      return true;
+    });
   }
 
   /// A note the player never tapped is a miss once it is too late to hit.
@@ -232,9 +258,23 @@ class PlaySession {
     // Tighter timing is played a little firmer, so a clean run sounds clean
     // as well as scoring well.
     final firmness = 0.85 + judge.quality(errorMs) * 0.3;
+    final early = quantize && _beat < tapTarget.beat;
+
     for (final note in tapTarget.notes) {
-      audio.noteOn(note.midi, velocity: (note.velocity * firmness).clamp(0.05, 1.0));
-      _scheduleRelease(note.midi, tapTarget.beat + note.duration);
+      final velocity = (note.velocity * firmness).clamp(0.05, 1.0);
+      if (early) {
+        // Hold it back to its written moment, so the piece comes out in time
+        // however jumpy the hand was.
+        _waiting.add((
+          beat: tapTarget.beat,
+          midi: note.midi,
+          velocity: velocity,
+          duration: note.duration,
+        ));
+      } else {
+        audio.noteOn(note.midi, velocity: velocity);
+        _scheduleRelease(note.midi, tapTarget.beat + note.duration);
+      }
     }
 
     return TapOutcome(
@@ -333,6 +373,7 @@ class PlaySession {
     _running = false;
     _releaseAt.clear();
     _justMissed.clear();
+    _waiting.clear();
     audio.engine.allNotesOff();
   }
 
