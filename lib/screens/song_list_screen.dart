@@ -45,6 +45,19 @@ class _SongListScreenState extends State<SongListScreen> {
   /// — which at their real tempo, Chopin's and Beethoven's both do.
   double _speed = 1.0;
 
+  /// The player's own timing calibration, in milliseconds, on top of whatever
+  /// the device reports about its own audio delay.
+  ///
+  /// It has to be adjustable because no device tells the truth about this.
+  /// A browser reports what it knows about; it cannot know about Bluetooth
+  /// headphones, and it says nothing about the player's own hand, which
+  /// reliably arrives a little after the eye says to move.
+  double _latencyOffsetMs = 0;
+
+  /// Steps of the calibration, and how far it goes either way.
+  static const double _latencyStep = 10;
+  static const double _latencyLimit = 300;
+
   /// Forgiving by default, and the music kept in time by default: the game
   /// should flatter a beginner before it tests one.
   TimingTolerance _tolerance = TimingTolerance.wide;
@@ -110,6 +123,13 @@ class _SongListScreenState extends State<SongListScreen> {
               value: _quantize,
               onChanged: (value) => setState(() => _quantize = value),
             ),
+            const SizedBox(height: 14),
+            _LatencyPicker(
+              offsetMs: _latencyOffsetMs,
+              onChanged: (value) => setState(() => _latencyOffsetMs =
+                  value.clamp(-_latencyLimit, _latencyLimit)),
+              step: _latencyStep,
+            ),
             const SizedBox(height: 24),
             for (final song in SongLibrary.all)
               _SongTile(
@@ -118,6 +138,7 @@ class _SongListScreenState extends State<SongListScreen> {
                 speed: _speed,
                 tolerance: _tolerance,
                 quantize: _quantize,
+                latencyOffsetMs: _latencyOffsetMs,
               ),
             const SizedBox(height: 8),
             // The recorded piano is CC BY: the credit is a condition of using
@@ -216,6 +237,106 @@ class _SpeedPicker extends StatelessWidget {
           style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
         ),
       ],
+    );
+  }
+}
+
+/// Nudges when the game thinks a tap happened.
+///
+/// The device is asked how far behind its own audio is and that is used
+/// automatically, but no device knows the whole answer: not what Bluetooth
+/// adds, and not the player's own hand, which arrives a little after the eye
+/// says to move. This is the part only the person playing can supply.
+///
+/// The sign is written out rather than left as a number, because "+40 ms" is
+/// meaningless to anyone who has not built a rhythm game.
+class _LatencyPicker extends StatelessWidget {
+  const _LatencyPicker({
+    required this.offsetMs,
+    required this.onChanged,
+    required this.step,
+  });
+
+  final double offsetMs;
+  final ValueChanged<double> onChanged;
+  final double step;
+
+  @override
+  Widget build(BuildContext context) {
+    final rounded = offsetMs.round();
+    final description = rounded == 0
+        ? 'Cihazın bildirdiği gecikme kullanılıyor'
+        : rounded > 0
+            ? 'Dokunuşların $rounded ms erken sayılıyor'
+            : 'Dokunuşların ${-rounded} ms geç sayılıyor';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Zamanlama ayarı',
+                style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+            _StepButton(
+              icon: Icons.remove,
+              onTap: () => onChanged(offsetMs - step),
+            ),
+            SizedBox(
+              width: 68,
+              child: Text(
+                '${rounded > 0 ? '+' : ''}$rounded ms',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: AppTheme.textPrimary, fontSize: 14),
+              ),
+            ),
+            _StepButton(
+              icon: Icons.add,
+              onTap: () => onChanged(offsetMs + step),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          'Her şey geç sayılıyorsa artırın',
+          style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+class _StepButton extends StatelessWidget {
+  const _StepButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(icon, size: 18, color: AppTheme.textPrimary),
+        ),
+      ),
     );
   }
 }
@@ -348,6 +469,7 @@ class _SongTile extends StatelessWidget {
     required this.speed,
     required this.tolerance,
     required this.quantize,
+    required this.latencyOffsetMs,
   });
 
   final Song song;
@@ -355,6 +477,7 @@ class _SongTile extends StatelessWidget {
   final double speed;
   final TimingTolerance tolerance;
   final bool quantize;
+  final double latencyOffsetMs;
 
   @override
   Widget build(BuildContext context) {
@@ -377,6 +500,7 @@ class _SongTile extends StatelessWidget {
                 speed: speed,
                 tolerance: tolerance,
                 quantize: quantize,
+                latencyOffsetMs: latencyOffsetMs,
               ),
             ),
           ),

@@ -151,7 +151,14 @@ docs/          magic-piano-analiz.md  mekanik incelemesi
   `test/play_session_test.dart` içindeki "with a latency to compensate for"
   grubu bunu kilitliyor.
 - Ses yolundaki gecikme `audio.latencyMs` ile telafi edilir, yoksa her dokunuş
-  geç sayılır.
+  geç sayılır. **Web'de `outputLatency` okunmalı, `baseLatency` değil**:
+  ikincisi yalnız ses grafiğinin iç tamponu (birkaç ms), hoparlöre giden yolu
+  hiç saymaz. iOS'ta o yol 100 ms'nin çok üstünde, Bluetooth'ta daha da fazla.
+  Yanlış olanı okuduğumuz sürece oyun kendini 50 ms geride sanıyordu, gerçekte
+  300 ms geride olabiliyordu — her dokunuş geç sayılıyordu.
+- Cihazın bildirdiği hiçbir zaman tam değil (Bluetooth'u, oyuncunun kendi elini
+  bilemez). Bu yüzden şarkı listesinde **elle zamanlama ayarı** var
+  (`_LatencyPicker` → `PlayScreen.latencyOffsetMs` → `PlaySession`).
 - iOS'ta ses için her `onPointerDown`'da `_audio.nudge()` çağrılır (AudioContext
   kullanıcı hareketiyle uyanmalı).
 
@@ -245,7 +252,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 246 test geçiyor
+flutter test        # 248 test geçiyor
 ```
 
 ## Cihazsız doğrulama

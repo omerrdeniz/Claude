@@ -38,6 +38,7 @@ void main() {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('Notalar tam zamanında çalsın'), findsOneWidget);
+    expect(find.text('Zamanlama ayarı'), findsOneWidget);
   });
 
   testWidgets('no label leaks raw code', (tester) async {
@@ -77,6 +78,7 @@ void main() {
     expect(screen.speed, 0.4);
     expect(screen.tolerance, TimingTolerance.wide, reason: 'the default');
     expect(screen.quantize, isTrue, reason: 'the default');
+    expect(screen.latencyOffsetMs, 0, reason: 'the default');
   });
 
   testWidgets('the timing settings reach the playfield too', (tester) async {
@@ -92,5 +94,27 @@ void main() {
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
     expect(screen.tolerance, TimingTolerance.tight);
     expect(screen.quantize, isFalse);
+  });
+
+  testWidgets('the timing calibration reaches the game', (tester) async {
+    // Every setting on this screen has been forgotten on the way to the game
+    // at least once. This one matters more than most: it is what a player
+    // reaches for when nothing they do registers.
+    await pumpList(tester);
+    await tester.scrollUntilVisible(find.text('Zamanlama ayarı'), 200);
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pump();
+    }
+    expect(find.text('+30 ms'), findsOneWidget);
+    expect(find.text('Dokunuşların 30 ms erken sayılıyor'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Neşeye Övgü'), 200);
+    await tester.tap(find.text('Neşeye Övgü'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(tester.widget<PlayScreen>(find.byType(PlayScreen)).latencyOffsetMs,
+        30);
   });
 }

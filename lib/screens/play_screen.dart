@@ -22,6 +22,7 @@ class PlayScreen extends StatefulWidget {
     this.tolerance = TimingTolerance.wide,
     this.quantize = true,
     this.approachSeconds = 1.9,
+    this.latencyOffsetMs = 0,
   });
 
   final Song song;
@@ -35,6 +36,12 @@ class PlayScreen extends StatefulWidget {
 
   /// Whether notes sound on their beat rather than under the finger.
   final bool quantize;
+
+  /// The player's own calibration, on top of what the device reports.
+  ///
+  /// Positive means their taps are treated as that much earlier — which is
+  /// what to reach for when everything registers as late.
+  final double latencyOffsetMs;
 
   /// How long a note takes to travel from the top of the screen to the line.
   ///
@@ -77,6 +84,7 @@ class _PlayScreenState extends State<PlayScreen>
           .tightened(widget.difficulty == Difficulty.hard ? 0.6 : 1.0),
       quantize: widget.quantize,
       approachSeconds: widget.approachSeconds,
+      latencyOffsetMs: widget.latencyOffsetMs,
       speed: widget.speed,
     )..onMiss = (_) => setState(() {});
     _audio.start();

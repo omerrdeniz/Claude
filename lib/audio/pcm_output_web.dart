@@ -79,10 +79,24 @@ class WebPcmOutput implements PcmOutput {
   double get latencyMs {
     final context = _context;
     if (context == null) return 0;
-    // What the player hears is a block behind what was rendered, plus whatever
-    // the browser adds on the way to the speaker.
-    final base = context.baseLatency * 1000;
-    return base + _blockFrames / context.sampleRate * 1000;
+
+    // `baseLatency` is only what the audio graph buffers internally — a few
+    // milliseconds. It says nothing about the trip from there to the speaker,
+    // which on a phone is the part that matters: iOS runs well over a tenth
+    // of a second, and Bluetooth headphones a good deal more than that.
+    // Reading the wrong one made the game think it was fifty milliseconds
+    // behind when it was three hundred, so every tap was judged late.
+    //
+    // `outputLatency` is the whole path and is defined to include the base,
+    // but it is not everywhere and reads zero when it is missing.
+    var path = context.outputLatency;
+    if (!path.isFinite || path <= 0) path = context.baseLatency;
+    // Nor trust an absurd figure: a second of latency is a broken reading,
+    // and acting on it would be worse than ignoring it.
+    if (!path.isFinite || path < 0 || path > 1.0) path = 0;
+
+    // Our own node buffers a block on top of whatever the browser reports.
+    return path * 1000 + _blockFrames / context.sampleRate * 1000;
   }
 
   void _onAudioProcess(web.AudioProcessingEvent event) {
