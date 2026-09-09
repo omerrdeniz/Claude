@@ -33,6 +33,25 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    // Undo the offline cache this app used to install.
+    //
+    // Earlier builds registered a service worker, and a registered worker keeps
+    // serving its own cached copy — so a phone that opened the game once would
+    // go on playing that version however many times the page was reloaded, and
+    // every fix after it was invisible. Builds no longer register one; this
+    // clears out any that is still installed from before.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        for (var i = 0; i < regs.length; i++) regs[i].unregister();
+      });
+    }
+    if (window.caches && caches.keys) {
+      caches.keys().then(function (keys) {
+        for (var i = 0; i < keys.length; i++) caches.delete(keys[i]);
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
