@@ -19,10 +19,33 @@ PcmOutput createPcmOutput() => WebPcmOutput();
 /// today without shipping a separate worklet module, and it runs on the main
 /// thread where Dart code can reach it. The cost is latency — roughly a block
 /// of it — which is why the block is kept as small as the browser will bear.
+///
+/// Moving to an AudioWorklet was looked at and turned down. A worklet runs on
+/// its own thread, but the synthesiser is Dart and stays on the main one, so
+/// the samples still have to be handed across — and the two ways of doing
+/// that both fail here. A SharedArrayBuffer needs the page to be
+/// cross-origin isolated, which needs COOP and COEP response headers, which
+/// GitHub Pages will not serve. Posting buffers to the worklet instead just
+/// moves the same queue behind a message port: it still drains if the main
+/// thread stalls, so it buys the robustness the change was for only by
+/// making the queue deeper, which is latency again. The real version of that
+/// change is rewriting the engine in JavaScript inside the worklet, which is
+/// a different project.
+///
+/// The measurement that settled it: rendering one block with ten voices
+/// sounding costs 155 µs against the 46 ms of audio it produces — about a
+/// third of one per cent of real time. There is no CPU to win here.
 class WebPcmOutput implements PcmOutput {
-  /// 2048 frames is about 46 ms at 44.1 kHz. Smaller starts to crackle on
-  /// phones, since this node shares the main thread with rendering.
-  static const int _blockFrames = 2048;
+  /// 1024 frames is about 23 ms at 44.1 kHz, and this node's own share of the
+  /// delay between a finger and a sound.
+  ///
+  /// It was 2048, halved once the recorded piano replaced the synthesiser:
+  /// filling a block went from 664 µs to 155 µs, so servicing the callback
+  /// twice as often is affordable where it was not before. What a smaller
+  /// block cannot survive is the main thread stopping for longer than the
+  /// block lasts — so if the sound crackles on a phone, this number going
+  /// back up is the fix, at the price of the latency it buys.
+  static const int _blockFrames = 1024;
 
   web.AudioContext? _context;
   web.ScriptProcessorNode? _node;

@@ -64,6 +64,17 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
 
 ### Reddedilenler — tekrar önermeyin
 
+- **AudioWorklet'e geçmek.** ScriptProcessorNode kullanımdan kalkmış olsa da
+  geçiş burada işe yaramıyor. Worklet kendi iş parçacığında çalışır ama
+  sentezleyici Dart'ta ve ana iş parçacığında kalır; örneklerin karşıya
+  geçmesi gerekir. İki yol da tıkalı: SharedArrayBuffer sayfanın
+  cross-origin isolated olmasını, o da COOP/COEP başlıklarını ister —
+  GitHub Pages bunları sunmuyor. Mesajla tampon göndermek ise aynı kuyruğu
+  bir port arkasına taşır, ana iş parçacığı takılınca yine boşalır; sağlamlık
+  ancak kuyruğu derinleştirerek gelir ki o da yine gecikme demek. Gerçek
+  çözüm motoru worklet içinde JavaScript'e taşımak, o ayrı bir proje.
+  **Ölçüm:** on ses çalarken bir bloğu doldurmak 155 µs, ürettiği ses 46 ms
+  — gerçek zamanın binde üçü. Kazanılacak CPU yok.
 - Şeritli (lane) düzen.
 - "Yelpaze" düzeni — oyuncunun gönderdiği ekran görüntüsündeki arka plan
   süsünden yanlışlıkla türetilmişti.
