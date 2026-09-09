@@ -211,13 +211,19 @@ class StagePainter extends CustomPainter {
             fade,
           );
         }
-        _paintNote(canvas, g, dot.across, head, radius, colour, fade);
+        _paintNote(canvas, g, dot.across, head, radius, tap.voices, fade);
       }
     }
   }
 
   /// Lays a chord's notes out so they do not overlap. See
   /// [StageGeometry.spreadChord] for what is and is not moved.
+  ///
+  /// This is worked out every frame even though it depends on nothing that
+  /// changes between them — only on pitch, note size and which hand. Hoisting
+  /// it into the chart was measured and left alone: the whole painter costs
+  /// 314 µs a frame against a budget of 16700, and moving this would mean
+  /// giving [Chart] a screen size it is deliberately free of.
   List<({double across, double endBeat, bool isHold})> _spreadChord(
     List<({double across, double endBeat, bool isHold})> dots,
     StageGeometry g,
@@ -324,49 +330,23 @@ class StagePainter extends CustomPainter {
   }
 
   void _paintNote(Canvas canvas, StageGeometry g, double across,
-      double progress, double radius, Color colour, double fade) {
+      double progress, double radius, int voices, double fade) {
     final centre = g.positionAtPosition(across, progress);
+    final brush = _Brushes.forNote(voices, fade, radius);
+
+    // The brushes are baked around the origin so they can be reused, so the
+    // canvas is moved to the note rather than the note to the canvas.
+    canvas.save();
+    canvas.translate(centre.dx, centre.dy);
 
     // The halo is a gradient, not a blur: a blur filter here costs more per
     // frame than everything else on screen put together.
-    canvas.drawCircle(
-      centre,
-      radius * 2.0,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            colour.withValues(alpha: 0.42 * fade),
-            colour.withValues(alpha: 0.16 * fade),
-            colour.withValues(alpha: 0.0),
-          ],
-          stops: const [0.35, 0.6, 1.0],
-        ).createShader(Rect.fromCircle(center: centre, radius: radius * 2.0)),
-    );
-
-    canvas.drawCircle(
-      centre,
-      radius,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            Color.lerp(Colors.white, colour, 0.15)!.withValues(alpha: fade),
-            colour.withValues(alpha: fade),
-            colour.withValues(alpha: 0.75 * fade),
-          ],
-          stops: const [0.0, 0.55, 1.0],
-        ).createShader(Rect.fromCircle(center: centre, radius: radius)),
-    );
-
+    canvas.drawCircle(Offset.zero, radius * 2.0, brush.halo);
+    canvas.drawCircle(Offset.zero, radius, brush.body);
     // A bright rim reads as a hard edge at any size.
-    canvas.drawCircle(
-      centre,
-      radius,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..color = Colors.white.withValues(alpha: 0.55 * fade),
-    );
+    canvas.drawCircle(Offset.zero, radius, brush.rim);
 
+    canvas.restore();
   }
 
   @override
@@ -376,4 +356,70 @@ class StagePainter extends CustomPainter {
       old.windowInBeats != windowInBeats ||
       old.holding != holding ||
       old.litHands != litHands;
+}
+
+/// The paints a note is drawn with, kept between frames.
+///
+/// Building a radial gradient's shader was the most expensive thing this
+/// painter did, and it did it twice for every note on screen, sixty times a
+/// second. What a note looks like depends only on how many notes sound with
+/// it, how faded it is and how big it is — never on where it is. So the
+/// gradients are baked around the origin, shared by every note that looks the
+/// same, and the canvas is moved instead.
+///
+/// Fade is continuous, so it is rounded into steps. Thirty-two is far finer
+/// than an eye can follow a note dimming as it falls.
+class _Brushes {
+  const _Brushes(this.halo, this.body, this.rim);
+
+  final Paint halo;
+  final Paint body;
+  final Paint rim;
+
+  static const int _fadeSteps = 32;
+
+  /// One entry per (voices, fade step). Cleared when the note size changes,
+  /// which happens only when the screen does.
+  static final Map<int, _Brushes> _cache = {};
+  static double _cachedRadius = -1;
+
+  static _Brushes forNote(int voices, double fade, double radius) {
+    if (radius != _cachedRadius) {
+      _cache.clear();
+      _cachedRadius = radius;
+    }
+    final colours = AppTheme.chordColors.length;
+    final index = (voices - 1).clamp(0, colours - 1);
+    final step = (fade * _fadeSteps).round().clamp(0, _fadeSteps);
+    return _cache[index * (_fadeSteps + 1) + step] ??=
+        _build(AppTheme.chordColors[index], step / _fadeSteps, radius);
+  }
+
+  static _Brushes _build(Color colour, double fade, double radius) {
+    return _Brushes(
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            colour.withValues(alpha: 0.42 * fade),
+            colour.withValues(alpha: 0.16 * fade),
+            colour.withValues(alpha: 0.0),
+          ],
+          stops: const [0.35, 0.6, 1.0],
+        ).createShader(
+            Rect.fromCircle(center: Offset.zero, radius: radius * 2.0)),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Color.lerp(Colors.white, colour, 0.15)!.withValues(alpha: fade),
+            colour.withValues(alpha: fade),
+            colour.withValues(alpha: 0.75 * fade),
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Rect.fromCircle(center: Offset.zero, radius: radius)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..color = Colors.white.withValues(alpha: 0.55 * fade),
+    );
+  }
 }

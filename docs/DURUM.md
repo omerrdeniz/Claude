@@ -158,6 +158,24 @@ tool/          render_song.dart, render_demo.dart  WAV üretici
 docs/          magic-piano-analiz.md  mekanik incelemesi
 ```
 
+### Ölçülmüş maliyetler
+
+Bir tahminle uğraşmadan önce buraya bakın. 60 fps bütçesi kare başına
+16700 µs.
+
+| iş | maliyet |
+|---|---|
+| `StagePainter.paint` (Nokturn, 18 dokunuş görünür) | 314 µs/kare (%1.9) |
+| `Chart.visibleAt` | 41 µs/kare |
+| Ses üretimi, örnek yolu, 10 ses | 155 µs / 46 ms blok (%0.33) |
+| Ses üretimi, sentez yedeği | 664 µs / blok (%1.4) |
+| `Chart.build` (Nokturn, zor) | 11.7 ms, bir kez |
+| `SongLibrary.all` ilk çağrı | 55 ms, bir kez |
+
+Yani **çizim de ses de darboğaz değil.** Nota fırçaları önbelleğe alındı
+(367 → 314 µs); akor yayılımını kareden çıkarmak da denenebilir ama ölçüm
+buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
+
 ### Dikkat edilecek noktalar
 
 - `song_list_screen.dart` içindeki `MaterialPageRoute` **her ayarı**
