@@ -167,8 +167,10 @@ void main() {
     test('a run across the beams can be played without chasing it', () {
       // Four quick notes sweeping from the bottom of the range to the top:
       // a hand cannot cross the screen this fast, and should not have to.
+      // Normal, because easy deliberately thins a run this dense.
       final session = sessionFor(
         songOf([note(0, 48), note(0.25, 60), note(0.5, 72), note(0.75, 84)]),
+        difficulty: Difficulty.normal,
       );
       for (final beat in [0.0, 0.25, 0.5, 0.75]) {
         seek(session, beat);

@@ -6,6 +6,10 @@ import '../music/song.dart';
 import '../theme/app_theme.dart';
 import 'play_screen.dart';
 
+/// Stamped in at build time, so a phone can say which version it is running.
+const String buildId =
+    String.fromEnvironment('BUILD_ID', defaultValue: 'geliştirme');
+
 /// The song browser.
 ///
 /// Every song is open from the first launch. Nothing is locked, nothing costs
@@ -23,8 +27,11 @@ class _SongListScreenState extends State<SongListScreen> {
   Difficulty _difficulty = Difficulty.normal;
 
   /// Speeds offered, as a fraction of the written tempo.
-  static const List<double> _speeds = [0.6, 0.8, 1.0];
-  double _speed = 0.8;
+  static const List<double> _speeds = [0.4, 0.6, 0.8, 1.0];
+
+  /// Slow by default. Someone meeting the game for the first time should be
+  /// able to play it, and can speed it up once they can.
+  double _speed = 0.6;
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +49,23 @@ class _SongListScreenState extends State<SongListScreen> {
                   ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Işığa dokun, notayı çal',
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+            Row(
+              children: [
+                const Text(
+                  'Işığa dokun, notayı çal',
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                ),
+                const Spacer(),
+                // Which build this is. Without it there is no way to tell a
+                // fix that did not work from a fix that never arrived.
+                Text(
+                  buildId,
+                  style: TextStyle(
+                    color: AppTheme.textMuted.withValues(alpha: 0.5),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             _DifficultyPicker(

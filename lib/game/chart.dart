@@ -8,7 +8,8 @@ import '../music/song.dart';
 /// tapping and starts feeling like playing. The levels here are graded by how
 /// much of the harmony is handed to the player rather than played for them.
 enum Difficulty {
-  /// Melody only, and a chord arrives under a single finger. For a first go.
+  /// Melody only, thinned so the notes never come faster than a beginner can
+  /// answer, and a chord arrives under a single finger. For a first go.
   easy,
 
   /// Melody, with the harmony that falls on the same moments folded in. The
@@ -200,7 +201,24 @@ class Chart {
 
     switch (difficulty) {
       case Difficulty.easy:
-        return (melody, accompaniment);
+        // Dense passages are thinned rather than dropped: what the player is
+        // not asked to hit is played for them, so the piece still sounds
+        // whole. A run of sixteenth notes is a wall to a beginner, and a wall
+        // teaches nothing except that they cannot play.
+        const minGap = 0.5; // beats between one tap and the next
+        final kept = <Note>[];
+        final passed = <Note>[...accompaniment];
+        var lastKept = double.negativeInfinity;
+
+        for (final chord in _byOnset(melody)) {
+          if (chord.first.beat >= lastKept + minGap - 0.001) {
+            lastKept = chord.first.beat;
+            kept.addAll(chord);
+          } else {
+            passed.addAll(chord);
+          }
+        }
+        return (kept, passed);
 
       case Difficulty.hard:
         return ([...melody, ...accompaniment], const []);
@@ -220,6 +238,20 @@ class Chart {
         }
         return ([...melody, ...joined], auto);
     }
+  }
+
+  /// Group notes that are struck together.
+  static List<List<Note>> _byOnset(List<Note> notes) {
+    final sorted = [...notes]..sort((a, b) => a.beat.compareTo(b.beat));
+    final out = <List<Note>>[];
+    for (final note in sorted) {
+      if (out.isNotEmpty && note.beat - out.last.first.beat <= 0.03) {
+        out.last.add(note);
+      } else {
+        out.add([note]);
+      }
+    }
+    return out;
   }
 
   /// Taps close enough to the hit line to be on screen.

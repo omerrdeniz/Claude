@@ -71,6 +71,32 @@ void main() {
       note(2, 41, hand: Hand.left), // off on its own, between melody notes
     ]);
 
+    test('easy thins a dense run so a beginner can answer it', () {
+      // Sixteen sixteenth notes: a wall at any tempo. Easy should ask for a
+      // fraction of them and play the rest, leaving the music whole.
+      final run = songOf([
+        for (var i = 0; i < 16; i++) note(i * 0.25, 60 + i),
+      ]);
+      final easy = Chart.build(run, difficulty: Difficulty.easy);
+      final normal = Chart.build(run, difficulty: Difficulty.normal);
+
+      expect(easy.taps.length, lessThanOrEqualTo(normal.taps.length ~/ 2));
+      expect(easy.taps.length + easy.autoNotes.length, 16,
+          reason: 'every note still sounds, played or not');
+
+      // And what is left is spread out.
+      for (var i = 1; i < easy.taps.length; i++) {
+        expect(easy.taps[i].beat - easy.taps[i - 1].beat,
+            greaterThanOrEqualTo(0.5 - 0.001));
+      }
+    });
+
+    test('easy leaves a song that is already sparse alone', () {
+      final sparse = songOf([note(0, 60), note(1, 62), note(2, 64)]);
+      final easy = Chart.build(sparse, difficulty: Difficulty.easy);
+      expect(easy.taps, hasLength(3));
+    });
+
     test('easy hands the player one finger and plays the rest', () {
       final chart = Chart.build(withChord, difficulty: Difficulty.easy);
       expect(chart.taps, hasLength(1));
