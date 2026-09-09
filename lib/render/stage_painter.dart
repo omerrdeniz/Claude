@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -134,10 +133,11 @@ class StagePainter extends CustomPainter {
 
       if (group.length > 1) _paintChordBand(canvas, g, group, progress, colour, fade);
 
+      // Long notes are not drawn with a trail behind them. The trail said
+      // "hold this" — a promise the game does not keep, since a tap is a
+      // moment here and the note's length comes from the song, not the
+      // finger. Better to draw nothing than to draw an instruction.
       for (final member in group) {
-        if (member.isHold) {
-          _paintHoldTail(canvas, g, member, progress, colour, fade);
-        }
         _paintNote(canvas, g, member, progress, radius, colour, fade);
       }
     }
@@ -218,38 +218,6 @@ class StagePainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4
         ..color = Colors.white.withValues(alpha: 0.55 * fade),
-    );
-  }
-
-  /// A held note trails behind itself.
-  ///
-  /// The trail is capped rather than drawn to the note's full length: a long
-  /// note can last most of the look-ahead window, and a bar running the height
-  /// of the screen reads as a rendering fault rather than a long note.
-  void _paintHoldTail(Canvas canvas, StageGeometry g, Tap tap, double progress,
-      Color colour, double fade) {
-    const maxTrail = 0.28; // of the way back up the screen
-    final tailProgress = math.max(
-      progress - maxTrail,
-      StageGeometry.progressFor(tap.beat + tap.duration - beat, windowInBeats),
-    );
-    if (tailProgress >= progress - 0.01) return;
-
-    final head = g.positionAtPosition(tap.across, progress);
-    final tail =
-        g.positionAtPosition(tap.across, math.max(tailProgress, -0.2));
-    final width = g.noteRadiusAt(progress) * 0.5;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(head.dx - width, tail.dy, head.dx + width, head.dy),
-        Radius.circular(width),
-      ),
-      Paint()
-        ..shader = ui.Gradient.linear(tail, head, [
-          colour.withValues(alpha: 0.0),
-          colour.withValues(alpha: 0.35 * fade),
-        ]),
     );
   }
 
