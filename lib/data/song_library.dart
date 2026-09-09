@@ -12,25 +12,30 @@ import 'scores.g.dart' as scores;
 /// behind a paywall, which is the single loudest complaint against the game
 /// this one takes after.
 ///
-/// Two of the three are read from engraved editions rather than written out
-/// here: [furElise] and [preludeInC] come from the Mutopia Project's LilyPond
-/// sources, rendered to MIDI with every repeat played out and embedded by
-/// `tool/fetch_scores.dart`. They are therefore the complete pieces, note for
-/// note, instead of the fragments that stood here before — and the octave the
-/// Bach was written in from memory turned out to be wrong.
+/// Three of the four are read from engraved editions rather than written out
+/// here: [furElise], [preludeInC] and [nocturneOp9No2] come from the Mutopia
+/// Project's LilyPond sources, rendered to MIDI with every repeat played out
+/// and embedded by `tool/fetch_scores.dart`. They are therefore the complete
+/// pieces, note for note, instead of the fragments that stood here before —
+/// and the octave the Bach was written in from memory turned out to be wrong.
 ///
 /// Tempos are the ones the pieces are actually played at. The game plays a
 /// song at the speed it is written at; there is no speed control.
 abstract final class SongLibrary {
-  static List<Song> get all =>
-      [odeToJoy, furElise, preludeInC, nocturneOp9No2];
+  /// Built once, on first use, and shared from then on.
+  ///
+  /// Fields rather than getters, for a reason. As getters every read rebuilt
+  /// all four songs — base64 decoded, MIDI parsed, some two and a half
+  /// thousand notes allocated — and the song list reads them inside `build`,
+  /// so a tap on any setting paid for the whole library again.
+  static final List<Song> all =
+      List.unmodifiable([odeToJoy, furElise, preludeInC, nocturneOp9No2]);
 
-  static Song? byId(String id) {
-    for (final song in all) {
-      if (song.id == id) return song;
-    }
-    return null;
-  }
+  static final Map<String, Song> _byId = {
+    for (final song in all) song.id: song,
+  };
+
+  static Song? byId(String id) => _byId[id];
 
   /// Beethoven, from the Ninth Symphony: the complete sixteen-bar theme, all
   /// four phrases. The gentlest thing to start on — stepwise, and everybody
@@ -40,7 +45,9 @@ abstract final class SongLibrary {
   /// and basses before it is anything else, so there is no piano edition to
   /// copy; it is set in C rather than Beethoven's D because that keeps the
   /// tune on white keys. The tempo is his own: Allegro assai, half note = 80.
-  static Song get odeToJoy {
+  static final Song odeToJoy = _odeToJoy();
+
+  static Song _odeToJoy() {
     // The phrase that opens three of the four lines.
     const opening = 'E4:1 E4:1 F4:1 G4:1 | G4:1 F4:1 E4:1 D4:1 | '
         'C4:1 C4:1 D4:1 E4:1 |';
@@ -83,7 +90,7 @@ abstract final class SongLibrary {
         ...seq('$openingChords G2+B2+D3:2 C3+E3+G3:2',
             start: 48, hand: Hand.left, velocity: 0.55),
       ],
-    );
+  );
   }
 
   /// Beethoven's bagatelle, whole: the rondo all the way through, A B A C A,
@@ -92,18 +99,18 @@ abstract final class SongLibrary {
   /// Written in 3/8, and counted here in eighths, which is how it is felt —
   /// so a beat is an eighth and the bar is three of them. The edition marks
   /// the quarter at 72, which puts the eighth at 144.
-  static Song get furElise => ScoreImport.read(
-        scores.furElise,
-        id: 'fur-elise',
-        title: 'Für Elise',
-        composer: 'Ludwig van Beethoven',
-        bpm: 144,
-        beatsPerBar: 3,
-        beatsPerQuarter: 2,
-        leftVelocity: 0.5,
-        source: 'Kamu malı (WoO 59, 1810). Mutopia Project baskısı '
-            '(Stelios Samelis), tam eser.',
-      );
+  static final Song furElise = ScoreImport.read(
+      scores.furElise,
+      id: 'fur-elise',
+      title: 'Für Elise',
+      composer: 'Ludwig van Beethoven',
+      bpm: 144,
+      beatsPerBar: 3,
+      beatsPerQuarter: 2,
+      leftVelocity: 0.5,
+      source: 'Kamu malı (WoO 59, 1810). Mutopia Project baskısı '
+          '(Stelios Samelis), tam eser.',
+  );
 
   /// Bach, the first prelude of the Well-Tempered Clavier: all thirty-five
   /// bars.
@@ -111,16 +118,16 @@ abstract final class SongLibrary {
   /// One figure repeated under a changing harmony, which makes it ideal here:
   /// the shape of the touch stays put while the notes move under the player's
   /// fingers. The edition marks the quarter at 60.
-  static Song get preludeInC => ScoreImport.read(
-        scores.preludeInC,
-        id: 'prelude-in-c',
-        title: 'Prelüd, Do Majör',
-        composer: 'Johann Sebastian Bach',
-        bpm: 60,
-        beatsPerBar: 4,
-        source: 'Kamu malı (BWV 846, 1722). Mutopia Project baskısı '
-            '(Tobias Erbsland), tam eser.',
-      );
+  static final Song preludeInC = ScoreImport.read(
+      scores.preludeInC,
+      id: 'prelude-in-c',
+      title: 'Prelüd, Do Majör',
+      composer: 'Johann Sebastian Bach',
+      bpm: 60,
+      beatsPerBar: 4,
+      source: 'Kamu malı (BWV 846, 1722). Mutopia Project baskısı '
+          '(Tobias Erbsland), tam eser.',
+  );
 
   /// Chopin's first well-known nocturne, whole, cadenza and all.
   ///
@@ -134,16 +141,16 @@ abstract final class SongLibrary {
   /// two this engraving is not in the public domain: it is CC BY-SA 3.0, so
   /// the typesetter has to be credited and anything derived from it — this
   /// note data included — carries the same licence.
-  static Song get nocturneOp9No2 => ScoreImport.read(
-        scores.nocturneOp9No2,
-        id: 'nocturne-op9-no2',
-        title: 'Nokturn, Mi Bemol Majör',
-        composer: 'Frédéric Chopin',
-        bpm: 132,
-        beatsPerBar: 12,
-        beatsPerQuarter: 2,
-        leftVelocity: 0.45,
-        source: 'Kamu malı (Op. 9 No. 2, 1832). Mutopia Project baskısı '
-            '(Renato Biolcati Rinaldi), CC BY-SA 3.0, tam eser.',
-      );
+  static final Song nocturneOp9No2 = ScoreImport.read(
+      scores.nocturneOp9No2,
+      id: 'nocturne-op9-no2',
+      title: 'Nokturn, Mi Bemol Majör',
+      composer: 'Frédéric Chopin',
+      bpm: 132,
+      beatsPerBar: 12,
+      beatsPerQuarter: 2,
+      leftVelocity: 0.45,
+      source: 'Kamu malı (Op. 9 No. 2, 1832). Mutopia Project baskısı '
+          '(Renato Biolcati Rinaldi), CC BY-SA 3.0, tam eser.',
+  );
 }
