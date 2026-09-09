@@ -75,6 +75,28 @@ void main() {
         returnsNormally);
   });
 
+  test('a held note stays on screen until its end reaches the line', () {
+    // Its head crosses the line the moment it starts; the finger is meant to
+    // stay down until the end does, so it must not vanish in between.
+    final chart = Chart.build(
+      Song(
+        id: 'held',
+        title: 'Held',
+        composer: '',
+        bpm: 120,
+        notes: [Note(beat: 0, midi: 60, duration: 3)],
+      ),
+      difficulty: Difficulty.normal,
+    );
+    expect(chart.taps.single.isHold, isTrue);
+
+    // A beat and a half in: the head is well past the line, the tail is not.
+    expect(chart.visibleAt(1.5, 4), isNotEmpty,
+        reason: 'the note is still being held');
+    // Past its end, it should be gone.
+    expect(chart.visibleAt(4.0, 4), isEmpty);
+  });
+
   test('a chord band never crosses the divide between the hands', () {
     // Both hands playing chords at once: the two bands must stay on their own
     // sides, which is what grouping by hand as well as by moment guarantees.
@@ -156,6 +178,12 @@ void main() {
       // Chords: colour by finger count, with a band tying each one together.
       'akorlar': await savePng(SongLibrary.odeToJoy, 5.0, 'akorlar'),
       'eller-ayri': await savePng(SongLibrary.preludeInC, 5.0, 'eller-ayri'),
+      // One finger, three notes: the pips have to say so.
+      'kolay-akor': await savePng(SongLibrary.odeToJoy, 5.0, 'kolay-akor',
+          difficulty: Difficulty.easy),
+      // A held note halfway through: the bar should still be on screen.
+      'tutma-ortasi': await savePng(SongLibrary.odeToJoy, 6.6, 'tutma-ortasi',
+          difficulty: Difficulty.normal),
       'zor-parmaklama': await savePng(
           SongLibrary.odeToJoy, 5.0, 'zor-parmaklama',
           difficulty: Difficulty.hard),

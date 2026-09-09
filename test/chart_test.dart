@@ -131,25 +131,36 @@ void main() {
     });
   });
 
-  group('how many fingers', () {
-    test('a hand is told how many of its own notes fall together', () {
-      final chart = Chart.build(
-        songOf([
-          note(0, 60, hand: Hand.left),
-          note(0, 64, hand: Hand.left),
-          note(0, 84),
-        ]),
-        difficulty: Difficulty.hard,
-      );
+  group('how many notes are sounding', () {
+    final chord = songOf([
+      note(0, 60, hand: Hand.left),
+      note(0, 64, hand: Hand.left),
+      note(0, 67, hand: Hand.left),
+      note(0, 84),
+    ]);
+
+    test('a hand counts only its own notes', () {
+      final chart = Chart.build(chord, difficulty: Difficulty.hard);
       for (final tap in chart.taps) {
-        expect(tap.fingers, tap.hand == Hand.left ? 2 : 1,
+        expect(tap.voices, tap.hand == Hand.left ? 3 : 1,
             reason: 'the other hand should not inflate the count');
       }
     });
 
-    test('a single note is a single finger', () {
-      final chart = Chart.build(songOf([note(0, 60)]));
-      expect(chart.taps.single.fingers, 1);
+    test('a chord is a chord however many fingers the level asks for', () {
+      // The colour is read off this, so a three-note chord must count as
+      // three whether it arrives under one finger or three.
+      for (final difficulty in Difficulty.values) {
+        final chart = Chart.build(chord, difficulty: difficulty);
+        final left = chart.taps.where((t) =>
+            t.notes.any((n) => n.hand == Hand.left));
+        expect(left.map((t) => t.voices).toSet(), {difficulty == Difficulty.easy ? 4 : 3},
+            reason: 'on ${difficulty.label}');
+      }
+    });
+
+    test('a single note is a single voice', () {
+      expect(Chart.build(songOf([note(0, 60)])).taps.single.voices, 1);
     });
   });
 

@@ -151,14 +151,22 @@ class StagePainter extends CustomPainter {
           StageGeometry.progressFor(tap.beat - beat, windowInBeats);
       if (progress < -0.05) continue;
 
-      final colour = AppTheme.chordColor(tap.fingers);
+      // A held note is not finished when its head crosses the line — the
+      // finger is meant to stay down until its end does. So a hold is judged
+      // gone by its tail, and stays on screen for as long as it is still
+      // being asked for.
+      final tailProgress =
+          StageGeometry.progressFor(tap.endBeat - beat, windowInBeats);
+      final departed = tap.isHold ? tailProgress : progress;
+
+      final colour = AppTheme.chordColor(tap.voices);
       final radius = g.noteRadiusAt(progress);
 
       // Distant notes are dimmer; ones past the line drop away quickly, so
       // the eye is never asked whether a note below the line still counts.
-      final fade = progress > 1
-          ? (1 - (progress - 1) / 0.16).clamp(0.0, 1.0)
-          : (0.35 + progress * 0.65).clamp(0.0, 1.0);
+      final fade = departed > 1
+          ? (1 - (departed - 1) / 0.16).clamp(0.0, 1.0)
+          : (0.35 + progress.clamp(0.0, 1.0) * 0.65).clamp(0.0, 1.0);
       if (fade <= 0.01) continue;
 
       if (group.length > 1) {
@@ -170,7 +178,8 @@ class StagePainter extends CustomPainter {
         // finger is meant to stay down for its length, and the bar is how
         // long. Struck notes stay plain circles, so the two never look alike.
         if (member.isHold) {
-          _paintHoldBar(canvas, g, member, progress, radius, colour, fade);
+          _paintHoldBar(canvas, g, member, progress, tailProgress, radius,
+              colour, fade);
         }
         _paintNote(canvas, g, member, progress, radius, colour, fade);
       }
@@ -213,11 +222,13 @@ class StagePainter extends CustomPainter {
   /// The body of a note that has to be held down, drawn as a bar as long as
   /// the note lasts.
   void _paintHoldBar(Canvas canvas, StageGeometry g, Tap tap, double progress,
-      double radius, Color colour, double fade) {
-    final tailProgress = StageGeometry.progressFor(
-        tap.endBeat - beat, windowInBeats);
+      double tailProgress, double radius, Color colour, double fade) {
     if (tailProgress >= progress) return;
 
+    // The bar is exactly as long as the note: it starts at the head and
+    // reaches back the distance the note lasts, and it keeps travelling until
+    // its far end has crossed the line. However long it looks is how long the
+    // finger stays down.
     final head = g.positionAtPosition(tap.across, progress);
     final tail = g.positionAtPosition(tap.across, tailProgress);
     final width = radius * 0.72;
@@ -284,6 +295,23 @@ class StagePainter extends CustomPainter {
         ..strokeWidth = 1.4
         ..color = Colors.white.withValues(alpha: 0.55 * fade),
     );
+
+    // How many notes this one touch carries, as pips inside it. On the easier
+    // levels a chord arrives under a single finger, and without these there
+    // is nothing to say that three notes are about to sound rather than one.
+    if (tap.notes.length > 1) {
+      final count = tap.notes.length;
+      final pip = (radius * 0.17).clamp(1.6, 4.0);
+      final spacing = pip * 2.6;
+      final start = -(count - 1) / 2 * spacing;
+      for (var i = 0; i < count; i++) {
+        canvas.drawCircle(
+          Offset(centre.dx + start + i * spacing, centre.dy),
+          pip,
+          Paint()..color = Colors.white.withValues(alpha: 0.9 * fade),
+        );
+      }
+    }
   }
 
   @override

@@ -63,9 +63,13 @@ class Tap {
   /// Where it sits across the screen, 0 at the left edge and 1 at the right.
   final double across;
 
-  /// How many touches its moment needs from the same hand. Drives the colour,
-  /// so the hand knows what is coming before it gets there.
-  int fingers = 1;
+  /// How many notes sound together in this hand at this moment.
+  ///
+  /// Counted in notes rather than touches on purpose: a three-note chord is a
+  /// three-note chord whether the level asks for one finger or three, and the
+  /// colour should say so either way. What changes with the level is how many
+  /// fingers it takes, not what the music is.
+  int voices = 1;
 
   /// The longest note in the touch.
   double get duration =>
@@ -202,8 +206,10 @@ class Chart {
         end++;
       }
       for (var j = i; j < end; j++) {
-        taps[j].fingers =
-            taps.sublist(i, end).where((t) => t.hand == taps[j].hand).length;
+        taps[j].voices = taps
+            .sublist(i, end)
+            .where((t) => t.hand == taps[j].hand)
+            .fold(0, (sum, t) => sum + t.notes.length);
       }
       i = end;
     }
