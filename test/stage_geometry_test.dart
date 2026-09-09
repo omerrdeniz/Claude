@@ -204,4 +204,35 @@ void main() {
       expect(spread([]), isEmpty);
     });
   });
+
+  group('a held note\'s bar stops short of what comes next', () {
+    const radius = 20.0;
+    // Screen coordinates grow downwards: the head is below the tail.
+    double? top(double headY, double tailY) =>
+        StageGeometry.holdBarTop(headY, tailY, radius);
+
+    test('it does not reach the end of the note', () {
+      final drawn = top(500, 100)!;
+      expect(drawn, greaterThan(100),
+          reason: 'the bar has to leave room for the next note');
+      expect(drawn, closeTo(100 + radius * StageGeometry.holdBarClearance, 1e-9));
+    });
+
+    test('and the room it leaves clears a whole note', () {
+      // Whatever is struck next sits at the tail with its own radius.
+      expect(top(500, 100)! - 100, greaterThan(radius * 2 * 0.7),
+          reason: 'daylight, not just a touch');
+    });
+
+    test('a long note still gets most of its length', () {
+      final length = 500 - top(500, 100)!;
+      expect(length, greaterThan(400 * 0.85));
+    });
+
+    test('nothing is drawn once there is no bar left', () {
+      expect(top(500, 500), isNull, reason: 'the tail has caught the head');
+      expect(top(500, 501), isNull, reason: 'and gone past it');
+      expect(top(500, 490), isNull, reason: 'a stub, not a bar');
+    });
+  });
 }

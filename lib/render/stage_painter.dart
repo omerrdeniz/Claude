@@ -340,20 +340,22 @@ class StagePainter extends CustomPainter {
     // note is still to come.
     final head = g.positionAtPosition(across, progress);
     final tail = g.positionAtPosition(across, tailProgress);
-    final width = radius * 0.72;
+    final width = radius * StageGeometry.holdBarWidth;
+
+    final top = StageGeometry.holdBarTop(head.dy, tail.dy, radius);
+    if (top == null) return;
+
+    final bar = RRect.fromRectAndRadius(
+      Rect.fromLTRB(head.dx - width, top, head.dx + width, head.dy),
+      Radius.circular(width),
+    );
 
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(head.dx - width, tail.dy, head.dx + width, head.dy),
-        Radius.circular(width),
-      ),
+      bar,
       Paint()..color = colour.withValues(alpha: 0.35 * fade),
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(head.dx - width, tail.dy, head.dx + width, head.dy),
-        Radius.circular(width),
-      ),
+      bar,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2

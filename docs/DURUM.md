@@ -77,6 +77,12 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   beklemez; diğer notalar gibi akıp gider, kuyruğuyla birlikte kaybolur.
   Hangi notanın basılı olduğunu `PlaySession.heldNotes` söylüyor
   (`(beat, midi)` kümesi), `StagePainter.heldNotes` olarak geçiyor.
+
+  **Çubuk notanın bittiği yere kadar çizilmez**, biraz önce biter
+  (`StageGeometry.holdBarTop`, nota yarıçapının 1.6 katı). Nota yazılı
+  uzunluğu kadar sürer — ses odur — ama uç uca çizilince çubuklar üstteki
+  notanın arkasına giriyor ve bir el dolusu tutma tek bir merdiven gibi
+  okunuyordu. Bu yalnızca resimdeki bir boşluk; sesle ilgisi yok.
 - **Nota boyutu sabit.** Eskiden yaklaşırken büyüyüp çizgiyi geçince
   küçülüyordu; oyuncu sabit olmasını istedi. Uzaklık artık yalnız solgunlukla
   anlatılıyor — "ne zaman" demeye çalışan bir resimde bir şeyin daha
@@ -385,7 +391,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 276 test geçiyor
+flutter test        # 280 test geçiyor
 ```
 
 ## Cihazsız doğrulama

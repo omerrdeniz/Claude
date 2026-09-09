@@ -105,6 +105,31 @@ class StageGeometry {
     return out;
   }
 
+  /// The top of a held note's bar, or null when there is nothing worth
+  /// drawing.
+  ///
+  /// The bar stops short of where the note actually ends, by enough to clear
+  /// whatever is struck next. The note itself lasts exactly as long as it is
+  /// written — that is the sound — but drawn end to end the bars ran into the
+  /// note above them and a hand full of held notes read as one long ladder.
+  /// This is a gap in the picture only.
+  ///
+  /// [headY] is the bottom of the bar, [tailY] the top it would reach without
+  /// the clearance; both grow downwards, so the tail is the smaller number.
+  static double? holdBarTop(double headY, double tailY, double radius) {
+    if (tailY >= headY) return null;
+    final clearance = radius * holdBarClearance;
+    final top = tailY + clearance > headY ? headY : tailY + clearance;
+    // Shorter than the bar is wide would be a stub, not a bar.
+    return headY - top < radius * holdBarWidth ? null : top;
+  }
+
+  /// How much room the bar leaves for the next note, in note radii.
+  static const double holdBarClearance = 1.6;
+
+  /// Half the bar's thickness, in note radii.
+  static const double holdBarWidth = 0.72;
+
   /// Where a note's head is drawn, given how far along it is.
   ///
   /// An ordinary note keeps going and leaves. A held one stops at the line
