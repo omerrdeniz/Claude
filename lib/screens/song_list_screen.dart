@@ -156,7 +156,7 @@ class _SpeedPicker extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: _Chip(
-                    label: speed == 1.0 ? 'Tam hız' : '%\${(speed * 100).round()}',
+                    label: speed == 1.0 ? 'Tam hız' : '%${(speed * 100).round()}',
                     selected: speed == selected,
                     onTap: () => onChanged(speed),
                   ),
@@ -246,7 +246,13 @@ class _SongTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => PlayScreen(song: song)),
+            MaterialPageRoute(
+              builder: (_) => PlayScreen(
+                song: song,
+                difficulty: difficulty,
+                speed: speed,
+              ),
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
