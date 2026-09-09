@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../audio/piano_audio.dart';
 import '../data/song_library.dart';
 import '../game/chart.dart';
 import '../game/judgement.dart';
@@ -25,6 +26,14 @@ class SongListScreen extends StatefulWidget {
 }
 
 class _SongListScreenState extends State<SongListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Start pulling the recorded piano in while the player is still reading
+    // the list, so the first song is already played on it.
+    PianoAudio().loadSamples();
+  }
+
   Difficulty _difficulty = Difficulty.normal;
 
   /// Speeds offered, as a fraction of the written tempo.
@@ -110,6 +119,16 @@ class _SongListScreenState extends State<SongListScreen> {
                 tolerance: _tolerance,
                 quantize: _quantize,
               ),
+            const SizedBox(height: 8),
+            // The recorded piano is CC BY: the credit is a condition of using
+            // it, not a courtesy, so it ships in the app and not only in the
+            // repository.
+            const Text(
+              'Piyano sesleri: Salamander Grand Piano — Alexander Holm, '
+              'CC BY 3.0',
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 11),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'sample_bank.dart';
+
 /// A small polyphonic piano synthesiser, in pure Dart.
 ///
 /// It has no Flutter or platform dependency on purpose: the whole thing is a
@@ -46,6 +48,25 @@ class SynthEngine {
   /// Overall output level, before the soft clipper.
   double masterGain = 0.55;
 
+  /// Recordings to play instead of synthesising, once they have loaded.
+  ///
+  /// Null until then, and on any platform where the asset cannot be read, in
+  /// which case the synthesiser below carries on. That fallback is why the
+  /// game makes a sound at all on the first frame of a web session, while two
+  /// and a half megabytes of piano are still arriving.
+  SampleBank? samples;
+
+  /// Whether the recorded piano is in use.
+  bool get isSampled => samples != null && !samples!.isEmpty;
+
+  /// Brings the recordings up to the level the game was mixed at.
+  ///
+  /// They sit about eight decibels under the synthesiser for the same note,
+  /// which is not a mistake to correct note by note — it is a real piano's own
+  /// range, and flattening it would put the shrill treble straight back. So
+  /// the whole instrument is lifted by one number instead.
+  static const double sampledBoost = 2.4;
+
   int get activeVoiceCount => _voices.where((v) => v.active).length;
 
   /// Start a note. [velocity] is 0..1 and controls both loudness and
@@ -55,7 +76,12 @@ class SynthEngine {
     // Re-striking a sounding key restarts it, as a real damper-and-hammer does.
     final existing = _voices.where((x) => x.active && x.midi == midi);
     final voice = existing.isNotEmpty ? existing.first : _allocate();
-    voice.start(midi, v, _sine);
+    final bank = samples;
+    if (bank != null && !bank.isEmpty) {
+      voice.startSampled(midi, v, bank);
+    } else {
+      voice.start(midi, v, _sine);
+    }
   }
 
   /// Release a note: the damper falls and the string is silenced quickly.
@@ -99,7 +125,7 @@ class SynthEngine {
       // input has to be pinned to — clamping to 1.0 instead would let the
       // makeup gain below drive it straight into the rail, which is the
       // hard clipping this saturator exists to avoid.
-      var x = mix[i] * masterGain;
+      var x = mix[i] * masterGain * (isSampled ? sampledBoost : 1.0);
       if (x > 1.0) {
         x = _saturationCeiling;
       } else if (x < -1.0) {
@@ -173,6 +199,20 @@ class _Voice {
   double _attack = 0;
   double _attackStep = 0;
 
+  // Playing a recording rather than synthesising. Null means the partials
+  // above are what sounds.
+  Int16List? _sample;
+  double _position = 0;
+  double _step = 0;
+  double _sampleAmp = 0;
+  double _sampleDecay = 1.0;
+
+  // One-pole low-pass over the recording, opened by how hard the note was
+  // struck. The bank has a single velocity layer, so without this a quiet
+  // note is only a smaller loud note; a real piano gets darker as well.
+  double _lowPass = 0;
+  double _lowPassCoef = 1.0;
+
   // Hammer transient.
   double _noiseAmp = 0;
   double _noiseDecay = 0;
@@ -181,6 +221,7 @@ class _Voice {
 
   /// Rough current level, used to choose which voice to steal.
   double get loudness {
+    if (_sample != null) return _sampleAmp;
     var sum = 0.0;
     for (var i = 0; i < _partialCount; i++) {
       sum += _amp[i];
@@ -188,7 +229,36 @@ class _Voice {
     return sum;
   }
 
+  /// Begin [note] from the nearest recording in [bank].
+  void startSampled(int note, double velocity, SampleBank bank) {
+    midi = note;
+    active = true;
+    releasing = false;
+
+    final index = bank.nearestTo(note);
+    _sample = bank.samples[index];
+    _position = 0;
+    // Resample for the interval, and for the bank's rate against ours.
+    _step = math.pow(2, (note - bank.midis[index]) / 12.0).toDouble() *
+        bank.sampleRate /
+        sampleRate;
+
+    // No treble taper here: the recordings carry the instrument's own, which
+    // is both steeper and better measured than anything applied on top.
+    _sampleAmp = velocity;
+    _sampleDecay = 1.0;
+
+    // From nearly shut at a whisper to wide open at a hard strike.
+    _lowPass = 0;
+    _lowPassCoef = 0.10 + 0.90 * math.pow(velocity, 0.6).toDouble();
+
+    _attack = 0;
+    _attackStep = 1.0 / (0.001 * sampleRate);
+    _noiseAmp = 0;
+  }
+
   void start(int note, double velocity, Float32List table) {
+    _sample = null;
     _table = table;
     midi = note;
     active = true;
@@ -243,6 +313,12 @@ class _Voice {
 
   void release() {
     releasing = true;
+    if (_sample != null) {
+      // The damper falls on a recording the same way it does on a string.
+      final tau = midi < 48 ? 0.15 : 0.08;
+      _sampleDecay = math.exp(-1.0 / (tau * sampleRate));
+      return;
+    }
     // A damper mutes the string in a couple of tenths of a second; bass
     // strings, being heavier, take a little longer. Slower than this and
     // consecutive notes would smear into each other.
@@ -258,6 +334,8 @@ class _Voice {
     active = false;
     releasing = false;
     midi = -1;
+    _sample = null;
+    _sampleAmp = 0;
     for (var i = 0; i < _partialCount; i++) {
       _amp[i] = 0;
     }
@@ -265,6 +343,12 @@ class _Voice {
   }
 
   void addTo(Float32List mix, int frames) {
+    final recording = _sample;
+    if (recording != null) {
+      _addRecordingTo(mix, frames, recording);
+      return;
+    }
+
     const table = SynthEngine._tableSize;
     final sine = _table;
 
@@ -310,5 +394,47 @@ class _Voice {
     }
 
     if (loudness < 5e-5 && _noiseAmp < 1e-6) kill();
+  }
+
+  /// Mix in a recorded note, resampled to the engine's rate and pitch.
+  void _addRecordingTo(Float32List mix, int frames, Int16List data) {
+    const scale = 1.0 / 32768.0;
+    final last = data.length - 2;
+
+    for (var f = 0; f < frames; f++) {
+      final position = _position;
+      if (position >= last) {
+        // The recording has run out; nothing is left to sound.
+        kill();
+        return;
+      }
+
+      final index = position.toInt();
+      final fraction = position - index;
+      final a = data[index] * scale;
+      final b = data[index + 1] * scale;
+      var sample = a + (b - a) * fraction;
+
+      // Softer strikes are darker, not merely smaller.
+      _lowPass += (sample - _lowPass) * _lowPassCoef;
+      sample = _lowPass;
+
+      if (_attack < 1.0) {
+        _attack += _attackStep;
+        if (_attack > 1.0) _attack = 1.0;
+        sample *= _attack;
+      }
+
+      mix[f] += sample * _sampleAmp;
+
+      _position = position + _step;
+      if (_sampleDecay != 1.0) {
+        _sampleAmp *= _sampleDecay;
+        if (_sampleAmp < 1e-5) {
+          kill();
+          return;
+        }
+      }
+    }
   }
 }

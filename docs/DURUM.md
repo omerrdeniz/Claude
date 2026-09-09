@@ -58,13 +58,54 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
 - Notaların arkasındaki dikey izler (hold trail çizgileri).
 - Perdeye göre renklendirme.
 
-### Sentezde perdeye göre seviye
+### Piyano sesi: kayıt, sentez değil
 
-`SynthEngine.trebleGain`: C6'nın üstünde oktav başına yarıya inen bir seviye
-düşüşü, 0.32'de tabanlanıyor. Sebep: kulak 2–4 kHz arasında en duyarlı,
-gerçek piyano da tiz bölgede çok daha az güç yayıyor. Bu olmadan Nokturn
-"parlak" değil **rahatsız edici** çıkıyordu — melodisinin onda biri Si♭6
-üstünde. C6 altında hiçbir şey değişmiyor.
+**Oyun artık gerçek piyano kaydı çalıyor.** `assets/piano/salamander.bin` —
+Alexander Holm'un Salamander Grand Piano'su (bir Yamaha C5), CC BY 3.0,
+`tool/fetch_samples.dart` ile paketleniyor. Minör üçlü aralıklarla 30 nota,
+22050 Hz mono, 2.53 MB.
+
+Neden: sentez tizde çözülemedi. Sorun tek bir notanın tınısı değil,
+**notaların birbirine göre dengesiydi**. Ölçüm (orta Do'ya göre):
+
+| nota | sentez | kayıt |
+|---|---|---|
+| Do5 (72) | −1.0 dB | **−9.2 dB** |
+| Do6 (84) | −2.0 dB | **−10.0 dB** |
+| Si♭6 (94) | −7.9 dB | **−13.9 dB** |
+| Re#7 (99) | −10.8 dB | **−18.9 dB** |
+
+Nokturn'ün melodisi tam bu aralıkta yaşıyor. Sentezleyici istenen genliği
+aynen veriyordu; gerçek piyano tizde çok daha sessiz.
+
+Denenip **atılan** bir şey: notaları komşularına göre eşitlemek. Eğri dik ve
+dışbükey olduğu için komşu ortalaması her tiz notayı yukarı çekiyor —
+kazanılan ayrımın yarısını geri veriyordu (Do6, −10 dB'den −6 dB'ye). Kalan
+notadan notaya dalgalanma kaydın kendi vuruş farkı; gerçek bir enstrüman
+böyle duyulur.
+
+`SynthEngine.trebleGain` **yalnız sentez yedeğinde** geçerli. Kayıtta
+uygulanmıyor: kaydın kendi eğrisi zaten daha dik ve daha doğru.
+
+### Yükleme ve yedek
+
+`PianoAudio.loadSamples()` beklenmeden çağrılıyor; banka gelene kadar (ve
+okunamazsa temelli) sentezleyici çalıyor, yani oyun asla sessiz kalmıyor.
+Banka bir kez ayrıştırılıp `PianoAudio._bank`'ta paylaşılıyor — her şarkı
+için yeniden okumak takılmaya sebep olurdu. Şarkı listesi ekranı, oyuncu
+seçim yaparken bankayı önden ısıtıyor.
+
+Bankayı yeniden üretmek için ağ ve iki araç gerekir:
+
+```bash
+apt-get install -y mpg123 sox
+dart run tool/fetch_samples.dart
+```
+
+**Lisans:** CC BY 3.0, atıf zorunlu. Şarkı listesi ekranının altında yazıyor
+(`song_list_screen.dart`), ayrıca `assets/piano/SALAMANDER-CC-BY.txt`.
+ShareAlike yok, yani App Store için sorun değil — Nokturn'ün nüshasından
+farklı olarak.
 
 ### Açık soru
 
@@ -74,7 +115,8 @@ Normal zorlukta da akorun her notası ayrı parmak istemeli mi? Şu an istemiyor
 ## Kod haritası
 
 ```
-lib/audio/     sentez motoru (saf Dart, additive + inharmonicity + hammer noise)
+lib/audio/     sample_bank.dart  kayıtlı piyano (asıl ses kaynağı)
+               synth_engine.dart sentez + örnek çalma; banka yoksa yedek
                pcm_output*: iOS/Android'de flutter_pcm_sound, web'de Web Audio
 lib/music/     note/song modeli, nota yazım dili (notation.dart), MIDI okuyucu
 lib/game/      chart.dart      Difficulty, Tap, el bölgeleri, seyreltme
@@ -87,6 +129,7 @@ lib/data/      song_library.dart  telifsiz şarkılar
                score_import.dart  nüshadan gelen MIDI'yi oyuna uydurur
                scores.g.dart      ÜRETİLMİŞ — gömülü Mutopia MIDI'leri
 tool/          render_song.dart, render_demo.dart  WAV üretici
+               fetch_samples.dart piyano kaydını indirir, salamander.bin üretir
                fetch_scores.dart  nüshaları indirir, scores.g.dart'ı üretir
                inspect_midi.dart  MIDI'yi ölçü ölçü döker, nüshayla karşılaştırmak için
 docs/          magic-piano-analiz.md  mekanik incelemesi
@@ -202,7 +245,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 233 test geçiyor
+flutter test        # 246 test geçiyor
 ```
 
 ## Cihazsız doğrulama

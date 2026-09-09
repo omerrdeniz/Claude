@@ -7,6 +7,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:piano_flow/audio/sample_bank.dart';
 import 'package:piano_flow/audio/synth_engine.dart';
 import 'package:piano_flow/data/song_library.dart';
 import 'package:piano_flow/music/song.dart';
@@ -35,10 +36,29 @@ void main(List<String> args) {
   stdout.writeln('wrote $path — $song');
 }
 
+/// The recorded piano, read straight off disk — the app gets the same bytes
+/// through the asset bundle, which this tool has no access to.
+///
+/// Missing, the synthesiser plays instead, exactly as it does in the app.
+SampleBank? loadBank() {
+  final file = File(PianoAudioSamplesPath.asset);
+  if (!file.existsSync()) {
+    stderr.writeln('no sample bank at ${file.path} — '
+        'synthesising instead (run tool/fetch_samples.dart)');
+    return null;
+  }
+  return SampleBank.parse(file.readAsBytesSync());
+}
+
+/// Where the packed piano lives in the repository.
+abstract final class PianoAudioSamplesPath {
+  static const String asset = 'assets/piano/salamander.bin';
+}
+
 /// Render a whole song, sample accurately: audio is generated in chunks that
 /// run right up to each note event, so onsets land where the data says.
 List<int> render(Song song, {double tailSeconds = 3.0}) {
-  final engine = SynthEngine(sampleRate: sampleRate);
+  final engine = SynthEngine(sampleRate: sampleRate)..samples = loadBank();
   final secondsPerBeat = 60.0 / song.bpm;
 
   final events = <_Event>[];

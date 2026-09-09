@@ -80,6 +80,10 @@ class _PlayScreenState extends State<PlayScreen>
       speed: widget.speed,
     )..onMiss = (_) => setState(() {});
     _audio.start();
+    // Not awaited: the synthesiser covers the first moments, and a song that
+    // waits on a download to begin is worse than one that improves as it
+    // goes. Usually the bank is already in memory from the song list.
+    _audio.loadSamples();
     _session.start();
     _ticker.start();
   }
