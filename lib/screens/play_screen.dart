@@ -21,7 +21,7 @@ class PlayScreen extends StatefulWidget {
     this.speed = 1.0,
     this.tolerance = TimingTolerance.wide,
     this.quantize = true,
-    this.fillMissed = true,
+    this.fillMissed = false,
     this.approachSeconds = 1.9,
     this.latencyOffsetMs = 0,
   });

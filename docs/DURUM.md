@@ -40,16 +40,24 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
 - **Normal zorlukta hiçbir nota oyuncudan alınmaz.** Oyuncu "şarkının benim
   çalmadığım kısımları var" dedi; yalnızca Kolay modda seyreltme yapılır
   (yarım vuruşta bir moment kalır, gerisi `autoNotes`'a gider).
-- **Ama kaçırılan nota yine de duyulur, kısık.** (`PlaySession.fillMissed`,
-  varsayılan açık; şarkı listesinde "Kaçırdıklarım da duyulsun".) Bunun
-  yukarıdaki kararla çelişmediğine dikkat: her nota hâlâ oyuncunun, hiçbiri
-  ondan alınmıyor; sadece basamadığında müzikte delik açılmıyor. Puan yine
-  "kaçtı" der.
+- **Kaçırılanı doldurma bir seçenek, varsayılan DEĞİL.**
+  (`PlaySession.fillMissed`, varsayılan **kapalı**; şarkı listesinde
+  "Kaçırdıklarım da duyulsun".)
 
-  Sebebi ölçüldü: Normal'de iki el de oyuncunun ve Nokturn'ün notalarının
+  Neden eklendi: Normal'de iki el de oyuncunun ve Nokturn'ün notalarının
   **%63'ü sol el** (Neşeye Övgü %58, Für Elise %42, Prelüd %24). Sadece
   melodiyi çalan biri Nokturn'ün üçte ikisini duymuyordu; oyuncu bunu
   "notalar kesik, aralarında boşluk var" diye bildirdi.
+
+  Neden varsayılan kapalı: açıkken oyuncu hemen fark etti — **"ben
+  basmadığımda neden müzik çalıyor?"** Doldurma, oyuncunun deneyip
+  denemediğine bakmıyor; notanın anı geçtiyse çalıyor. Yani hiç basmayan biri
+  şarkının kendi kendine çaldığını duyuyor, ki bu projenin en eski kuralına
+  aykırı.
+
+  **Bu iki şikâyet aynı kadranın iki ucu.** "Kaçırdığım yerde delik olmasın"
+  ile "ben basmadan hiçbir şey çalmasın" aynı anda sağlanamaz. O yüzden
+  seçenek olarak duruyor, karar oyuncunun.
 
   **Zamanlaması kritik:** doldurma, yargı penceresinde değil **mükemmel**
   penceresinde yapılır (`_fillDelayBeats`). Yargı penceresi en genişinde
@@ -507,9 +515,13 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
    her zorlukta `autoNotes`'a al; (c) şarkı başına tempo düşür. (b) DURUM'daki
    "normalde hiçbir şey kendi çalmaz" kararına dokunduğu için oyuncuya
    sorulmalı.
-2. **Doldurma ayarı denendi mi?** `fillMissed` açık geliyor; oyuncu
-   beğenmezse kapatabiliyor. Kısık ses oranı `_fillVelocity = 0.45` ve
-   gecikmesi mükemmel penceresi — ikisi de kulakla ayarlanmayı bekliyor.
+2. **Delik/kendi çalma ikilemi çözülmedi, sadece seçeneğe bağlandı.**
+   Doldurma kapalı gelirse Nokturn'ün üçte ikisi sessiz; açılırsa oyun
+   basmadığınız her şeyi çalıyor. Üçüncü bir yol olabilir ve zorluk
+   kademesine bağlanabilir: Kolay'da sol eli oyun çalsın (zaten seyreltiyor),
+   Normal ve Zor'da hiçbir şey çalmasın. O zaman kadranın hangi ucunda
+   olduğunuzu zorluk söyler ve ayrı bir anahtar gerekmez. Oyuncuya
+   sorulmalı.
 3. Normal zorlukta akor parmaklama sorusu yanıtlanacak.
 4. MIDI içe aktarma **arayüzü** (yol haritası adım 8) — okuyucu ve dönüştürücü
    hazır, eksik olan yalnızca dosya seçme ekranı. Oyuncu kendi MIDI'lerini

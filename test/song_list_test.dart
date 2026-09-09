@@ -108,7 +108,7 @@ void main() {
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
     expect(screen.tolerance, TimingTolerance.tight);
     expect(screen.quantize, isFalse);
-    expect(screen.fillMissed, isFalse);
+    expect(screen.fillMissed, isTrue, reason: 'switched on from off');
   });
 
   testWidgets('the timing calibration reaches the game', (tester) async {

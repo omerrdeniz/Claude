@@ -66,10 +66,10 @@ class _SongListScreenState extends State<SongListScreen> {
 
   /// A note nobody plays still sounds, quietly, so the piece keeps its shape.
   ///
-  /// On by default. In Normal both hands belong to the player and two thirds
-  /// of the nocturne is the left one; without this, answering only the melody
-  /// leaves most of the music silent.
-  bool _fillMissed = true;
+  /// Off by default. It closes the holes a missed note leaves, but the price
+  /// is that a player who stops playing hears the song play itself — and
+  /// "nothing plays itself" is this game's oldest rule. Offered, not assumed.
+  bool _fillMissed = false;
 
   void _setLatency(double value) => setState(
       () => _latencyOffsetMs = value.clamp(-_latencyLimit, _latencyLimit));
@@ -160,8 +160,9 @@ class _SongListScreenState extends State<SongListScreen> {
             SettingSwitch(
               title: 'Kaçırdıklarım da duyulsun',
               subtitle: _fillMissed
-                  ? 'Basamadığın nota kısık çalar — puanın yine kaçtı der'
-                  : 'Basamadığın nota hiç çalmaz, parçada boşluk kalır',
+                  ? 'Basmadığın her nota kısık çalar — hiç basmazsan '
+                      'şarkı kendi çalar'
+                  : 'Yalnız senin bastığın notalar duyulur',
               value: _fillMissed,
               onChanged: (value) => setState(() => _fillMissed = value),
             ),

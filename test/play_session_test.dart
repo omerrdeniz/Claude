@@ -48,7 +48,7 @@ void main() {
     Song song, {
     Difficulty difficulty = Difficulty.easy,
     bool quantize = true,
-    bool fillMissed = true,
+    bool fillMissed = false,
     Judge judge = const Judge(),
   }) {
     engine = RecordingEngine();
@@ -314,11 +314,7 @@ void main() {
     });
 
     test('a late touch sounds at once, since there is no going back', () {
-      // Filling switched off, so this is only about the touch. With it on the
-      // note would already have been sounded softly by then — that is what
-      // the group below is for.
-      final session =
-          sessionFor(songOf([note(0, 60)]), fillMissed: false);
+      final session = sessionFor(songOf([note(0, 60)]));
       seek(session, 0.2);
       session.tap(right);
       expect(engine.struck.map((s) => s.$1), [60]);
@@ -362,17 +358,19 @@ void main() {
       expect(session.scoreboard.counts[Verdict.miss], 1);
     });
 
-    test('and stays silent when filling is switched off', () {
-      final session = sessionFor(songOf([note(0, 60)]), fillMissed: false);
+    test('and stays silent, which is the default', () {
+      final session = sessionFor(songOf([note(0, 60)]));
       seek(session, 2);
-      expect(engine.struck, isEmpty);
+      expect(engine.struck, isEmpty,
+          reason: 'nothing plays itself unless the player asks it to');
     });
 
-    test('but it sounds anyway, quietly, so the piece keeps its shape', () {
+    test('switched on, it sounds anyway, quietly', () {
       // In Normal both hands are the player's, and two thirds of Chopin's
       // nocturne is the left one. Without this, someone answering only the
       // melody hears a piece full of holes.
-      final session = sessionFor(songOf([note(0, 60, duration: 1)]));
+      final session =
+          sessionFor(songOf([note(0, 60, duration: 1)]), fillMissed: true);
       seek(session, 1);
       expect(engine.struck.map((s) => s.$1), [60]);
       expect(engine.struck.single.$2, lessThan(0.5),
@@ -380,7 +378,8 @@ void main() {
     });
 
     test('a filled note is not sounded twice', () {
-      final session = sessionFor(songOf([note(0, 60, duration: 1)]));
+      final session =
+          sessionFor(songOf([note(0, 60, duration: 1)]), fillMissed: true);
       seek(session, 1);
       seek(session, 1.5);
       seek(session, 2);
@@ -391,7 +390,7 @@ void main() {
       // The note is filled at the perfect window, but the player can still
       // reach it, still scores, and still hears their own touch play it.
       final session = sessionFor(songOf([note(0, 60, duration: 1)]),
-          quantize: false);
+          quantize: false, fillMissed: true);
       seek(session, 0.2); // past the fill, inside the judging window
       expect(engine.struck, hasLength(1), reason: 'the fill has happened');
 
@@ -404,7 +403,7 @@ void main() {
 
     test('a note played in time is never filled', () {
       final session = sessionFor(songOf([note(0, 60, duration: 1)]),
-          quantize: false);
+          quantize: false, fillMissed: true);
       seek(session, 0);
       session.tap(right);
       seek(session, 2);

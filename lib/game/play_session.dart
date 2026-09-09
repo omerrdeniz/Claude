@@ -60,7 +60,7 @@ class PlaySession {
     this.approachSeconds = 1.9,
     this.speed = 1.0,
     this.quantize = true,
-    this.fillMissed = true,
+    this.fillMissed = false,
   })  : assert(speed > 0),
         _chart = chart;
 
@@ -103,14 +103,18 @@ class PlaySession {
 
   /// Whether a note nobody played sounds anyway, quietly.
   ///
-  /// Without it, every note the player misses is a hole in the piece — and
-  /// in Normal both hands are theirs, so someone answering only the melody
-  /// hears less than half of it. Two thirds of Chopin's nocturne is the left
-  /// hand.
+  /// **Off by default, and that is a decision, not an oversight.**
   ///
-  /// It does not soften what the score says: a filled note is still a miss.
-  /// What it protects is the music, which is the thing the player is here
-  /// for.
+  /// It was added because missing a note leaves a hole, and in Normal both
+  /// hands belong to the player — two thirds of Chopin's nocturne is the left
+  /// one, so answering only the melody left most of the piece silent. But
+  /// turning it on has a cost the player put plainly: sit still and the game
+  /// plays the song to you. Filling every hole and leaving every note to the
+  /// player are the same dial from opposite ends; there is no setting that is
+  /// both.
+  ///
+  /// So it is offered rather than assumed. It never softens the score: a
+  /// filled note is still a miss.
   final bool fillMissed;
 
   /// Notes already sounded on the player's behalf.
