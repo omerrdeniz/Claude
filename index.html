@@ -20,17 +20,56 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Piano Flow — akan notalara dokunarak piyano çalma oyunu">
 
-  <!-- iOS meta tags & icons -->
+  <!--
+    Without this a phone lays the page out at a notional 980 pixels and then
+    shrinks the result to fit, so the whole game is drawn at the wrong size and
+    every touch arrives in that scaled space. It was missing.
+
+    Deliberately NOT viewport-fit=cover: left alone, iOS keeps the page inside
+    the safe area, and this game puts its hit line low on the screen. Filling
+    the whole display would slide that line under the home indicator, where a
+    swipe leaves the app instead of playing a note.
+  -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+  <!-- Added to the home screen, it runs as its own app. -->
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="piano_flow">
+  <meta name="apple-mobile-web-app-title" content="Piano Flow">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>piano_flow</title>
+  <title>Piano Flow</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* The app's own background, so neither the wait before the engine starts
+       nor the safe-area bars on a notched phone flash white. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #0B0B14;
+      overscroll-behavior: none; /* no rubber-banding, no pull-to-refresh */
+    }
+
+    /* A game is played with the fingers, and a browser assumes fingers mean
+       something else: a double tap zooms, a long press selects text and opens
+       a callout, two fingers pinch. All of that fires in the middle of a
+       piece. `manipulation` is the narrow one — it stops the double-tap zoom
+       and the delay that comes with waiting to see if a tap was one, and
+       leaves ordinary scrolling alone so the song list still works. */
+    * {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+  </style>
 </head>
 <body>
   <script>
@@ -41,6 +80,9 @@
     // go on playing that version however many times the page was reloaded, and
     // every fix after it was invisible. Builds no longer register one; this
     // clears out any that is still installed from before.
+    //
+    // Adding the game to the home screen does NOT need one. It costs offline
+    // play, which this has never had, and buys back being able to ship a fix.
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function (regs) {
         for (var i = 0; i < regs.length; i++) regs[i].unregister();
@@ -51,6 +93,15 @@
         for (var i = 0; i < keys.length; i++) caches.delete(keys[i]);
       });
     }
+
+    // Safari honours `user-scalable=no` unevenly, so pinch-to-zoom is turned
+    // away here as well. Without it a second finger — which this game asks
+    // for by design, one hand each side — can zoom the board mid-song.
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (name) {
+      document.addEventListener(name, function (event) {
+        event.preventDefault();
+      }, { passive: false });
+    });
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
