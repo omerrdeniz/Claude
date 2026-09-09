@@ -18,7 +18,6 @@ class PlayScreen extends StatefulWidget {
     super.key,
     required this.song,
     this.difficulty = Difficulty.normal,
-    this.speed = 1.0,
     this.tolerance = TimingTolerance.wide,
     this.quantize = true,
     this.approachSeconds = 1.9,
@@ -26,9 +25,6 @@ class PlayScreen extends StatefulWidget {
 
   final Song song;
   final Difficulty difficulty;
-
-  /// Fraction of the written tempo to play at.
-  final double speed;
 
   /// How forgiving the judging is.
   final TimingTolerance tolerance;
@@ -77,7 +73,6 @@ class _PlayScreenState extends State<PlayScreen>
           .tightened(widget.difficulty == Difficulty.hard ? 0.6 : 1.0),
       quantize: widget.quantize,
       approachSeconds: widget.approachSeconds,
-      speed: widget.speed,
     )..onMiss = (_) => setState(() {});
     _audio.start();
     _session.start();

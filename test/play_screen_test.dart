@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_flow/data/song_library.dart';
+import 'package:piano_flow/music/note.dart';
+import 'package:piano_flow/music/song.dart';
 import 'package:piano_flow/screens/play_screen.dart';
 
 void main() {
@@ -75,9 +77,19 @@ void main() {
   });
 
   testWidgets('the song ends on a result, not an empty stage', (tester) async {
-    await tester.pumpWidget(
-        MaterialApp(home: PlayScreen(song: SongLibrary.preludeInC)));
-    await play(tester, const Duration(seconds: 20), frames: 130);
+    // A song of its own, so the test does not have to sit through a real one.
+    final brief = Song(
+      id: 'brief',
+      title: 'Kısa',
+      composer: 'Test',
+      bpm: 120,
+      notes: [
+        Note(beat: 0, midi: 60, duration: 0.5),
+        Note(beat: 1, midi: 62, duration: 0.5),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: brief)));
+    await play(tester, const Duration(seconds: 8), frames: 60);
     expect(find.text('Tekrar çal'), findsOneWidget);
     expect(find.text('İsabet'), findsOneWidget);
   });
@@ -86,7 +98,7 @@ void main() {
       (tester) async {
     // The lift is what ends a held note, so the wiring for it has to exist.
     await tester.pumpWidget(MaterialApp(
-        home: PlayScreen(song: SongLibrary.odeToJoy, speed: 0.6)));
+        home: PlayScreen(song: SongLibrary.odeToJoy)));
     await play(tester, const Duration(milliseconds: 2200), frames: 40);
 
     final stage = tester.getRect(find.byType(PlayScreen));
@@ -99,7 +111,7 @@ void main() {
 
   testWidgets('both sides of the screen accept a finger', (tester) async {
     await tester.pumpWidget(MaterialApp(
-        home: PlayScreen(song: SongLibrary.odeToJoy, speed: 0.6)));
+        home: PlayScreen(song: SongLibrary.odeToJoy)));
     await play(tester, const Duration(milliseconds: 2200), frames: 40);
 
     final stage = tester.getRect(find.byType(PlayScreen));
