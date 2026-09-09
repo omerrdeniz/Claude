@@ -60,6 +60,7 @@ class PlaySession {
     this.approachSeconds = 1.9,
     this.speed = 1.0,
     this.quantize = true,
+    this.fillMissed = true,
   })  : assert(speed > 0),
         _chart = chart;
 
@@ -99,6 +100,34 @@ class PlaySession {
   /// late tap can only sound at once — there is no going back — so lateness is
   /// the one error that is still heard.
   final bool quantize;
+
+  /// Whether a note nobody played sounds anyway, quietly.
+  ///
+  /// Without it, every note the player misses is a hole in the piece — and
+  /// in Normal both hands are theirs, so someone answering only the melody
+  /// hears less than half of it. Two thirds of Chopin's nocturne is the left
+  /// hand.
+  ///
+  /// It does not soften what the score says: a filled note is still a miss.
+  /// What it protects is the music, which is the thing the player is here
+  /// for.
+  final bool fillMissed;
+
+  /// Notes already sounded on the player's behalf.
+  final Set<(double, int)> _filled = {};
+
+  /// How long after its moment a note is given up on and filled in.
+  ///
+  /// The judging window is the wrong length for this: at its widest a note
+  /// would arrive nearly four hundred milliseconds late, which in a piece
+  /// whose eighths are four hundred and fifty apart is not a filled hole but
+  /// a wrong note. The perfect window is the right length — anyone playing
+  /// in time gets there first, and the fill only covers what they truly
+  /// missed.
+  double get _fillDelayBeats => judge.perfectMs / 1000 * beatsPerSecond;
+
+  /// How loud a filled note is against a played one. Present, not competing.
+  static const double _fillVelocity = 0.45;
 
   /// Notes tapped early, waiting for their moment.
   final List<({double beat, int midi, double velocity, double duration})>
@@ -202,6 +231,7 @@ class PlaySession {
 
     _playAccompaniment();
     _playWaitingNotes();
+    _fillMissedNotes();
     _expireMissedTaps();
     _releaseFinishedNotes();
   }
@@ -221,6 +251,27 @@ class PlaySession {
       _scheduleRelease(note.midi, note.beat + note.duration);
       return true;
     });
+  }
+
+  /// Sound what the player has not, so the piece keeps its shape.
+  ///
+  /// Deliberately does not resolve the note. The window stays open, so a late
+  /// hand still finds it, still scores, and still hears its own touch play it
+  /// — lateness remains the one error that is heard. And the miss is still
+  /// registered later, by [_expireMissedTaps], if nobody comes.
+  void _fillMissedNotes() {
+    if (!fillMissed) return;
+    final due = _judgedBeat - _fillDelayBeats;
+    for (final tap in chart.taps) {
+      if (tap.beat > due) break; // taps are in time order
+      if (!_isPending(tap)) continue;
+      for (final note in tap.notes) {
+        if (!_filled.add(_keyOf(note))) continue;
+        audio.noteOn(note.midi,
+            velocity: (note.velocity * _fillVelocity).clamp(0.05, 1.0));
+        _scheduleRelease(note.midi, note.endBeat);
+      }
+    }
   }
 
   /// A note the player never tapped is a miss once it is too late to hit.
@@ -471,6 +522,7 @@ class PlaySession {
     _lastBeat = _beat;
     scoreboard.reset();
     _resolved.clear();
+    _filled.clear();
     _running = true;
   }
 }

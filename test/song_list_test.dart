@@ -38,6 +38,7 @@ void main() {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('Notalar tam zamanında çalsın'), findsOneWidget);
+    expect(find.text('Kaçırdıklarım da duyulsun'), findsOneWidget);
     expect(find.text('Zamanlama ayarı'), findsOneWidget);
   });
 
@@ -82,10 +83,23 @@ void main() {
   });
 
   testWidgets('the timing settings reach the playfield too', (tester) async {
+    /// The switch under [title], found by its own label rather than by being
+    /// the only one on the screen — there is more than one now.
+    Finder switchUnder(String title) => find.ancestor(
+          of: find.text(title),
+          matching: find.byType(Row),
+        ).first;
+
     await pumpList(tester);
     await tester.tap(find.text(TimingTolerance.tight.label));
     await tester.pump();
-    await tester.tap(find.byType(Switch));
+    await tester.tap(find.descendant(
+        of: switchUnder('Notalar tam zamanında çalsın'),
+        matching: find.byType(Switch)));
+    await tester.pump();
+    await tester.tap(find.descendant(
+        of: switchUnder('Kaçırdıklarım da duyulsun'),
+        matching: find.byType(Switch)));
     await tester.pump();
     await tester.tap(find.text('Für Elise'));
     await tester.pump();
@@ -94,6 +108,7 @@ void main() {
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
     expect(screen.tolerance, TimingTolerance.tight);
     expect(screen.quantize, isFalse);
+    expect(screen.fillMissed, isFalse);
   });
 
   testWidgets('the timing calibration reaches the game', (tester) async {

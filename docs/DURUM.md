@@ -37,9 +37,25 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
 - **Akorun her notası ayrı çizilir.** Tek parmakla basılsa bile üç nota üç
   daire olarak görünür (`Tap.noteAcross`), arkalarında onları birleştiren bir
   şerit/bant vardır.
-- **Normal zorlukta hiçbir şey kendi kendine çalmaz.** Oyuncu "şarkının benim
+- **Normal zorlukta hiçbir nota oyuncudan alınmaz.** Oyuncu "şarkının benim
   çalmadığım kısımları var" dedi; yalnızca Kolay modda seyreltme yapılır
   (yarım vuruşta bir moment kalır, gerisi `autoNotes`'a gider).
+- **Ama kaçırılan nota yine de duyulur, kısık.** (`PlaySession.fillMissed`,
+  varsayılan açık; şarkı listesinde "Kaçırdıklarım da duyulsun".) Bunun
+  yukarıdaki kararla çelişmediğine dikkat: her nota hâlâ oyuncunun, hiçbiri
+  ondan alınmıyor; sadece basamadığında müzikte delik açılmıyor. Puan yine
+  "kaçtı" der.
+
+  Sebebi ölçüldü: Normal'de iki el de oyuncunun ve Nokturn'ün notalarının
+  **%63'ü sol el** (Neşeye Övgü %58, Für Elise %42, Prelüd %24). Sadece
+  melodiyi çalan biri Nokturn'ün üçte ikisini duymuyordu; oyuncu bunu
+  "notalar kesik, aralarında boşluk var" diye bildirdi.
+
+  **Zamanlaması kritik:** doldurma, yargı penceresinde değil **mükemmel**
+  penceresinde yapılır (`_fillDelayBeats`). Yargı penceresi en genişinde
+  378 ms; sekizlikleri 450 ms olan bir parçada o kadar geç gelen nota deliği
+  doldurmaz, yanlış nota gibi duyulur. Doldurma notayı **çözmez**: geç kalan
+  el hâlâ bulur, hâlâ puan alır ve kendi dokunuşu notayı yine çalar.
 - **Eller ayrılır.** Ekranın sol yarısı sol el, sağ yarısı sağ el. Zorluğun
   asıl anlamı bu:
   - Kolay: tek alan, akor tek parmakla, seyreltme var.
@@ -361,7 +377,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 271 test geçiyor
+flutter test        # 276 test geçiyor
 ```
 
 ## Cihazsız doğrulama
@@ -491,27 +507,9 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
    her zorlukta `autoNotes`'a al; (c) şarkı başına tempo düşür. (b) DURUM'daki
    "normalde hiçbir şey kendi çalmaz" kararına dokunduğu için oyuncuya
    sorulmalı.
-2. **Kaçırılan nota hiç seslenmiyor — parçada delik açıyor.** Oyuncu
-   "doğru çalsam bile akıcı hissettirmiyor, notalar kesik" dedi. Sebep ses
-   yolunda değil (yukarıya bakın), burada: Normal ve Zor'da `autoNotes` boş,
-   yani basılmayan nota sessiz kalıyor. Normal'de her parçanın ne kadarı
-   *öteki* el:
-
-   | Şarkı | Sol elin payı |
-   |---|---|
-   | Nokturn | **%63** |
-   | Neşeye Övgü | %58 |
-   | Für Elise | %42 |
-   | Prelüd | %24 |
-
-   Yani sadece melodiyi çalan biri Nokturn'ün üçte ikisini duymuyor.
-
-   Önerilen çözüm: **kaçırılan nota yine de çalsın, ama kısık.** Puan hâlâ
-   kaçırdığını söyler, müzik bütün kalır. Bu, "normalde hiçbir şey kendi
-   kendine çalmaz" kararına dokunduğu için **oyuncuya sorulmadan
-   yapılmamalı** — ama o karar "şarkının benim çalmadığım kısımları var"
-   şikâyetinden gelmişti, bu ise farklı: her nota hâlâ oyuncunun, sadece
-   kaçırınca müzikte delik açılmıyor.
+2. **Doldurma ayarı denendi mi?** `fillMissed` açık geliyor; oyuncu
+   beğenmezse kapatabiliyor. Kısık ses oranı `_fillVelocity = 0.45` ve
+   gecikmesi mükemmel penceresi — ikisi de kulakla ayarlanmayı bekliyor.
 3. Normal zorlukta akor parmaklama sorusu yanıtlanacak.
 4. MIDI içe aktarma **arayüzü** (yol haritası adım 8) — okuyucu ve dönüştürücü
    hazır, eksik olan yalnızca dosya seçme ekranı. Oyuncu kendi MIDI'lerini

@@ -60,13 +60,20 @@ class ChoiceRow<T> extends StatelessWidget {
   }
 }
 
-/// Whether the music is kept in time regardless of the hand.
-class QuantizeSwitch extends StatelessWidget {
-  const QuantizeSwitch({
+/// One on-off setting, with a line saying what it currently means.
+class SettingSwitch extends StatelessWidget {
+  const SettingSwitch({
     super.key,
+    required this.title,
+    required this.subtitle,
     required this.value,
     required this.onChanged,
   });
+
+  final String title;
+
+  /// What the setting means in the state it is in — not what it is called.
+  final String subtitle;
 
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -79,15 +86,14 @@ class QuantizeSwitch extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Notalar tam zamanında çalsın',
-                style: TextStyle(fontSize: 14, color: AppTheme.textPrimary),
+              Text(
+                title,
+                style: const TextStyle(
+                    fontSize: 14, color: AppTheme.textPrimary),
               ),
               const SizedBox(height: 2),
               Text(
-                value
-                    ? 'Erken basarsan nota vuruşu bekler'
-                    : 'Nota parmağın değdiği anda çalar',
+                subtitle,
                 style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
             ],

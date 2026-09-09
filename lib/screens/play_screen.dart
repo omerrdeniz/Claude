@@ -21,6 +21,7 @@ class PlayScreen extends StatefulWidget {
     this.speed = 1.0,
     this.tolerance = TimingTolerance.wide,
     this.quantize = true,
+    this.fillMissed = true,
     this.approachSeconds = 1.9,
     this.latencyOffsetMs = 0,
   });
@@ -36,6 +37,9 @@ class PlayScreen extends StatefulWidget {
 
   /// Whether notes sound on their beat rather than under the finger.
   final bool quantize;
+
+  /// Whether a note nobody plays sounds anyway, quietly.
+  final bool fillMissed;
 
   /// The player's own calibration, on top of what the device reports.
   ///
@@ -83,6 +87,7 @@ class _PlayScreenState extends State<PlayScreen>
       judge: Judge.forTolerance(widget.tolerance)
           .tightened(widget.difficulty == Difficulty.hard ? 0.6 : 1.0),
       quantize: widget.quantize,
+      fillMissed: widget.fillMissed,
       approachSeconds: widget.approachSeconds,
       latencyOffsetMs: widget.latencyOffsetMs,
       speed: widget.speed,

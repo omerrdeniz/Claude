@@ -64,6 +64,13 @@ class _SongListScreenState extends State<SongListScreen> {
   TimingTolerance _tolerance = TimingTolerance.wide;
   bool _quantize = true;
 
+  /// A note nobody plays still sounds, quietly, so the piece keeps its shape.
+  ///
+  /// On by default. In Normal both hands belong to the player and two thirds
+  /// of the nocturne is the left one; without this, answering only the melody
+  /// leaves most of the music silent.
+  bool _fillMissed = true;
+
   void _setLatency(double value) => setState(
       () => _latencyOffsetMs = value.clamp(-_latencyLimit, _latencyLimit));
 
@@ -141,9 +148,22 @@ class _SongListScreenState extends State<SongListScreen> {
               onChanged: (value) => setState(() => _tolerance = value),
             ),
             const SizedBox(height: 14),
-            QuantizeSwitch(
+            SettingSwitch(
+              title: 'Notalar tam zamanında çalsın',
+              subtitle: _quantize
+                  ? 'Erken basarsan nota vuruşu bekler'
+                  : 'Nota parmağın değdiği anda çalar',
               value: _quantize,
               onChanged: (value) => setState(() => _quantize = value),
+            ),
+            const SizedBox(height: 14),
+            SettingSwitch(
+              title: 'Kaçırdıklarım da duyulsun',
+              subtitle: _fillMissed
+                  ? 'Basamadığın nota kısık çalar — puanın yine kaçtı der'
+                  : 'Basamadığın nota hiç çalmaz, parçada boşluk kalır',
+              value: _fillMissed,
+              onChanged: (value) => setState(() => _fillMissed = value),
             ),
             const SizedBox(height: 14),
             LatencyPicker(
@@ -160,6 +180,7 @@ class _SongListScreenState extends State<SongListScreen> {
                 speed: _speed,
                 tolerance: _tolerance,
                 quantize: _quantize,
+                fillMissed: _fillMissed,
                 latencyOffsetMs: _latencyOffsetMs,
               ),
             const SizedBox(height: 8),

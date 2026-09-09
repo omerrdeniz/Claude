@@ -18,6 +18,7 @@ class SongTile extends StatelessWidget {
     required this.speed,
     required this.tolerance,
     required this.quantize,
+    required this.fillMissed,
     required this.latencyOffsetMs,
   });
 
@@ -26,6 +27,7 @@ class SongTile extends StatelessWidget {
   final double speed;
   final TimingTolerance tolerance;
   final bool quantize;
+  final bool fillMissed;
   final double latencyOffsetMs;
 
   @override
@@ -49,6 +51,7 @@ class SongTile extends StatelessWidget {
                 speed: speed,
                 tolerance: tolerance,
                 quantize: quantize,
+                fillMissed: fillMissed,
                 latencyOffsetMs: latencyOffsetMs,
               ),
             ),
