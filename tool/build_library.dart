@@ -485,17 +485,30 @@ String _quote(String text) {
 String _number(double value) =>
     value == value.roundToDouble() ? '${value.round()}' : '$value';
 
-Future<List<int>> _download(String url) async {
-  final client = HttpClient();
-  try {
-    final request = await client.getUrl(Uri.parse(url));
-    final response = await request.close();
-    if (response.statusCode != 200) {
-      throw HttpException('HTTP ${response.statusCode} for $url');
+/// Fetch a file, with a few goes at it.
+///
+/// A score archive is one request; a library rebuild is dozens in a row, and
+/// a server that is happy to serve one is not always happy to serve twenty —
+/// KernScores drops the connection partway through a run of them. Failing
+/// the whole build on that means starting over for the sake of one file, so
+/// this waits and asks again.
+Future<List<int>> _download(String url, {int tries = 4}) async {
+  for (var attempt = 1;; attempt++) {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(Uri.parse(url));
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        throw HttpException('HTTP ${response.statusCode} for $url');
+      }
+      return [await for (final chunk in response) ...chunk];
+    } catch (error) {
+      if (attempt >= tries) rethrow;
+      stdout.writeln('  yeniden deneniyor ($attempt/$tries): $error');
+      await Future<void>.delayed(Duration(seconds: 2 * attempt));
+    } finally {
+      client.close();
     }
-    return [await for (final chunk in response) ...chunk];
-  } finally {
-    client.close();
   }
 }
 

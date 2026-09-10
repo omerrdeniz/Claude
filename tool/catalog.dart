@@ -199,6 +199,115 @@ const List<Score> catalog = [
         'Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp, 2004.',
   ),
   Score(
+    id: 'moonlight-sonata',
+    title: 'Moonlight Sonata, Op. 27 No. 2',
+    composer: 'Ludwig van Beethoven',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=sonata14-1.krn&l=users/craig/classical/beethoven/piano/sonata'
+        '&format=midi',
+    credit: 'Kamu malı (Op. 27 No. 2, 1801). 1. bölüm, Adagio sostenuto. '
+        'Nota kaynağı: KernScores (CCARH, Stanford) — Humdrum **kern '
+        'dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
+    id: 'pathetique-adagio',
+    title: 'Pathétique, Op. 13 — Adagio cantabile',
+    composer: 'Ludwig van Beethoven',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=sonata08-2.krn&l=users/craig/classical/beethoven/piano/sonata'
+        '&format=midi',
+    leftVelocity: 0.5,
+    credit: 'Kamu malı (Op. 13, 1798). 2. bölüm. Nota kaynağı: KernScores '
+        '(CCARH, Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
+    id: 'sonata-k545',
+    title: 'Sonata in C, K. 545',
+    composer: 'Wolfgang Amadeus Mozart',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=sonata15-1.krn&l=users/craig/classical/mozart/piano/sonata'
+        '&format=midi',
+    credit: 'Kamu malı (K. 545, 1788). 1. bölüm, Allegro. Alte '
+        'Mozart-Ausgabe baskısından. Nota kaynağı: KernScores (CCARH, '
+        'Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
+    id: 'rondo-alla-turca',
+    title: 'Rondo alla Turca, K. 331',
+    composer: 'Wolfgang Amadeus Mozart',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=sonata11-3.krn&l=users/craig/classical/mozart/piano/sonata'
+        '&format=midi',
+    credit: 'Kamu malı (K. 331, 1783). 3. bölüm. Alte Mozart-Ausgabe '
+        'baskısından. Nota kaynağı: KernScores (CCARH, Stanford) — '
+        'Humdrum **kern dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
+    id: 'prelude-op28-no4',
+    title: 'Prelude Op. 28 No. 4',
+    composer: 'Frédéric Chopin',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=prelude28-04.krn&l=users/craig/classical/chopin/prelude'
+        '&format=midi',
+    leftVelocity: 0.45,
+    credit: 'Kamu malı (Op. 28 No. 4, 1839). Nota kaynağı: KernScores '
+        '(CCARH, Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
+    id: 'raindrop-prelude',
+    title: 'Raindrop Prelude, Op. 28 No. 15',
+    composer: 'Frédéric Chopin',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=prelude28-15.krn&l=users/craig/classical/chopin/prelude'
+        '&format=midi',
+    leftVelocity: 0.45,
+    credit: 'Kamu malı (Op. 28 No. 15, 1839). Nota kaynağı: KernScores '
+        '(CCARH, Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
+    id: 'waltz-op64-no2',
+    title: 'Waltz Op. 64 No. 2',
+    composer: 'Frédéric Chopin',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=waltz64-2.krn&l=users/craig/classical/chopin/waltz'
+        '&format=midi',
+    leftVelocity: 0.45,
+    credit: 'Kamu malı (Op. 64 No. 2, 1847). Nota kaynağı: KernScores '
+        '(CCARH, Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
+    id: 'minute-waltz',
+    title: 'Minute Waltz, Op. 64 No. 1',
+    composer: 'Frédéric Chopin',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=waltz64-1.krn&l=users/craig/classical/chopin/waltz'
+        '&format=midi',
+    leftVelocity: 0.45,
+    credit: 'Kamu malı (Op. 64 No. 1, 1847). Nota kaynağı: KernScores '
+        '(CCARH, Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
+    id: 'promenade',
+    title: 'Promenade (Pictures at an Exhibition)',
+    composer: 'Modest Mussorgsky',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=promenade.krn&l=users/craig/classical/mussorgsky/exhibition'
+        '&format=midi',
+    credit: 'Kamu malı (1874). Nota kaynağı: KernScores (CCARH, Stanford), '
+        'Humdrum **kern dizgisi.',
+  ),
+  Score(
+    id: 'impromptu-op90-no3',
+    title: 'Impromptu Op. 90 No. 3',
+    composer: 'Franz Schubert',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=op90-03.krn&l=users/craig/classical/schubert/piano/op90'
+        '&format=midi',
+    leftVelocity: 0.5,
+    credit: 'Kamu malı (D. 899 No. 3, 1827). Nota kaynağı: KernScores '
+        '(CCARH, Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp.',
+  ),
+  Score(
     id: 'nocturne-op9-no2',
     title: 'Nocturne Op. 9 No. 2',
     composer: 'Frédéric Chopin',
