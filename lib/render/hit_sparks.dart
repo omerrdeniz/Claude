@@ -38,12 +38,16 @@ class Spark {
 /// second, and an uncapped list is a way to make the game stutter exactly
 /// where it should feel best.
 class SparkField {
-  SparkField({this.lifeMs = 420, this.limit = 24});
+  SparkField({this.lifeMs = 260, this.limit = 16});
 
   /// How long a spark lasts.
   final double lifeMs;
 
   /// The most that may be alive at once.
+  ///
+  /// Short-lived and few. The first version lasted 420 ms and allowed
+  /// twenty-four, and in a dense passage the line was never not covered in
+  /// them — which reads as noise rather than as anything the player did.
   final int limit;
 
   final List<Spark> _sparks = [];

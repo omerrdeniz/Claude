@@ -112,42 +112,43 @@ class StagePainter extends CustomPainter {
     _paintSparks(canvas, geometry);
   }
 
-  /// The light a hit leaves on the line: a ring opening outwards and a flash
-  /// dying where the note landed.
+  /// The light a hit leaves on the line: a short flare where the note landed.
   ///
-  /// Rings and discs rather than anything blurred — a blur filter here costs
-  /// more per frame than the rest of the screen put together, and this fires
-  /// a dozen times a second in a fast passage.
+  /// It flares out a little and dies where it is. An expanding ring was tried
+  /// first and had to go — with a dozen a second, rings travelling outwards
+  /// cross each other and the notes above them, and the line turns into
+  /// ripples on water. What is wanted is "that note went off here", which is
+  /// a thing that happens in one place.
+  ///
+  /// Discs and no blur: a blur filter here costs more per frame than the rest
+  /// of the screen put together.
   void _paintSparks(Canvas canvas, StageGeometry g) {
     if (sparks.isEmpty) return;
     final y = g.hitLineY;
     final radius = g.noteRadius;
 
     for (final spark in sparks) {
-      final at = Offset(g.xAtPosition(spark.across), y);
       final life = spark.age.clamp(0.0, 1.0);
-      final fade = (1 - life) * (0.5 + spark.quality * 0.5);
+      // Quick out, slow fade: the first instant is the hit, the rest is it
+      // leaving.
+      final open = 1 - (1 - life) * (1 - life);
+      final fade = (1 - life) * (1 - life) * (0.55 + spark.quality * 0.45);
+      final at = Offset(g.xAtPosition(spark.across), y);
       final colour = AppTheme.chordColor(spark.voices);
 
-      // The ring opens out and thins as it goes. It carries the effect;
-      // anything solid and note-sized here reads as another note, which is
-      // the last thing the line needs.
       canvas.drawCircle(
         at,
-        radius * (0.6 + life * 2.6),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = radius * 0.40 * (1 - life)
-          ..color = colour.withValues(alpha: 0.75 * fade),
+        radius * (0.85 + open * 0.55),
+        Paint()..color = colour.withValues(alpha: 0.55 * fade),
       );
 
-      // A hot point at the moment of contact, small and gone almost at once.
-      final flash = (1 - life * 5).clamp(0.0, 1.0);
+      // A hot core for the first moment only.
+      final flash = (1 - life * 4).clamp(0.0, 1.0);
       if (flash > 0) {
         canvas.drawCircle(
           at,
-          radius * (0.20 + flash * 0.34),
-          Paint()..color = Colors.white.withValues(alpha: 0.9 * flash),
+          radius * (0.30 + flash * 0.30),
+          Paint()..color = Colors.white.withValues(alpha: 0.85 * flash),
         );
       }
     }

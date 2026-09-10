@@ -280,9 +280,15 @@ Eksik olan, saniye saniye hissedilen şeydi. Bir nota vurulduğunda olan tek
 aynı görünüyordu.
 
 - **Kıvılcımlar** (`lib/render/hit_sparks.dart`). Her çalan nota, kendi
-  yerinde çizgide bir halka bırakıyor: açılarak inceliyor, ortasında bir
-  anlık sıcak nokta. Akorun her notası ayrı bir kıvılcım — üç notalık akor
-  üç şey olmalı, çünkü öyle.
+  yerinde çizgide kısa bir parlama bırakıyor: azıcık açılıp olduğu yerde
+  sönüyor, ilk anında beyaz bir çekirdek. Akorun her notası ayrı bir kıvılcım
+  — üç notalık akor üç şey olmalı, çünkü öyle.
+
+  **Dışa yayılan halka denendi ve geri alındı.** Saniyede bir düzine
+  atıldığında halkalar birbirini ve üstteki notaları kesiyor, çizgi su
+  üstündeki dalgalara dönüşüyor; oyuncu "karışık, dalga dalga yayılma gibi"
+  dedi. İstenen şey "o nota burada patladı" — tek bir yerde olan bir şey.
+  Ömür 420 ms'den 260'a, sınır 24'ten 16'ya indi.
 
   Saf veri + saat: Flutter yok, rastgelelik yok, çizim yok. Nasıl göründüğü
   çizerin işi. **Sayısı sınırlı (24)**: yoğun bir geçit saniyede bir düzine
