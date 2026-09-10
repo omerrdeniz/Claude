@@ -11,6 +11,7 @@ import 'package:piano_flow/game/play_session.dart' show RunBead;
 import 'package:piano_flow/render/hit_sparks.dart';
 import 'package:piano_flow/render/stage_painter.dart';
 import 'package:piano_flow/theme/app_theme.dart';
+import 'package:piano_flow/theme/song_ground.dart';
 
 import 'support/library.dart';
 
@@ -402,15 +403,16 @@ void main() {
           runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: false)]),
       // Inside one of the canon's two long runs, so the thread shows.
       'kanon': await savePng(shipped('canon-in-d'), 80.0, 'kanon',
-          ground: AppTheme.groundFor('canon-in-d'),
+          ground: groundOf(shipped('canon-in-d')),
           runBeads: [beadOf(shipped('canon-in-d'), 80.0, tracked: true)]),
-      // Each piece brings its own light: Satie cold, Joplin warm.
+      // Each piece brings its own light, read off its key: Satie's F minor
+      // against Joplin's C major.
       'zemin-satie': await savePng(
           shipped('gnossienne-1'), 20.0, 'zemin-satie',
-          ground: AppTheme.groundFor('gnossienne-1')),
+          ground: groundOf(shipped('gnossienne-1'))),
       'zemin-joplin': await savePng(
           shipped('entertainer'), 20.0, 'zemin-joplin',
-          ground: AppTheme.groundFor('entertainer')),
+          ground: groundOf(shipped('entertainer'))),
     };
     for (final entry in sizes.entries) {
       // A stage drawn with nothing on it compresses to almost nothing.

@@ -10,6 +10,7 @@ import '../music/song.dart';
 import '../render/hit_sparks.dart';
 import '../render/stage_painter.dart';
 import '../theme/app_theme.dart';
+import '../theme/song_ground.dart';
 import '../widgets/result_panel.dart';
 import '../widgets/score_hud.dart';
 
@@ -267,7 +268,7 @@ class _PlayScreenState extends State<PlayScreen>
                       // heat by the time the multiplier maxes out.
                       heat: (_session.scoreboard.combo / 50).clamp(0.0, 1.0),
                       seconds: _now.inMicroseconds / 1e6,
-                      ground: AppTheme.groundFor(widget.song.id),
+                      ground: groundOf(widget.song),
                     ),
                   ),
                 ),
