@@ -75,6 +75,7 @@ Future<void> main(List<String> args) async {
 /// the cached render is stale.
 String _recipeOf(Score score) => [
       score.url ?? '',
+      score.midiUrl ?? '',
       score.patchUrl ?? '',
       score.entry ?? '',
       for (final name in [score.local, score.assemble])
@@ -144,6 +145,10 @@ String _clock(Duration d) =>
 
 /// Fetch, assemble and render one score.
 Future<List<int>> _render(Score score) async {
+  // A score already published as MIDI needs no rendering at all. See
+  // [Score.midiUrl] for why that is not a shortcut.
+  if (score.midiUrl != null) return _download(score.midiUrl!);
+
   final work = await Directory.systemTemp.createTemp('piano-flow-${score.id}');
   try {
     final File entry;

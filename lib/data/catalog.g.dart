@@ -120,6 +120,25 @@ const List<SongInfo> catalog = [
     highMidi: 99,
   ),
   SongInfo(
+    id: 'waltz-in-a-minor',
+    title: 'Waltz in A minor, B. 150',
+    composer: 'Frédéric Chopin',
+    source: 'Kamu malı (B. 150, 1847). Nota kaynağı: KernScores '
+        '(CCARH, Stanford) — Humdrum **kern dizgisi: Craig '
+        'Stuart Sapp, 2004.',
+    bpm: 120,
+    beatsPerBar: 3,
+    beatsPerQuarter: 1,
+    rightVelocity: 0.75,
+    leftVelocity: 0.45,
+    startBeat: 0,
+    noteCount: 920,
+    tapCount: 581,
+    durationMs: 120000,
+    lowMidi: 33,
+    highMidi: 100,
+  ),
+  SongInfo(
     id: 'entertainer',
     title: 'The Entertainer',
     composer: 'Scott Joplin',

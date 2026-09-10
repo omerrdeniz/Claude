@@ -19,6 +19,7 @@ class Score {
     required this.composer,
     required this.credit,
     this.url,
+    this.midiUrl,
     this.local,
     this.patchUrl,
     this.entry,
@@ -29,7 +30,8 @@ class Score {
     this.bpm,
     this.beatsPerBar,
     this.fromBar,
-  }) : assert(url != null || local != null, 'a score has to come from somewhere');
+  }) : assert(url != null || local != null || midiUrl != null,
+            'a score has to come from somewhere');
 
   /// What the song is called in code, in the asset name, and in save data.
   final String id;
@@ -49,6 +51,20 @@ class Score {
   /// A score of our own, under `tool/scores/`. Used where no edition exists
   /// to take — the theme from the Ninth is not written for a keyboard at all.
   final String? local;
+
+  /// A score published as MIDI rather than as engraving source.
+  ///
+  /// LilyPond is how most of this library arrives, but it is not the only
+  /// way a score is published free. A digital edition in a symbolic format —
+  /// Humdrum, MEI — is an encoding of the notes themselves, so the MIDI it
+  /// renders is exactly as exact as one LilyPond makes: on the grid, repeats
+  /// written out, both hands on their own tracks. Taking it straight saves
+  /// setting an entire engraving toolchain on a file that is already the
+  /// notes.
+  ///
+  /// This is what opens the library beyond Mutopia, which has no Chopin
+  /// waltzes at all.
+  final String? midiUrl;
 
   /// A patch to apply over the unpacked archive, for an arrangement
   /// published as a diff against somebody else's edition.
@@ -168,6 +184,19 @@ const List<Score> catalog = [
     // \new PianoStaff, so unfolding would land on the printed one.
     credit: 'Kamu malı (1890). Mutopia Project baskısı (Knute Snortum), '
         'Salabert 1913 baskısından, CC BY-SA 4.0, tam eser.',
+  ),
+  Score(
+    id: 'waltz-in-a-minor',
+    title: 'Waltz in A minor, B. 150',
+    composer: 'Frédéric Chopin',
+    midiUrl: 'https://kernscores.stanford.edu/cgi-bin/ksdata?'
+        'file=waltz150.krn&l=users/craig/classical/chopin/waltz&format=midi',
+    // The left hand is the waltz's rocking bass-and-chord, under a melody
+    // that is mostly single notes: level velocities would put the
+    // accompaniment on top of the tune.
+    leftVelocity: 0.45,
+    credit: 'Kamu malı (B. 150, 1847). Nota kaynağı: KernScores (CCARH, '
+        'Stanford) — Humdrum **kern dizgisi: Craig Stuart Sapp, 2004.',
   ),
   Score(
     id: 'nocturne-op9-no2',
