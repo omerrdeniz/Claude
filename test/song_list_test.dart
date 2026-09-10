@@ -48,6 +48,15 @@ void main() {
     expect(find.text('Zamanlama ayarı'), findsOneWidget);
   });
 
+  testWidgets('the build says which one it is', (tester) async {
+    // The player reads this back when a fix does not seem to have arrived.
+    // Without it there is no way to tell a fix that did not work from a fix
+    // that never reached the phone.
+    await pumpList(tester);
+    expect(versionLabel, isNotEmpty);
+    expect(find.text(versionLabel), findsOneWidget);
+  });
+
   testWidgets('no label leaks raw code', (tester) async {
     // A mis-escaped string once shipped '%${(speed * 100).round()}' to the
     // screen; nothing the player reads should contain source code.

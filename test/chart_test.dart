@@ -371,6 +371,44 @@ void main() {
     });
   });
 
+  group('what counts as a note to hold', () {
+    test('it is a length of time, not a number of beats', () {
+      // The same written note, in two pieces at different tempos. A hand
+      // knows seconds; it does not know beats.
+      Tap only(double bpm) => Chart
+          .build(songOf([note(0, 60, duration: 1.2)], bpm: bpm),
+              difficulty: Difficulty.normal)
+          .taps
+          .single;
+
+      expect(only(40).isHold, isTrue, reason: '1.2 beats at 40 is 1.8 s');
+      expect(only(200).isHold, isFalse, reason: '1.2 beats at 200 is 0.36 s');
+    });
+
+    test("the canon's walking bass is held, because that is how it sounds", () {
+      // Reported by the player: the opening notes sound held but were drawn
+      // as taps. They are quarter notes at 55 — 1.09 seconds each — and the
+      // threshold used to be 1.25 beats, which in this piece is 1.36
+      // seconds. Nothing in the bass reached it.
+      final chart = Chart.build(shipped('canon-in-d'));
+      final opening = chart.taps.take(8);
+      expect(opening.every((tap) => tap.isHold), isTrue,
+          reason: 'the ground bass rings for a second a note');
+    });
+
+    test('nothing quick is ever asked to be held', () {
+      for (final song in shippedSongs) {
+        final secondsPerBeat = 60 / song.bpm;
+        for (final tap in Chart.build(song).taps.where((t) => t.isHold)) {
+          expect(tap.duration * secondsPerBeat,
+              greaterThanOrEqualTo(Tap.holdSeconds - 1e-9),
+              reason: '${song.title}: a hold of '
+                  '${(tap.duration * secondsPerBeat * 1000).round()} ms');
+        }
+      }
+    });
+  });
+
   test('which hand a touch belongs to is read from where it landed', () {
     expect(Chart.handAt(0.1), Hand.left);
     expect(Chart.handAt(0.49), Hand.left);

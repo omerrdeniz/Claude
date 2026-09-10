@@ -93,12 +93,28 @@ class Tap {
       notes.map((n) => n.duration).reduce((a, b) => a > b ? a : b);
 
   /// Long enough that the finger is expected to stay down.
-  bool get isHold => duration >= holdThreshold;
+  bool get isHold => duration >= holdFrom;
 
-  /// Beats a note has to last before it is held rather than struck. Under
+  /// How long this touch has to last to be held rather than struck, in this
+  /// song's beats. Set by [Chart.build] from the tempo.
+  ///
+  /// The default is what [holdSeconds] comes to at 120 beats a minute, for a
+  /// touch built outside a chart.
+  double holdFrom = holdSeconds * 2;
+
+  /// Seconds a note has to last before it is held rather than struck. Under
   /// this, asking for a hold would be asking for a press the hand cannot
   /// meaningfully control.
-  static const double holdThreshold = 1.25;
+  ///
+  /// **In seconds, and that matters.** It used to be beats, which meant it
+  /// was a different length of time in every piece: 469 ms in the Ode, 1364
+  /// in the canon. A hand does not know what a beat is. The canon showed it
+  /// plainly — its walking bass is a quarter note at 55, which rings for
+  /// 1.09 seconds and sounds held to anybody listening, but fell short of a
+  /// 1.25-beat threshold and was drawn as a tap. Five of its eight hundred
+  /// touches were holds; now two hundred and ninety-three are, which is what
+  /// the piece actually is.
+  static const double holdSeconds = 0.7;
 
   double get endBeat => beat + duration;
 
@@ -228,6 +244,12 @@ class Chart {
     taps.sort((a, b) => a.beat != b.beat
         ? a.beat.compareTo(b.beat)
         : a.across.compareTo(b.across));
+
+    // How long a note has to last, in this song's beats, to be held.
+    final holdFrom = Tap.holdSeconds * song.bpm / 60;
+    for (final tap in taps) {
+      tap.holdFrom = holdFrom;
+    }
 
     // Tell every touch how many fingers its hand needs at that moment.
     for (var i = 0; i < taps.length;) {

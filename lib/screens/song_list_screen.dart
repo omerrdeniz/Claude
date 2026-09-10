@@ -10,8 +10,20 @@ import 'song_list/settings.dart';
 import 'song_list/song_tile.dart';
 
 /// Stamped in at build time, so a phone can say which version it is running.
+///
+/// The number is how many commits the branch has, which makes it comparable
+/// at a glance — v51 is plainly newer than v50, where two commit hashes are
+/// not. The hash is kept beside it because that is what actually identifies
+/// the build. Both come from `tool/deploy.sh`.
+const String appVersion =
+    String.fromEnvironment('APP_VERSION', defaultValue: '');
 const String buildId =
     String.fromEnvironment('BUILD_ID', defaultValue: 'geliştirme');
+
+/// What the player reads at the top of the list, and quotes back when a fix
+/// does not seem to have arrived.
+String get versionLabel =>
+    appVersion.isEmpty ? buildId : 'v$appVersion · $buildId';
 
 /// The song browser.
 ///
@@ -112,7 +124,7 @@ class _SongListScreenState extends State<SongListScreen> {
                 // Which build this is. Without it there is no way to tell a
                 // fix that did not work from a fix that never arrived.
                 Text(
-                  buildId,
+                  versionLabel,
                   style: TextStyle(
                     color: AppTheme.textMuted.withValues(alpha: 0.5),
                     fontSize: 11,

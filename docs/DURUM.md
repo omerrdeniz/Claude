@@ -147,6 +147,19 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   Kapsam (Normal): Für Elise dokunuşlarının %12'si (3 koşu, en uzunu **62
   nota**), Kanon %19, Nokturn %4, Neşeye Övgü ve Prelüd %0.
 
+- **Basılı tutma eşiği saniye cinsinden.** Bir nota, sesi 0.7 saniyeden uzun
+  sürüyorsa basılı tutmalı sayılıyor (`Tap.holdSeconds`); `Chart.build` bunu
+  parçanın temposundan vuruşa çeviriyor.
+
+  Eskiden eşik **vuruş** cinsindeydi (1.25 vuruş) ve bu her parçada başka bir
+  süre demekti: Neşeye Övgü'de 469 ms, Kanon'da 1364 ms. El vuruş nedir
+  bilmez. Oyuncu farkı Kanon'da yakaladı: zemin bası ♩=55'te dörtlük, yani
+  1.09 saniye çınlıyor ve kulağa basılı tutmalı geliyor, ama eşiğin altında
+  kaldığı için tek dokunuş çiziliyordu. 818 dokunuşun 5'i tutmalıydı; şimdi
+  293'ü, ki parçanın gerçekten olduğu şey bu.
+
+  Aynı hatanın ikizi Kolay moddaki seyreltmede duruyor, henüz düzeltilmedi
+  (aşağıda, "Sıradaki iş").
 - **Tolerans bir ayardır.** `TimingTolerance { wide, normal, tight }` —
   çarpanlar 1.8 / 1.0 / 0.6. Erken basışlar kuyruğa alınıp **kendi vuruşunda**
   seslendirilir (quantize anahtarı), geç basışlar hemen çalar.
@@ -644,25 +657,27 @@ için anlamlı.
 
 Oyuncu iPhone'dan oynuyor, Mac/Xcode yok. Web derlemesi
 **https://omerrdeniz.github.io/Claude/** adresinde yayında; kaynağı `gh-pages`
-dalı.
+dalı. Tek komut:
 
 ```bash
-SHA=$(git rev-parse --short HEAD)
-flutter build web --release --base-href /Claude/ \
-  --pwa-strategy=none --dart-define=BUILD_ID=$SHA
-git worktree add /tmp/pages gh-pages
-rm -rf /tmp/pages/*            # .git hariç
-cp -r build/web/* /tmp/pages/
-echo "$SHA" > /tmp/pages/.last_build_id
-git -C /tmp/pages add -A
-git -C /tmp/pages commit -m "Piano Flow web derlemesi $SHA"
-git -C /tmp/pages push origin gh-pages
+tool/deploy.sh
 ```
+
+Derler, damgalar, `gh-pages`'e ve çalışılan dala iter, sonuçta sürümü yazar.
+Çalışma dizini temiz değilse çalışmayı reddediyor — yayınlanan şeyin hangi
+commit olduğu belli olmalı.
+
+**Sürüm numarası.** Dalın commit sayısı (`git rev-list --count HEAD`), yani
+her yayında bir artıyor ve bakışta karşılaştırılabiliyor: v51'in v50'den yeni
+olduğu bellidir, iki commit hash'inin hangisinin yeni olduğu belli değildir.
+Yanında commit hash'i de duruyor, asıl kimlik o. İkisi de şarkı listesinin
+üstünde yazıyor (`versionLabel`), ve **her değişiklikten sonra oyuncuya
+söyleniyor** — bir düzeltmenin işe yaramadığını, hiç ulaşmadığından ayırmanın
+başka yolu yok.
 
 `--pwa-strategy=none` ve `web/index.html` içindeki service worker kaldırma
 betiği **şart**: yoksa telefonda eski derleme kalıyor ve saatlerce yanlış
-sürüm test ediliyor. Derleme kimliği (`BUILD_ID`) şarkı listesi ekranının
-altında yazıyor; oyuncudan "ekranda hangi kod yazıyor" diye teyit alın.
+sürüm test ediliyor.
 
 ## Yol haritası
 
