@@ -292,15 +292,50 @@ void main() {
       expect(chart.taps.map((t) => t.runIndex), [0, 1, 2, 3, 4, 5]);
     });
 
-    test('a flurry too short to get a finger onto is left as taps', () {
-      // Three notes an eighth of a second apart are over in a quarter of a
-      // second. The player could not catch them and there was nothing to
-      // gain: three taps is three taps.
+    test('a passage that breathes is still one passage', () {
+      // A beat is half a second here: 0.25 begins a run (125 ms), 0.5 is a
+      // breath a run carries over (250 ms), 0.7 ends it (350 ms).
       final chart = Chart.build(
-        songOf([for (var i = 0; i < 3; i++) note(i * 0.25, 60 + i)]),
+        songOf([
+          for (var i = 0; i < 4; i++) note(i * 0.25, 60 + i),
+          for (var i = 0; i < 4; i++) note(1.25 + i * 0.25, 64 + i),
+        ]),
+        difficulty: Difficulty.normal,
+      );
+      expect(runOf(chart), hasLength(8),
+          reason: 'one longer note inside a run does not end it');
+    });
+
+    test('a gap too wide is still a gap', () {
+      final chart = Chart.build(
+        songOf([
+          for (var i = 0; i < 4; i++) note(i * 0.25, 60 + i),
+          for (var i = 0; i < 4; i++) note(1.45 + i * 0.25, 64 + i),
+        ]),
+        difficulty: Difficulty.normal,
+      );
+      expect(chart.runs, hasLength(2), reason: 'two runs, not one');
+    });
+
+    test('a merely quick passage begins nothing', () {
+      // Notes a quarter of a second apart are inside the carry but never
+      // begin a run: without that, a piece of steady sixteenths would come
+      // out as one slide from end to end.
+      final chart = Chart.build(
+        songOf([for (var i = 0; i < 12; i++) note(i * 0.5, 60 + i)]),
         difficulty: Difficulty.normal,
       );
       expect(chart.runs, isEmpty);
+    });
+
+    test("the canon's variations come out whole, not in fragments", () {
+      // Reported by the player: its runs had been chopped into thirty-one
+      // pieces, most of them three notes long, by the breath every fourth
+      // note. Ten bars of semiquavers are two passages, not thirty-one.
+      final chart = Chart.build(shipped('canon-in-d'));
+      expect(chart.runs, hasLength(lessThan(5)));
+      expect(chart.runs.values.map((r) => r.length).reduce((a, b) => a > b ? a : b),
+          greaterThan(50));
     });
 
     test('two are a flourish, not a run', () {
@@ -374,9 +409,17 @@ void main() {
         final secondsPerBeat = 60 / song.bpm;
         for (final run in Chart.build(song).runs.values) {
           expect(run.length, greaterThanOrEqualTo(Chart.runLength));
-          expect((run.last.beat - run.first.beat) * secondsPerBeat,
-              greaterThanOrEqualTo(Chart.runSeconds - 1e-9),
-              reason: '${song.title}: a run too short to join');
+          // Every gap inside a run is at most the carry, and at least one of
+          // them is fast enough to have begun it.
+          var fastest = double.infinity;
+          for (var i = 1; i < run.length; i++) {
+            final gap = (run[i].beat - run[i - 1].beat) * secondsPerBeat;
+            expect(gap, lessThanOrEqualTo(Chart.runCarrySeconds + 1e-9),
+                reason: '${song.title}: a run carried over a real gap');
+            if (gap < fastest) fastest = gap;
+          }
+          expect(fastest, lessThanOrEqualTo(Chart.runGapSeconds + 1e-9),
+              reason: '${song.title}: a run that never was fast');
           for (var i = 1; i < run.length; i++) {
             expect(run[i].beat, greaterThan(run[i - 1].beat));
             expect(run[i].hand, run[i - 1].hand);

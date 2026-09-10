@@ -288,19 +288,25 @@ class Chart {
   /// notes are a flourish; three are a run.
   static const int runLength = 3;
 
-  /// How long a run has to last to be worth joining, in seconds.
+  /// Once in a run, the most its notes may be apart without ending it.
   ///
-  /// The library turns out to hold exactly two kinds of fast passage, with
-  /// nothing in between: flurries of three notes over in a quarter of a
-  /// second (26 of them), and real runs of eleven to sixty-two notes lasting
-  /// one to six seconds (13 of them).
+  /// A passage does not stop being a passage because one note in it is
+  /// twice the length of its neighbours. The canon's sixteenth-note
+  /// variations breathe every four notes — 273 ms where the rest are 136 —
+  /// and a single threshold chopped ten bars of continuous semiquavers into
+  /// thirty-one fragments, most of them three notes long. Those fragments
+  /// were unplayable as slides and the player rightly asked what had
+  /// happened to them.
   ///
-  /// The flurries were being offered as slides and the player could not
-  /// catch them — reasonably, since getting a finger onto a moving ring
-  /// inside 273 ms is a coin toss, and three taps is three taps anyway. The
-  /// slide is for passages a hand cannot answer at all; a quarter of a
-  /// second is not one of those, however tight its notes are.
-  static const double runSeconds = 0.6;
+  /// So there are two thresholds, not one: [runGapSeconds] to *begin* a run
+  /// and this to *keep* it. The same ten bars now come out as two runs, of
+  /// seventy-nine and a hundred and twelve notes, which is what they are.
+  ///
+  /// It has to stay under the gap that would start a run in a merely quick
+  /// piece: Für Elise's sixteenths are 208 ms apart, and a threshold that
+  /// began runs there would turn nine tenths of the piece into one slide.
+  /// As a carry rather than a start, 300 ms leaves it at an eighth.
+  static const double runCarrySeconds = 0.3;
 
   /// Find the stretches too fast to tap, hand by hand.
   ///
@@ -323,15 +329,25 @@ class Chart {
     var nextId = 1;
     for (final line in byHand.values) {
       var start = 0;
-      for (var i = 1; i <= line.length; i++) {
-        final gapBeats =
-            i < line.length ? line[i].beat - line[i - 1].beat : double.infinity;
-        final continues =
-            gapBeats > onsetTolerance && gapBeats * secondsPerBeat <= runGapSeconds;
-        if (continues) continue;
+      // Whether anything in the chain so far was fast enough to make it a
+      // run. Until something is, a wide gap is just a wide gap.
+      var running = false;
 
-        final span = (line[i - 1].beat - line[start].beat) * secondsPerBeat;
-        if (i - start >= runLength && span >= runSeconds) {
+      for (var i = 1; i <= line.length; i++) {
+        final gap = i < line.length
+            ? (line[i].beat - line[i - 1].beat) * secondsPerBeat
+            : double.infinity;
+        final together = gap <= onsetTolerance * secondsPerBeat;
+
+        if (!together) {
+          if (gap <= runGapSeconds) {
+            running = true;
+            continue;
+          }
+          if (running && gap <= runCarrySeconds) continue;
+        }
+
+        if (running && i - start >= runLength) {
           final run = line.sublist(start, i);
           final id = nextId++;
           for (var j = 0; j < run.length; j++) {
@@ -341,6 +357,7 @@ class Chart {
           runs[id] = List.unmodifiable(run);
         }
         start = i;
+        running = false;
       }
     }
     return runs;

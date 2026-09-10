@@ -268,7 +268,9 @@ void main() {
       'kosu-boncugu-bos': await savePng(
           shipped('fur-elise'), 156.0, 'kosu-boncugu-bos',
           runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: false)]),
-      'kanon': await savePng(shipped('canon-in-d'), 103.0, 'kanon'),
+      // Inside one of the canon's two long runs, so the thread shows.
+      'kanon': await savePng(shipped('canon-in-d'), 80.0, 'kanon',
+          runBeads: [beadOf(shipped('canon-in-d'), 80.0, tracked: true)]),
     };
     for (final entry in sizes.entries) {
       // A stage drawn with nothing on it compresses to almost nothing.

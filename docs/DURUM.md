@@ -185,8 +185,28 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   halka var (çalınmakta olan, yoksa gelmekte olan). Parmağını basılı tutan
   biri sekiz koşuyu da kesintisiz çalıyor.
 
-  Kapsam (Normal): Kanon 8 koşu (hepsi 11 nota), Für Elise 2 (46 ve 62 nota),
-  Nokturn 2 (11 ve 14), diğerleri yok.
+  **Beşinci tur — iki eşik, bir tane değil.** Oyuncu Kanon'daki üçlülerin
+  neden kaybolduğunu sordu. Doğru cevap "geri getirelim" değildi: o üçlüler
+  hiç ayrı bir şey değildi. Kanon'un on altılık varyasyonları dört notada bir
+  nefes alıyor — komşuları 136 ms iken o aralık 273 ms — ve tek eşikli kural
+  on ölçülük kesintisiz semiquaver'ı **otuz bir parçaya** bölüyordu, çoğu üç
+  notalık. Sürüklenemeyecek kadar kısa olmalarının sebebi buydu.
+
+  Artık iki eşik var: `runGapSeconds` (150 ms) bir koşuyu **başlatıyor**,
+  `runCarrySeconds` (300 ms) onu **sürdürüyor**. Aynı on ölçü şimdi 79 ve 112
+  notalık iki koşu; en uzunu 17 saniye kesintisiz takip.
+
+  Sürdürme eşiği, sadece hızlı bir parçada koşu başlatacak aralığın altında
+  kalmak zorunda: Für Elise'in on altılıkları 208 ms arayla ve orada koşu
+  başlatan bir eşik şarkının %90'ını tek bir sürüklemeye çevirirdi. Sürdürme
+  olarak 300 ms onu %14'te bırakıyor.
+
+  Bu arada 0.6 saniyelik asgari süre kuralı kaldırıldı. O kural, kısa
+  koşuları yakalamak imkânsız olduğu için konmuştu; parmak artık ele bağlı
+  olduğundan yakalanacak bir şey kalmadı.
+
+  Kapsam (Normal): Kanon 2 koşu (79 ve 112 nota, %23), Für Elise 4 (5, 8, 52,
+  62 — %14), Nokturn 5 (3, 3, 5, 14, 14 — %5), diğerleri yok.
 
 - **Basılı tutma eşiği saniye cinsinden.** Bir nota, sesi 0.7 saniyeden uzun
   sürüyorsa basılı tutmalı sayılıyor (`Tap.holdSeconds`); `Chart.build` bunu
