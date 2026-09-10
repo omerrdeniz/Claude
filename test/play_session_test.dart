@@ -576,13 +576,12 @@ void main() {
     List<double> placesOf(PlaySession session) =>
         [for (final tap in session.chart.taps) tap.across];
 
-    /// Put a finger on the bead, the way a player does.
+    /// Put a finger down on the run's hand, the way a player does.
     (PlaySession, int) joined({double atBeat = 0}) {
       final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
       seek(session, atBeat);
-      final bead = session.runBeads.single;
-      final id = session.beginDrag(bead.across);
-      expect(id, isNotNull, reason: 'there was no bead to take');
+      expect(session.runBeads, hasLength(1), reason: 'no run to follow');
+      final id = session.beginDrag(session.runBeads.single.across);
       return (session, id!);
     }
 
@@ -614,8 +613,10 @@ void main() {
       expect(session.runBeads, hasLength(1));
       expect(session.tap(session.runBeads.single.across)?.scored ?? false,
           isFalse, reason: 'nothing is playable yet');
-      expect(session.beginDrag(session.runBeads.single.across), isNotNull,
+      final drag = session.beginDrag(session.runBeads.single.across)!;
+      expect(session.runBeads.single.tracked, isTrue,
           reason: 'but the run can be got hold of');
+      session.endDrag(drag);
     });
 
     test('a finger anywhere in that hand takes the run', () {
@@ -626,15 +627,52 @@ void main() {
       for (final at in [Chart.rightZoneStart, 0.75, Chart.rightZoneEnd]) {
         final fresh = sessionFor(fastRun(), difficulty: Difficulty.normal);
         seek(fresh, 0);
-        expect(fresh.beginDrag(at), isNotNull, reason: 'at $at');
+        final drag = fresh.beginDrag(at)!;
+        fresh.drag(drag, placesOf(fresh).first);
+        seek(fresh, 0.05);
+        expect(fresh.scoreboard.counts[Verdict.miss], 0, reason: 'from $at');
       }
     });
 
-    test('a finger in the other hand takes nothing', () {
+    test('a finger in the other hand plays nothing', () {
       final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
       seek(session, 0);
-      expect(session.beginDrag(left), isNull,
+      final drag = session.beginDrag(left)!;
+      for (var i = 0; i < 8; i++) {
+        session.drag(drag, left);
+        seek(session, i * 0.25 + 0.05);
+      }
+      expect(engine.struck, isEmpty,
           reason: 'the run is in the right hand');
+    });
+
+    test('one finger carries one run into the next', () {
+      // The canon's runs come eight in a row, eight hundred milliseconds
+      // apart. Binding a finger to a single run meant lifting and pressing
+      // again in each of those gaps — which is what made the mechanic feel
+      // impossible to catch.
+      final second = [
+        for (var i = 0; i < 8; i++) note(i * 0.25, 72 + i),
+        // A gap too long to be part of the run, then another run.
+        for (var i = 0; i < 8; i++) note(4 + i * 0.25, 72 + i),
+      ];
+      final session = sessionFor(songOf(second), difficulty: Difficulty.normal);
+      expect(session.chart.runs, hasLength(2), reason: 'two separate runs');
+
+      seek(session, 0);
+      final drag = session.beginDrag(right)!;
+      final places = placesOf(session);
+      for (var i = 0; i < 8; i++) {
+        session.drag(drag, places[i]);
+        seek(session, i * 0.25 + 0.05);
+      }
+      // Without ever lifting, straight on into the second run.
+      for (var i = 0; i < 8; i++) {
+        session.drag(drag, places[i]);
+        seek(session, 4 + i * 0.25 + 0.05);
+      }
+      expect(engine.struck, hasLength(16),
+          reason: 'the finger was dropped between the runs');
     });
 
     test('slowing the song down gives longer to get onto the bead', () {
@@ -736,24 +774,44 @@ void main() {
       expect(session.runBeads.single.tracked, isFalse);
     });
 
-    test('nothing is taken twice, by a second finger or by a tap', () {
+    test('a note is never played twice, by a second finger or by a tap', () {
       final (session, drag) = joined();
-      expect(session.beginDrag(session.runBeads.single.across), isNull,
-          reason: 'one run, one finger');
+      final other = session.beginDrag(right)!; // a second finger, same hand
       session.drag(drag, placesOf(session).first);
+      session.drag(other, placesOf(session).first);
       seek(session, 0.05);
-      expect(engine.struck.map((s) => s.$1), [72]);
+      expect(engine.struck.map((s) => s.$1), [72],
+          reason: 'two fingers on one run should not double it');
+
       // A tap now finds the *next* note, never the one the run just played.
       session.tap(placesOf(session).first);
-      expect(engine.struck.where((s) => s.$1 == 72), hasLength(1),
-          reason: 'the note the run played sounded twice');
+      expect(engine.struck.where((s) => s.$1 == 72), hasLength(1));
     });
 
-    test('a still session ignores a finger', () {
+    test('a paused session ignores a finger', () {
       final (session, drag) = joined();
       session.pause();
       expect(session.beginDrag(0.6), isNull);
       session.drag(drag, 0.7); // harmless
+    });
+
+    test('only one ring to a hand, however the runs overlap', () {
+      // Two runs whose warning time overlaps: the second's ring would appear
+      // before the first had finished, and two hollow circles sat on the
+      // line — which the player saw and reported.
+      final session = sessionFor(
+        songOf([
+          for (var i = 0; i < 8; i++) note(i * 0.25, 72 + i),
+          for (var i = 0; i < 8; i++) note(2.6 + i * 0.25, 72 + i),
+        ]),
+        difficulty: Difficulty.normal,
+      );
+      expect(session.chart.runs, hasLength(2));
+      for (var beat = -1.0; beat < 5; beat += 0.05) {
+        seek(session, beat);
+        expect(session.runBeads.length, lessThanOrEqualTo(1),
+            reason: 'two rings at beat $beat');
+      }
     });
   });
 }

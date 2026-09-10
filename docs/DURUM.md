@@ -165,8 +165,28 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
      saniye. Bir şey yakalanamayacak kadar hızlıysa insanın uzandığı ayar
      bu; hiçbir şey yapmıyor olması kabul edilemezdi.
 
-  Kapsam (Normal, düzeltmelerden sonra): Kanon 8 koşu (hepsi 11 nota),
-  Für Elise 2 (46 ve 62 nota), Nokturn 2 (11 ve 14), diğerleri yok.
+  **Dördüncü tur — parmak koşuya değil ele bağlandı.** Oyuncu: *"hâlâ bozuk
+  gibi, yakalamak çok zor ve bazen içi boş iki tane daire çıkıyor."* İki
+  belirti, tek kök:
+
+  - Kanon'un koşuları **arka arkaya sekiz tane** ve aralarında 818 ms var.
+    Parmak tek bir koşuya bağlıydı, yani o koşu bitince bırakılıyordu — ve
+    yeni bir koşuya girmenin tek yolu `beginDrag`, o da yalnızca parmak
+    **yeniden basıldığında** çağrılıyor. Parmağını kaldırmayan biri ilk
+    koşudan sonra hiçbir şey çalamıyordu; sekiz koşu boyunca sekiz kez, 818
+    ms'lik boşluklara denk getirerek kaldırıp basmak gerekiyordu. "Yakalamak
+    çok zor" buydu.
+  - Boncuğun öne gelme süresi (900 ms) o boşluktan (818 ms) uzun olduğu için
+    bir sonraki koşunun halkası, mevcut koşu bitmeden beliriyordu. **İki içi
+    boş daire** buydu — ve parmak bastığında yanlış olanı alabiliyordu.
+
+  Şimdi **bir parmak bir koşuya değil bir ele bağlı**: o elde hangi koşu
+  varsa, şimdi ya da birazdan, onu takip ediyor. Her elde de en fazla bir
+  halka var (çalınmakta olan, yoksa gelmekte olan). Parmağını basılı tutan
+  biri sekiz koşuyu da kesintisiz çalıyor.
+
+  Kapsam (Normal): Kanon 8 koşu (hepsi 11 nota), Für Elise 2 (46 ve 62 nota),
+  Nokturn 2 (11 ve 14), diğerleri yok.
 
 - **Basılı tutma eşiği saniye cinsinden.** Bir nota, sesi 0.7 saniyeden uzun
   sürüyorsa basılı tutmalı sayılıyor (`Tap.holdSeconds`); `Chart.build` bunu

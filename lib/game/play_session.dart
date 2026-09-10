@@ -12,7 +12,6 @@ class TapOutcome {
     required this.notes,
     this.scored = true,
     this.holdId,
-    this.dragId,
   });
 
   final Verdict verdict;
@@ -21,11 +20,6 @@ class TapOutcome {
   /// Set when this touch began a note the finger is expected to keep down.
   /// Hand it back to [PlaySession.releaseHold] when the finger lifts.
   final int? holdId;
-
-  /// Set when this touch landed on a run the finger can slide through. Hand
-  /// it to [PlaySession.drag] as the finger moves, and to
-  /// [PlaySession.endDrag] when it lifts.
-  final int? dragId;
 
   /// How early (negative) or late (positive) the tap was.
   final double errorMs;
@@ -49,17 +43,20 @@ class _Hold {
   final double endBeat;
 }
 
-/// A finger following a run.
+/// A finger down on the playfield, following whatever run its hand has.
+///
+/// Deliberately not bound to one run. The canon's runs come eight in a row,
+/// eight hundred milliseconds apart; binding a finger to a single run meant
+/// lifting and pressing again between each of them, inside that gap, eight
+/// times. A finger that is down is following the passage, not a numbered
+/// piece of it.
 class _Drag {
-  _Drag({required this.runId, required this.across});
+  _Drag({required this.hand, required this.across});
 
-  final int runId;
+  final Hand hand;
 
   /// Where the finger is now, as a fraction across the screen.
   double across;
-
-  /// The last note of the run that has been dealt with, or -1 before any.
-  int index = -1;
 }
 
 /// The bead a run is currently on: the note due now, sitting on the hit line.
@@ -475,21 +472,50 @@ class PlaySession {
     final tail = judge.windowMs / 1000 * beatsPerSecond;
     final now = _judgedBeat;
 
-    final beads = <RunBead>[];
+    // One bead to a hand, never two. The canon's runs overlap once the lead
+    // is counted — the next one's ring was appearing before the current one
+    // had finished, so two hollow circles sat on the line and a finger going
+    // down could be given the wrong one.
+    final chosen = <Hand, MapEntry<int, List<Tap>>>{};
     for (final entry in chart.runs.entries) {
       final run = entry.value;
       if (now < run.first.beat - lead) continue;
       if (now > run.last.beat + tail) continue;
-      final across = _beadAcross(run, now);
-      beads.add(RunBead(
-        runId: entry.key,
-        hand: run.first.hand,
-        across: across,
-        tracked: _drags.values.any((drag) =>
-            drag.runId == entry.key && (drag.across - across).abs() <= dragReach),
-      ));
+
+      final hand = run.first.hand;
+      final rival = chosen[hand];
+      if (rival == null) {
+        chosen[hand] = entry;
+        continue;
+      }
+      // The one being played beats the one still coming; between two that
+      // have started, the later. A ring should never point ahead of the
+      // notes actually arriving.
+      final mine = run.first.beat <= now;
+      final theirs = rival.value.first.beat <= now;
+      if (mine && !theirs) chosen[hand] = entry;
+      if (mine == theirs &&
+          (mine
+              ? run.first.beat > rival.value.first.beat
+              : run.first.beat < rival.value.first.beat)) {
+        chosen[hand] = entry;
+      }
     }
-    return beads;
+
+    return [
+      for (final entry in chosen.entries)
+        () {
+          final across = _beadAcross(entry.value.value, now);
+          return RunBead(
+            runId: entry.value.key,
+            hand: entry.key,
+            across: across,
+            tracked: _drags.values.any((drag) =>
+                drag.hand == entry.key &&
+                (drag.across - across).abs() <= dragReach),
+          );
+        }(),
+    ];
   }
 
   /// The bead slides between one note's place and the next rather than
@@ -506,36 +532,23 @@ class PlaySession {
     return run.last.across;
   }
 
-  /// A finger went down at [across]. If a run is on screen in that hand, the
-  /// finger takes it; returns the token the screen hands back to [drag].
+  /// A finger went down at [across]. Returns the token the screen hands back
+  /// to [drag] while it moves and to [endDrag] when it lifts.
   ///
-  /// **Anywhere in the hand, not on the bead.** Aiming at the ring was the
-  /// second version's failure: a finger has to arrive somewhere precise, in
-  /// the moment before a passage nobody can play, and the player could not
-  /// do it. There is nothing to protect by making entry hard — joining a run
-  /// only ever adds notes you could otherwise not play, and the skill the
-  /// mechanic is actually about is *staying* with the bead, which [dragReach]
-  /// still asks for.
+  /// **A finger is not given a run; it is given a hand.** Whatever run that
+  /// hand has, now or in a moment, this finger follows — which is what a
+  /// person expects of a finger they have not lifted. Binding it to one run
+  /// meant the canon, whose runs come eight in a row eight hundred
+  /// milliseconds apart, asked for a fresh press between each of them.
   ///
-  /// Nor is it tied to catching the run's first note; that was the first
-  /// version's failure. A run can be joined wherever it has got to.
+  /// Nor is entry aimed: anywhere in the hand will do. There is nothing to
+  /// protect by making it hard — following a run only ever adds notes you
+  /// could otherwise not play, and the skill the mechanic is about is
+  /// *staying* with the bead, which [dragReach] still asks for.
   int? beginDrag(double across) {
     if (!_running) return null;
-    final hand = Chart.handAt(across);
-
-    RunBead? nearest;
-    for (final bead in runBeads) {
-      if (chart.separatesHands && bead.hand != hand) continue;
-      if (_drags.values.any((drag) => drag.runId == bead.runId)) continue;
-      if (nearest == null ||
-          (bead.across - across).abs() < (nearest.across - across).abs()) {
-        nearest = bead;
-      }
-    }
-    if (nearest == null) return null;
-
     final id = _nextDragId++;
-    _drags[id] = _Drag(runId: nearest.runId, across: across);
+    _drags[id] = _Drag(hand: Chart.handAt(across), across: across);
     return id;
   }
 
@@ -549,29 +562,35 @@ class PlaySession {
   /// the moment a finger is briefly still — dropped a note.
   void drag(int dragId, double across) => _drags[dragId]?.across = across;
 
-  /// The finger came off, or the run is over.
+  /// The finger came off.
   void endDrag(int dragId) => _drags.remove(dragId);
+
+  /// How far each run has been carried, so two runs in a row each keep their
+  /// own place and a finger can be handed from one to the next.
+  final Map<int, int> _runReached = {};
 
   /// Play the notes of every run a finger is following.
   ///
   /// The song still decides *when*; what the finger decides is *whether*, by
   /// being near the note that is due. Position rather than motion is the
-  /// whole of the change: it is what makes the bead worth following, and
-  /// what lets a hand that drifts off hear itself drift off.
+  /// whole of it: it is what makes the bead worth following, and what lets a
+  /// hand that drifts off hear itself drift off.
   void _playRuns() {
-    for (final dragId in _drags.keys.toList()) {
-      final drag = _drags[dragId]!;
-      final run = chart.runs[drag.runId];
-      if (run == null) {
-        _drags.remove(dragId);
-        continue;
-      }
+    if (_drags.isEmpty) return;
+    final beads = runBeads;
+    if (beads.isEmpty) return;
 
-      while (drag.index + 1 < run.length) {
-        final next = run[drag.index + 1];
+    for (final drag in _drags.values) {
+      final bead = beads.where((b) => b.hand == drag.hand).firstOrNull;
+      if (bead == null) continue;
+
+      final run = chart.runs[bead.runId]!;
+      var index = _runReached[bead.runId] ?? -1;
+      while (index + 1 < run.length) {
+        final next = run[index + 1];
         final errorMs = (_judgedBeat - next.beat) / beatsPerSecond * 1000;
         if (errorMs < 0) break; // not due yet
-        drag.index++;
+        index++;
 
         // Gone: already played, or expired while nobody was on it.
         if (!_isPending(next) || errorMs > judge.windowMs) continue;
@@ -588,11 +607,9 @@ class PlaySession {
           hand: next.hand,
           errorMs: errorMs,
           notes: next.notes,
-          dragId: dragId,
         ));
       }
-
-      if (drag.index + 1 >= run.length) _drags.remove(dragId);
+      _runReached[bead.runId] = index;
     }
   }
 
@@ -728,6 +745,7 @@ class PlaySession {
     _waiting.clear();
     _holds.clear();
     _drags.clear();
+    _runReached.clear();
     audio.engine.allNotesOff();
   }
 
