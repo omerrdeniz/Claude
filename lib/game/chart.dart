@@ -104,6 +104,16 @@ class Tap {
   /// every bar of the first prelude; Satie's does it in both hands.
   bool sustains = false;
 
+  /// Where this touch's tail is *drawn* to: the next touch this hand has, or
+  /// the note's own end if nothing comes before it.
+  ///
+  /// The sound still lasts as long as the edition says. The picture stops at
+  /// the next thing the hand is asked for, because that is what the player
+  /// needs to know — how long to stay before moving. Drawn to the written
+  /// end instead, a hand full of overlapping notes reads as a ladder of bars
+  /// with the notes buried in it.
+  double drawnEndBeat = 0;
+
   /// How long this touch has to last to be held rather than struck, in this
   /// song's beats. Set by [Chart.build] from the tempo.
   ///
@@ -376,10 +386,13 @@ class Chart {
     }
     for (final line in byHand.values) {
       for (var i = 0; i < line.length; i++) {
+        line[i].drawnEndBeat = line[i].endBeat;
         for (var j = i + 1; j < line.length; j++) {
-          if (line[j].beat >= line[i].endBeat) break;
           if (line[j].beat <= line[i].beat) continue; // struck together
-          line[i].sustains = true;
+          if (line[j].beat < line[i].endBeat) {
+            line[i].sustains = true;
+            line[i].drawnEndBeat = line[j].beat;
+          }
           break;
         }
       }

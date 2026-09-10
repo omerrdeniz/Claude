@@ -258,17 +258,29 @@ void main() {
             reason: 'the held note stopped when the next one was played');
       });
 
-      test('stays pinned on the line until it is written to end', () {
+      test('leaves the line when the finger does, though it goes on sounding',
+          () {
+        // Sound and picture part company here, deliberately. Keeping every
+        // sustained note pinned on the line filled the screen with notes the
+        // hand had long since left — unreadable, and untrue.
         final session = sessionFor(overlapping());
         seek(session, 0);
-        session.releaseHold(session.tap(right)!.holdId!);
+        final id = session.tap(right)!.holdId!;
+        expect(session.heldNotes, contains((0.0, 60)));
 
-        seek(session, 2);
-        expect(session.heldNotes, contains((0.0, 60)),
-            reason: 'it is still sounding, so it is still on the line');
+        session.releaseHold(id);
+        expect(session.heldNotes, isEmpty, reason: 'the finger has gone');
+        expect(session.isHolding, isFalse);
+        expect(engine.released, isEmpty, reason: 'but the note has not');
+      });
 
-        seek(session, 4.1);
-        expect(session.heldNotes, isEmpty, reason: 'now it is over');
+      test('the tail is drawn only as far as the next note', () {
+        final chart = Chart.build(overlapping(), difficulty: Difficulty.easy);
+        expect(chart.taps.first.endBeat, 4, reason: 'it sounds for four beats');
+        expect(chart.taps.first.drawnEndBeat, 1,
+            reason: 'but the hand is needed again at one');
+        expect(chart.taps.last.drawnEndBeat, chart.taps.last.endBeat,
+            reason: 'nothing follows it, so it is drawn whole');
       });
 
       test('a note nothing follows is still cut short by letting go', () {

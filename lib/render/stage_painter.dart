@@ -197,7 +197,7 @@ class StagePainter extends CustomPainter {
       // A held note is not finished when its head crosses the line — the
       // finger is meant to stay down until its end does.
       final tailProgress =
-          StageGeometry.progressFor(tap.endBeat - beat, windowInBeats);
+          StageGeometry.progressFor(tap.drawnEndBeat - beat, windowInBeats);
 
       // Every note that sounds at this moment in this hand, wherever its
       // pitch puts it. A chord is drawn as its notes even when one finger
@@ -209,7 +209,12 @@ class StagePainter extends CustomPainter {
           dots.add(_Dot(
             across: member.noteAcross[i],
             midi: note.midi,
-            endBeat: member.beat + note.duration,
+            // The tail stops at the next thing this hand is asked for, not
+            // at the note's written end — see [Tap.drawnEndBeat]. The sound
+            // still runs its full length.
+            endBeat: member.drawnEndBeat < member.beat + note.duration
+                ? member.drawnEndBeat
+                : member.beat + note.duration,
             isHold: member.isHold,
             isHeld: heldNotes.contains((member.beat, note.midi)),
           ));

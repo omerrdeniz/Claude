@@ -245,6 +245,11 @@ void main() {
           heldNotes: heldAt(shipped('ode-to-joy'), 6.0)),
       'tutma-basilmadi': await savePng(
           shipped('ode-to-joy'), 6.6, 'tutma-basilmadi'),
+      // Bach's left hand: bass notes that ring under the figure above them.
+      // Their tails now stop where the hand is next needed, instead of
+      // stacking into a ladder.
+      'ust-uste-tutmalar': await savePng(
+          shipped('prelude-in-c'), 6.0, 'ust-uste-tutmalar'),
       'zor-parmaklama': await savePng(
           shipped('ode-to-joy'), 5.0, 'zor-parmaklama',
           difficulty: Difficulty.hard),

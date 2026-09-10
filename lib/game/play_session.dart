@@ -52,6 +52,14 @@ class _Hold {
   /// True where the same hand is asked for another note before this one
   /// ends — see [Tap.sustains]. The finger has to leave; the note does not.
   final bool sustained;
+
+  /// Whether a finger is on it right now.
+  ///
+  /// A sustained note keeps sounding after this goes false, but it stops
+  /// being drawn on the line: a screen full of notes pinned there while the
+  /// hand is somewhere else is unreadable, and it is not true either — the
+  /// finger has moved on.
+  bool underFinger = true;
 }
 
 /// A finger down on the playfield, following whatever run its hand has.
@@ -631,20 +639,21 @@ class PlaySession {
   int _nextHoldId = 1;
 
   /// Whether a long note is being held right now — for the screen to show.
-  bool get isHolding => _holds.isNotEmpty;
+  bool get isHolding => _holds.values.any((hold) => hold.underFinger);
 
-  /// The long notes sounding at this moment, keyed the same way as everything
+  /// The long notes with a finger on them, keyed the same way as everything
   /// else here: which beat, which pitch.
   ///
   /// The screen needs this to know which ones to stop at the line. One that
-  /// nobody caught is not sounding, and should carry on down and leave like
-  /// any other missed note rather than sitting on the line pretending. One
-  /// the player caught stays until it is written to end — whether or not the
-  /// finger is still on it, because a hand with one finger has to leave in
-  /// order to play what comes next.
+  /// nobody caught was never held, and carries on down and leaves like any
+  /// other missed note. One the player had to let go of — because the same
+  /// hand was needed elsewhere — goes on *sounding*, but stops being drawn
+  /// there: the finger is not on it any more, and a line full of notes
+  /// pinned under a hand that has moved away is unreadable.
   Set<(double, int)> get heldNotes => {
         for (final hold in _holds.values)
-          for (final midi in hold.midis) (hold.beat, midi),
+          if (hold.underFinger)
+            for (final midi in hold.midis) (hold.beat, midi),
       };
 
   /// The finger came off a long note.
@@ -663,7 +672,10 @@ class PlaySession {
     // Otherwise every one of Bach's bass notes would be cut off by the very
     // touch the piece asks for next, and the player would be punished for
     // having one finger to a hand.
-    if (hold.sustained) return false;
+    if (hold.sustained) {
+      hold.underFinger = false;
+      return false;
+    }
 
     _holds.remove(holdId);
     if (_beat >= hold.endBeat - 0.05) return false; // held to the end
