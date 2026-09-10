@@ -7,6 +7,7 @@ import '../game/play_session.dart' show RunBead;
 import '../music/note.dart';
 import '../game/stage_geometry.dart';
 import '../theme/app_theme.dart';
+import 'hit_sparks.dart';
 
 /// One note as it is drawn: where it sits across the screen, when it ends,
 /// and whether the finger is meant to be — and actually is — on it.
@@ -17,6 +18,7 @@ class _Dot {
     required this.endBeat,
     required this.isHold,
     required this.isHeld,
+    required this.isPlayed,
   });
 
   final double across;
@@ -30,12 +32,16 @@ class _Dot {
   /// after one had to leave to play the next note.
   final bool isHeld;
 
+  /// The player has already dealt with it, so it ends at the line.
+  final bool isPlayed;
+
   _Dot movedTo(double newAcross) => _Dot(
         across: newAcross,
         midi: midi,
         endBeat: endBeat,
         isHold: isHold,
         isHeld: isHeld,
+        isPlayed: isPlayed,
       );
 }
 
@@ -53,6 +59,9 @@ class StagePainter extends CustomPainter {
     this.holding = false,
     this.heldNotes = const {},
     this.runBeads = const [],
+    this.playedNotes = const {},
+    this.sparks = const [],
+    this.heat = 0,
   });
 
   final Chart chart;
@@ -79,6 +88,19 @@ class StagePainter extends CustomPainter {
   /// Where each run on screen has got to, and whether a finger is on it.
   final List<RunBead> runBeads;
 
+  /// The notes the player has already dealt with. A note that was hit ends
+  /// at the line; only what nobody caught goes on falling past it.
+  final Set<(double, int)> playedNotes;
+
+  /// Hits still burning on the line.
+  final List<Spark> sparks;
+
+  /// How far into a streak the player is, 0 to 1.
+  ///
+  /// The stage warms with it. Fifty notes in a row used to look exactly like
+  /// three, which is a strange thing for a game to say nothing about.
+  final double heat;
+
   @override
   void paint(Canvas canvas, Size size) {
     final geometry = StageGeometry(size: size);
@@ -87,6 +109,48 @@ class StagePainter extends CustomPainter {
     if (chart.separatesHands) _paintHandDivide(canvas, size, geometry);
     _paintHitLine(canvas, size, geometry);
     _paintNotes(canvas, geometry);
+    _paintSparks(canvas, geometry);
+  }
+
+  /// The light a hit leaves on the line: a ring opening outwards and a flash
+  /// dying where the note landed.
+  ///
+  /// Rings and discs rather than anything blurred — a blur filter here costs
+  /// more per frame than the rest of the screen put together, and this fires
+  /// a dozen times a second in a fast passage.
+  void _paintSparks(Canvas canvas, StageGeometry g) {
+    if (sparks.isEmpty) return;
+    final y = g.hitLineY;
+    final radius = g.noteRadius;
+
+    for (final spark in sparks) {
+      final at = Offset(g.xAtPosition(spark.across), y);
+      final life = spark.age.clamp(0.0, 1.0);
+      final fade = (1 - life) * (0.5 + spark.quality * 0.5);
+      final colour = AppTheme.chordColor(spark.voices);
+
+      // The ring opens out and thins as it goes. It carries the effect;
+      // anything solid and note-sized here reads as another note, which is
+      // the last thing the line needs.
+      canvas.drawCircle(
+        at,
+        radius * (0.6 + life * 2.6),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = radius * 0.40 * (1 - life)
+          ..color = colour.withValues(alpha: 0.75 * fade),
+      );
+
+      // A hot point at the moment of contact, small and gone almost at once.
+      final flash = (1 - life * 5).clamp(0.0, 1.0);
+      if (flash > 0) {
+        canvas.drawCircle(
+          at,
+          radius * (0.20 + flash * 0.34),
+          Paint()..color = Colors.white.withValues(alpha: 0.9 * flash),
+        );
+      }
+    }
   }
 
   void _paintBackground(Canvas canvas, Size size, StageGeometry g) {
@@ -103,14 +167,14 @@ class StagePainter extends CustomPainter {
     // A pool of light on the floor where the beams land, so the hit line feels
     // like a place rather than a rule drawn across the screen.
     final glowCentre = Offset(size.width / 2, g.hitLineY);
-    final glowRadius = size.width * 0.75;
+    final glowRadius = size.width * (0.75 + heat * 0.35);
     canvas.drawCircle(
       glowCentre,
       glowRadius,
       Paint()
         ..shader = RadialGradient(
           colors: [
-            AppTheme.accent.withValues(alpha: 0.20),
+            AppTheme.accent.withValues(alpha: 0.20 + heat * 0.22),
             AppTheme.accent.withValues(alpha: 0.0),
           ],
         ).createShader(
@@ -157,7 +221,8 @@ class StagePainter extends CustomPainter {
           Offset(0, glow.bottom),
           [
             AppTheme.accentSoft.withValues(alpha: 0.0),
-            AppTheme.accentSoft.withValues(alpha: 0.22 + flash * 0.22),
+            AppTheme.accentSoft
+                .withValues(alpha: 0.22 + flash * 0.22 + heat * 0.30),
             AppTheme.accentSoft.withValues(alpha: 0.0),
           ],
           const [0.0, 0.5, 1.0],
@@ -168,7 +233,7 @@ class StagePainter extends CustomPainter {
       Offset(0, y),
       Offset(size.width, y),
       Paint()
-        ..strokeWidth = 2
+        ..strokeWidth = 2 + heat * 1.5
         ..color = Colors.white.withValues(alpha: 0.75 + flash * 0.25),
     );
   }
@@ -217,6 +282,7 @@ class StagePainter extends CustomPainter {
                 : member.beat + note.duration,
             isHold: member.isHold,
             isHeld: heldNotes.contains((member.beat, note.midi)),
+            isPlayed: playedNotes.contains((member.beat, note.midi)),
           ));
         }
       }
@@ -248,6 +314,10 @@ class StagePainter extends CustomPainter {
 
       for (final dot in dots) {
         final head = headOf(dot);
+        // A note that was played is spent at the line — the burst of light
+        // there is what happened to it. Only what nobody caught goes on
+        // falling, which is how the screen says which is which.
+        if (dot.isPlayed && head > 1) continue;
         if (dot.isHold) {
           _paintHoldBar(
             canvas,
@@ -506,6 +576,8 @@ class StagePainter extends CustomPainter {
       old.windowInBeats != windowInBeats ||
       old.holding != holding ||
       old.litHands != litHands ||
+      old.heat != heat ||
+      old.sparks.length != sparks.length ||
       old.runBeads.length != runBeads.length;
 }
 

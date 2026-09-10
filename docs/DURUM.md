@@ -269,6 +269,37 @@ ama nüshada sayısal tempo yok ve 9/8 — vuruş birimi elle verilmeli),
 Arabesque 1 ve 2, Satie'nin Gnossienne 2 ve 3'ü, Joplin'in dokuz ragtime'ı
 daha.
 
+### Vuruşun kendisi bir olay
+
+Oyun bir **öğretme aracı değil**, oynarken keyif alınacak bir oyun. Oyuncu
+bunu açıkça söyledi ve sıradaki iş listesi buna göre yeniden yazıldı: tek el
+modu, ölçüden başlama, hız merdiveni gibi öğretim fikirleri **istenmiyor**.
+
+Eksik olan, saniye saniye hissedilen şeydi. Bir nota vurulduğunda olan tek
+şey elin tarafında soluk bir parıltı ve bir kelimeydi; elli seri ile üç seri
+aynı görünüyordu.
+
+- **Kıvılcımlar** (`lib/render/hit_sparks.dart`). Her çalan nota, kendi
+  yerinde çizgide bir halka bırakıyor: açılarak inceliyor, ortasında bir
+  anlık sıcak nokta. Akorun her notası ayrı bir kıvılcım — üç notalık akor
+  üç şey olmalı, çünkü öyle.
+
+  Saf veri + saat: Flutter yok, rastgelelik yok, çizim yok. Nasıl göründüğü
+  çizerin işi. **Sayısı sınırlı (24)**: yoğun bir geçit saniyede bir düzine
+  atıyor ve sınırsız bir liste, oyunun tam da en iyi hissetmesi gereken
+  yerde takılmasının yolu.
+- **Çalınan nota çizgide biter.** Eskiden basılan da basılmayan da aynı
+  şekilde çizgiyi geçip soluyordu; ekran oyuncunun bir şey yapıp yapmadığı
+  hakkında hiçbir şey söylemiyordu. Artık vurulan nota çizgide harcanıyor
+  (ışık patlaması onun yerine geçiyor), yalnızca kaçırılan akıp gidiyor.
+- **Seri sayacı sayıyor.** Her notada bir tekme, seri uzadıkça daha büyük;
+  puntosu ve rengi de seriyle birlikte artıyor.
+- **Sahne ısınıyor.** Zemindeki ışık havuzu, vuruş çizgisinin parlaklığı ve
+  kalınlığı seriyle büyüyor; çarpan tavana vurduğunda tam ısıda.
+
+Bulanıklık (blur) yok — ölçülmüştü, kare başına ekranın geri kalanının
+tamamından pahalı. Her şey halka ve disk.
+
 ### Reddedilenler — tekrar önermeyin
 
 Oynanış:
@@ -863,41 +894,27 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
 
 ## Sıradaki iş
 
-1. **Parmağın yetişemediği yerler — büyük ölçüde çözüldü, denenmedi.**
-   Tam hızda bazı geçitler dokunma hızının üstünde kalıyor:
+Oyun bir oyun; öğretme aracı değil. Sıra buna göre:
 
-   | Şarkı | En dar aralık | Kaç dokunuş |
-   |---|---|---|
-   | Nokturn | 76 ms (ölçü 16 ve 24, otuz ikilik üçlemeler) | 408'de 9 tanesi 100 ms altı |
-   | Für Elise | 104 ms (doruktaki otuz ikilik iniş) | — |
-   | Prelüd | 250 ms | yok |
+1. **Bitiş bir şey ifade etsin.** Şu an sonunda puan ve yüzde var. Yerine
+   büyük bir harf/yıldız, "yeni rekor" patlaması, en uzun serinin öne
+   çıkarılması.
+2. **Arka plan müzikle yaşasın.** 38 parçanın hepsi aynı koyu zeminde
+   geçiyor. Işık havuzu vuruşla nefes alsa, renk parçanın perdesine göre
+   kaysa, her parça başka bir yerde geçiyormuş gibi olur.
+3. **Kütüphane doldurulacak bir koleksiyon olsun.** Şarkı başına en iyi puan
+   ve yıldız listede görünsün. Hiçbir şey saklanmıyor şu an.
+4. **Uzun koşuları ödüllendir.** İp ve boncuk oyunun en gösterişli anı;
+   koşuyu baştan sona takip edince ekranın patlaması, parçaların doruk
+   noktalarını olay hâline getirir.
 
-   Cevap sürükleme mekaniği oldu (yukarıda, "Kabul edilenler"). Kimseden
-   nota alınmıyor, kendi kendine hiçbir şey çalmıyor, tek tek basmak da
-   hâlâ mümkün — yalnızca ikinci bir yol açıldı. **Ama henüz gerçek
-   telefonda oynanmadı** (ilk iki sürümü oynandı ve reddedildi; yukarıya
-   bakın). Bakılacaklar: `dragReach` (%15) çok mu geniş/dar; `dragLeadMs`
-   (900 ms) raya girmeye yetiyor mu.
+Kapanmamış eski işler:
 
-   Eşik ölçümü (oyuncu sordu, karar verilmedi): nota araları kuantize
-   olduğu için 150 ile 200 ms arasında neredeyse hiçbir şey yok — 200'ün
-   tek kazancı Nokturn'de bir koşu, tek maliyeti Neşeye Övgü'de olmaması
-   gereken iki koşu, ve **210 ms'de uçurum var**: Für Elise'in on
-   altılıkları oraya düşüyor ve şarkının %90'ı tek bir sürüklemeye
-   dönüşüyor. 175 ms güvenli duruyor. Minimum uzunluğu 3'ten 4'e çıkarmak
-   Kanon'daki kısa ipleri temizler; Kanon kendi düzenlememize geçince
-   3'lük koşular 58'den 23'e zaten düştü.
-2. **Delik/kendi çalma ikilemi çözülmedi, sadece seçeneğe bağlandı.**
-   Doldurma kapalı gelirse Nokturn'ün üçte ikisi sessiz; açılırsa oyun
-   basmadığınız her şeyi çalıyor. Üçüncü bir yol olabilir ve zorluk
-   kademesine bağlanabilir: Kolay'da sol eli oyun çalsın (zaten seyreltiyor),
-   Normal ve Zor'da hiçbir şey çalmasın. O zaman kadranın hangi ucunda
-   olduğunuzu zorluk söyler ve ayrı bir anahtar gerekmez. Oyuncuya
-   sorulmalı.
-3. Normal zorlukta akor parmaklama sorusu yanıtlanacak.
-4. MIDI içe aktarma **arayüzü** (yol haritası adım 8) — okuyucu ve dönüştürücü
-   hazır, eksik olan yalnızca dosya seçme ekranı. Oyuncu kendi MIDI'lerini
-   ekleyebilsin diye.
-5. Kolay moddaki seyreltme (`Chart._divideVoices`, `minGap = 0.5` vuruş) vuruş
-   birimine bağlı: Für Elise'de vuruş sekizlik olduğu için 0.5 vuruş bir
-   on altılığa denk geliyor ve pek seyreltmiyor. Saniyeye çevrilmesi gerekebilir.
+5. **Kolay moddaki seyreltme vuruş cinsinden** (`Chart._divideVoices`,
+   `minGap = 0.5` vuruş). Vuruş/saniye hatasının üçüncü ve sonuncusu:
+   "Kolay" Kanon'da 545 ms, Ode to Joy'da 188 ms aralık bırakıyor. Sorulacak
+   bir şey yok, düzeltilecek.
+6. **Delik/kendi çalma ikilemi** seçeneğe bağlı duruyor. Zorluğa bağlamak
+   üçüncü bir yol olabilir — **oyuncuya sorulmalı**, oyunun en eski kuralına
+   dokunuyor.
+7. **`canon-run-test`** sürükleme oturunca listeden kaldırılacak.

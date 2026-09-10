@@ -8,6 +8,7 @@ import 'package:piano_flow/music/song.dart';
 import 'package:piano_flow/game/stage_geometry.dart';
 import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/game/play_session.dart' show RunBead;
+import 'package:piano_flow/render/hit_sparks.dart';
 import 'package:piano_flow/render/stage_painter.dart';
 import 'package:piano_flow/theme/app_theme.dart';
 
@@ -23,6 +24,8 @@ ui.Picture paintFrame(Song song, double beat,
     Size size = phone,
     Set<(double, int)> heldNotes = const {},
     List<RunBead> runBeads = const [],
+    List<Spark> sparks = const [],
+    double heat = 0,
     Difficulty difficulty = Difficulty.normal}) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder, Offset.zero & size);
@@ -33,6 +36,8 @@ ui.Picture paintFrame(Song song, double beat,
     litHands: litHands,
     heldNotes: heldNotes,
     runBeads: runBeads,
+    sparks: sparks,
+    heat: heat,
   ).paint(canvas, size);
   return recorder.endRecording();
 }
@@ -45,12 +50,16 @@ Future<int> savePng(Song song, double beat, String name,
     Size size = phone,
     Set<(double, int)> heldNotes = const {},
     List<RunBead> runBeads = const [],
+    List<Spark> sparks = const [],
+    double heat = 0,
     Difficulty difficulty = Difficulty.normal}) async {
   final picture = paintFrame(song, beat,
       litHands: litHands,
       size: size,
       heldNotes: heldNotes,
       runBeads: runBeads,
+      sparks: sparks,
+      heat: heat,
       difficulty: difficulty);
   final image = await picture.toImage(size.width.toInt(), size.height.toInt());
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -250,6 +259,17 @@ void main() {
       // stacking into a ladder.
       'ust-uste-tutmalar': await savePng(
           shipped('prelude-in-c'), 6.0, 'ust-uste-tutmalar'),
+      // A hit, and a streak running hot: rings opening on the line, the
+      // floor lit, the beam thickened.
+      'vurus-patlamasi': await savePng(
+          shipped('ode-to-joy'), 6.05, 'vurus-patlamasi',
+          litHands: {Hand.right: 0.9},
+          heat: 0.9,
+          sparks: [
+            Spark(across: 0.72, voices: 2, quality: 1)..age = 0.02,
+            Spark(across: 0.30, voices: 3, quality: 0.8)..age = 0.30,
+            Spark(across: 0.20, voices: 3, quality: 0.5)..age = 0.8,
+          ]),
       'zor-parmaklama': await savePng(
           shipped('ode-to-joy'), 5.0, 'zor-parmaklama',
           difficulty: Difficulty.hard),

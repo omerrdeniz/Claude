@@ -10,6 +10,8 @@ class TapOutcome {
     required this.hand,
     required this.errorMs,
     required this.notes,
+    this.places = const [],
+    this.voices = 1,
     this.scored = true,
     this.holdId,
   });
@@ -25,6 +27,13 @@ class TapOutcome {
   final double errorMs;
 
   final List<Note> notes;
+
+  /// Where each of those notes sits across the screen, so a hit can be lit
+  /// where it happened rather than somewhere in the middle of the hand.
+  final List<double> places;
+
+  /// How many notes sounded together, which is what colours the hit.
+  final int voices;
 
   /// False for a tap that found a note but was too far off to count. It costs
   /// nothing; it exists so the player is told *why* nothing sounded instead of
@@ -208,6 +217,14 @@ class PlaySession {
   final Set<(double, int)> _resolved = {};
 
   static (double, int) _keyOf(Note note) => (note.beat, note.midi);
+
+  /// The notes already dealt with, as (beat, pitch).
+  ///
+  /// The screen uses it to stop drawing a note that has been played: a hit
+  /// ends at the line, in a burst of light, and only what nobody caught goes
+  /// on falling past it. Drawn the same either way, the picture said nothing
+  /// about whether the player had done anything.
+  Set<(double, int)> get playedNotes => _resolved;
 
   bool _isPending(Tap tap) =>
       tap.notes.any((note) => !_resolved.contains(_keyOf(note)));
@@ -422,6 +439,8 @@ class PlaySession {
       hand: tapTarget.hand,
       errorMs: errorMs,
       notes: tapTarget.notes,
+      places: tapTarget.noteAcross,
+      voices: tapTarget.voices,
       holdId: holdId,
     );
   }
@@ -628,6 +647,8 @@ class PlaySession {
           hand: next.hand,
           errorMs: errorMs,
           notes: next.notes,
+          places: next.noteAcross,
+          voices: next.voices,
         ));
       }
       _runReached[bead.runId] = index;

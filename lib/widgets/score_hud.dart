@@ -16,6 +16,7 @@ class ScoreHud extends StatelessWidget {
     required this.outcome,
     required this.outcomeAge,
     required this.hitLineFraction,
+    this.comboAge = 1,
   });
 
   final Scoreboard scoreboard;
@@ -23,6 +24,11 @@ class ScoreHud extends StatelessWidget {
 
   /// How far through its life the verdict is, 0 to 1.
   final double outcomeAge;
+
+  /// How long ago the streak last grew, 0 at the moment it did and 1 once
+  /// the kick has died away. It is what makes the counter feel like it is
+  /// counting rather than displaying.
+  final double comboAge;
 
   final double hitLineFraction;
 
@@ -64,36 +70,46 @@ class ScoreHud extends StatelessWidget {
 
   Widget _streak() {
     final multiplier = scoreboard.multiplier;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '${scoreboard.combo}',
-          style: const TextStyle(
-            fontSize: 15,
-            color: AppTheme.accentSoft,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        ),
-        if (multiplier > 1) ...[
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: AppTheme.accent.withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(6),
+    // A kick on every note, and a bigger one the longer the streak — at
+    // fifty in a row the number should be hard to ignore.
+    final kick = (1 - comboAge).clamp(0.0, 1.0);
+    final reach = (scoreboard.combo / 50).clamp(0.0, 1.0);
+    return Transform.scale(
+      alignment: Alignment.centerRight,
+      scale: 1 + kick * (0.18 + reach * 0.22),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${scoreboard.combo}',
+            style: TextStyle(
+              fontSize: 15 + reach * 9,
+              fontWeight: reach > 0.4 ? FontWeight.w600 : FontWeight.w400,
+              color: Color.lerp(
+                  AppTheme.accentSoft, Colors.white, kick * 0.6 + reach * 0.3),
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
-            child: Text(
-              '×$multiplier',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.accentSoft,
+          ),
+          if (multiplier > 1) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: AppTheme.accent.withValues(alpha: 0.25 + reach * 0.45),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '×$multiplier',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
               ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 

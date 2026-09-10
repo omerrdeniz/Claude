@@ -7,6 +7,7 @@ import '../music/note.dart';
 import '../game/judgement.dart';
 import '../game/play_session.dart';
 import '../music/song.dart';
+import '../render/hit_sparks.dart';
 import '../render/stage_painter.dart';
 import '../theme/app_theme.dart';
 import '../widgets/result_panel.dart';
@@ -73,6 +74,13 @@ class _PlayScreenState extends State<PlayScreen>
   /// Which run each finger currently on the screen is sliding through.
   final Map<int, int> _dragByPointer = {};
 
+  /// The light left on the line by recent hits.
+  final SparkField _sparks = SparkField();
+
+  /// When the streak last grew, so the counter can react to it.
+  Duration _comboAt = Duration.zero;
+  int _combo = 0;
+
   TapOutcome? _lastOutcome;
   Duration _lastOutcomeAt = Duration.zero;
   Duration _now = Duration.zero;
@@ -110,8 +118,10 @@ class _PlayScreenState extends State<PlayScreen>
 
   void _onTick(Duration elapsed) {
     setState(() {
+      final step = (elapsed - _now).inMicroseconds / 1000;
       _now = elapsed;
       _session.update(elapsed);
+      _sparks.advance(step.clamp(0, 100));
       _fadeBeamGlow();
     });
     if (_session.isFinished) {
@@ -169,7 +179,18 @@ class _PlayScreenState extends State<PlayScreen>
   void _record(TapOutcome outcome) {
     // A near miss reports itself but does not light anything: nothing
     // sounded, so nothing should look as though it did.
-    if (outcome.scored) _litHands[outcome.hand] = 1.0;
+    if (outcome.scored) {
+      _litHands[outcome.hand] = 1.0;
+      // One spark per note, where the note actually is. A three-note chord
+      // should look like three things happening, because it is.
+      final quality = _session.judge.quality(outcome.errorMs);
+      for (final across in outcome.places) {
+        _sparks.add(Spark(
+            across: across, voices: outcome.voices, quality: quality));
+      }
+    }
+    if (_session.scoreboard.combo > _combo) _comboAt = _now;
+    _combo = _session.scoreboard.combo;
     _lastOutcome = outcome;
     _lastOutcomeAt = _now;
   }
@@ -192,6 +213,8 @@ class _PlayScreenState extends State<PlayScreen>
       _litHands.clear();
       _heldByPointer.clear();
       _dragByPointer.clear();
+      _sparks.clear();
+      _combo = 0;
     });
     if (!_ticker.isActive) _ticker.start();
   }
@@ -232,6 +255,11 @@ class _PlayScreenState extends State<PlayScreen>
                       holding: _session.isHolding,
                       heldNotes: _session.heldNotes,
                       runBeads: _session.runBeads,
+                      playedNotes: _session.playedNotes,
+                      sparks: _sparks.sparks,
+                      // The stage warms as the streak climbs, and is at full
+                      // heat by the time the multiplier maxes out.
+                      heat: (_session.scoreboard.combo / 50).clamp(0.0, 1.0),
                     ),
                   ),
                 ),
@@ -241,6 +269,7 @@ class _PlayScreenState extends State<PlayScreen>
                   // The verdict fades on its own so it never covers the next
                   // note the player has to read.
                   outcomeAge: (_now - _lastOutcomeAt).inMilliseconds / 700,
+                  comboAge: (_now - _comboAt).inMilliseconds / 260,
                   hitLineFraction: 0.68,
                 ),
                 _controls(),
