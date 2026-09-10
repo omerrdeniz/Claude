@@ -35,6 +35,7 @@ void main() {
         rightVelocity: rightVelocity,
         leftVelocity: leftVelocity,
         noteCount: 0,
+        tapCount: 0,
         durationMs: 0,
         lowMidi: 0,
         highMidi: 0,

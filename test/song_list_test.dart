@@ -74,6 +74,7 @@ void main() {
 
   testWidgets('tapping a song opens the playfield', (tester) async {
     await pumpList(tester);
+    await tester.scrollUntilVisible(find.text('Für Elise'), 200);
     await tester.tap(find.text('Für Elise'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -121,6 +122,7 @@ void main() {
         of: switchUnder('Kaçırdıklarım da duyulsun'),
         matching: find.byType(Switch)));
     await tester.pump();
+    await tester.scrollUntilVisible(find.text('Für Elise'), 200);
     await tester.tap(find.text('Für Elise'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));

@@ -16,6 +16,7 @@ class SongInfo {
     required this.bpm,
     required this.beatsPerBar,
     required this.noteCount,
+    required this.tapCount,
     required this.durationMs,
     required this.lowMidi,
     required this.highMidi,
@@ -52,6 +53,19 @@ class SongInfo {
   final double startBeat;
 
   final int noteCount;
+
+  /// How many touches the piece asks for at Normal — measured, like
+  /// everything else here, by laying the score out at build time.
+  final int tapCount;
+
+  /// Touches a second at the written tempo: how busy the piece is.
+  ///
+  /// The one number that says whether somebody who has never played can get
+  /// through it. The library ran from Satie's 1.2 to Chopin's 14.9 with
+  /// nothing on the screen to tell them apart, and the player — who had
+  /// asked for well-known pieces and got the hardest ones — noticed.
+  double get tapsPerSecond =>
+      durationMs == 0 ? 0 : tapCount / (durationMs / 1000);
 
   /// How long the piece runs at its written tempo.
   final int durationMs;

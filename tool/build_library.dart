@@ -21,6 +21,7 @@ import 'dart:typed_data';
 
 import 'package:piano_flow/data/score_import.dart';
 import 'package:piano_flow/data/song_info.dart';
+import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/midi_reader.dart';
 
 import 'catalog.dart';
@@ -58,8 +59,13 @@ Future<void> main(List<String> args) async {
     final info = _describe(score, bytes);
     infos.add(info);
     stdout.writeln('  ${info.noteCount} nota, ${info.bpm.round()} bpm, '
-        '${info.beatsPerBar} vuruş/ölçü, ${_clock(info.duration)}');
+        '${info.beatsPerBar} vuruş/ölçü, ${_clock(info.duration)}, '
+        '${info.tapsPerSecond.toStringAsFixed(1)} dokunuş/sn');
   }
+
+  // Gentlest first. The catalogue is written in whatever order songs were
+  // added, which is no use to anybody looking for something they can play.
+  infos.sort((a, b) => a.tapsPerSecond.compareTo(b.tapsPerSecond));
 
   await File(_generated).writeAsString(_emit(infos));
   stdout.writeln('wrote $_generated (${infos.length} songs)');
@@ -95,6 +101,7 @@ SongInfo _describe(Score score, Uint8List midi) {
     startBeat:
         score.fromBar == null ? 0 : (score.fromBar! - 1) * beatsPerBar * 1.0,
     noteCount: 0,
+    tapCount: 0,
     durationMs: 0,
     lowMidi: 0,
     highMidi: 0,
@@ -114,6 +121,7 @@ SongInfo _describe(Score score, Uint8List midi) {
     leftVelocity: facts.leftVelocity,
     startBeat: facts.startBeat,
     noteCount: song.notes.length,
+    tapCount: Chart.build(song).taps.length,
     durationMs: song.duration.inMilliseconds,
     lowMidi: low,
     highMidi: high,
@@ -433,6 +441,7 @@ String _emit(List<SongInfo> infos) {
       ..writeln('    leftVelocity: ${_number(info.leftVelocity)},')
       ..writeln('    startBeat: ${_number(info.startBeat)},')
       ..writeln('    noteCount: ${info.noteCount},')
+      ..writeln('    tapCount: ${info.tapCount},')
       ..writeln('    durationMs: ${info.durationMs},')
       ..writeln('    lowMidi: ${info.lowMidi},')
       ..writeln('    highMidi: ${info.highMidi},')
