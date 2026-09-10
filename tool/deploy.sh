@@ -29,12 +29,13 @@ flutter build web --release --base-href /Claude/ \
 # copy of the page and of the code, and will happily go on running a build
 # from hours ago — which is indistinguishable, from the player's side, from a
 # fix that did not work. The page carries its build number; version.json says
-# what the current one is; the script in index.html compares them.
+# what the current one is; the script in index.html compares them. Not
+# version.json — Flutter writes its own there, from pubspec.
 sed -i "s|BUILD_STAMP|$VERSION|" build/web/index.html
 sed -i "s|flutter_bootstrap.js|flutter_bootstrap.js?v=$VERSION|" build/web/index.html
 sed -i "s|\"mainJsPath\":\"main.dart.js\"|\"mainJsPath\":\"main.dart.js?v=$VERSION\"|" \
   build/web/flutter_bootstrap.js
-printf '{"version":"%s","build":"%s"}\n' "$VERSION" "$SHA" > build/web/version.json
+printf '{"version":"%s","build":"%s"}\n' "$VERSION" "$SHA" > build/web/build.json
 
 # The published branch is a worktree so the source checkout is never touched.
 if [ ! -d "$WORKTREE" ]; then

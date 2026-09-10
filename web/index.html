@@ -116,7 +116,7 @@
       var stamp = document.querySelector('meta[name="piano-flow-build"]');
       var mine = stamp ? stamp.content : '';
       if (!mine || mine === 'BUILD' + '_STAMP') return; // a local build
-      fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+      fetch('build.json?t=' + Date.now(), { cache: 'no-store' })
         .then(function (response) { return response.json(); })
         .then(function (server) {
           if (!server.version || server.version === mine) return;
