@@ -29,9 +29,13 @@ abstract final class ScoreImport {
       // beat the piece is felt in — 2 for a piece in eighths, which is how
       // 3/8 is counted.
       final beat = _snap(note.beat) * info.beatsPerQuarter;
+      // An excerpt starts where it starts; everything before it is not this
+      // song. A note still sounding across the cut is dropped rather than
+      // clipped — it belongs to a phrase nobody is going to hear.
+      if (beat < info.startBeat) continue;
       final duration = _snap(note.duration) * info.beatsPerQuarter;
       notes.add(Note(
-        beat: beat,
+        beat: beat - info.startBeat,
         duration: duration,
         midi: note.midi,
         velocity: note.hand == Hand.left

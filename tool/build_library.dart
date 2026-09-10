@@ -82,16 +82,19 @@ SongInfo _describe(Score score, Uint8List midi) {
   final raw = MidiReader.read(midi);
   // The edition marks the quarter; the piece may be counted in something
   // else. A 3/8 rondo marked quarter = 72 is played at 144 eighths.
+  final beatsPerBar = score.beatsPerBar ?? raw.beatsPerBar;
   final facts = SongInfo(
     id: score.id,
     title: score.title,
     composer: score.composer,
     source: score.credit,
     bpm: score.bpm ?? _tidy(raw.bpm * score.beatsPerQuarter),
-    beatsPerBar: score.beatsPerBar ?? raw.beatsPerBar,
+    beatsPerBar: beatsPerBar,
     beatsPerQuarter: score.beatsPerQuarter,
     rightVelocity: score.rightVelocity,
     leftVelocity: score.leftVelocity,
+    startBeat:
+        score.fromBar == null ? 0 : (score.fromBar! - 1) * beatsPerBar * 1.0,
     noteCount: 0,
     durationMs: 0,
     lowMidi: 0,
@@ -110,6 +113,7 @@ SongInfo _describe(Score score, Uint8List midi) {
     beatsPerQuarter: facts.beatsPerQuarter,
     rightVelocity: facts.rightVelocity,
     leftVelocity: facts.leftVelocity,
+    startBeat: facts.startBeat,
     noteCount: song.notes.length,
     durationMs: song.duration.inMilliseconds,
     lowMidi: low,
@@ -286,6 +290,7 @@ String _emit(List<SongInfo> infos) {
       ..writeln('    beatsPerQuarter: ${_number(info.beatsPerQuarter)},')
       ..writeln('    rightVelocity: ${_number(info.rightVelocity)},')
       ..writeln('    leftVelocity: ${_number(info.leftVelocity)},')
+      ..writeln('    startBeat: ${_number(info.startBeat)},')
       ..writeln('    noteCount: ${info.noteCount},')
       ..writeln('    durationMs: ${info.durationMs},')
       ..writeln('    lowMidi: ${info.lowMidi},')

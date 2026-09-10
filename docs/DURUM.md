@@ -382,6 +382,7 @@ buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
 
 | id | Ad | BPM | Nota | Süre | Kaynak |
 |---|---|---|---|---|---|
+| `canon-run-test` | Kanon — koşu denemesi | 55 (♩) | 624 | 2:51 | Kanon'un 18. ölçüsünden |
 | `ode-to-joy` | Neşeye Övgü | 160 (♩) | 149 | 0:24 | Piano Flow düzenlemesi |
 | `canon-in-d` | Kanon, Re Majör | 55 (♩) | 818 | 4:05 | Mutopia + Piano Flow düzenlemesi |
 | `fur-elise` | Für Elise | 144 (♪) | 1038 | 2:35 | Mutopia WoO 59 |
@@ -441,6 +442,23 @@ Son ikisi `tool/scores/` altındaki kendi `.ly` dosyalarımız.
 her şey; yani yüz şarkılık bir kataloğa bir şarkı eklemek bir şarkı kadar
 sürüyor. Önbellek commit edilmiyor, **varlıklar ediliyor** — uygulamayı
 derlemek için ne bu araç ne internet gerekiyor.
+
+### Deneme parçaları — `fromBar`
+
+Bir kayda `fromBar` verilirse şarkı o ölçüden başlıyor; öncesi atılıyor ve
+kalan başa çekiliyor (`SongInfo.startBeat`, `ScoreImport` uyguluyor).
+
+Sebebi somut: **sürükleme mekaniği Kanon'da 79. saniyede başlıyor.** Onu
+denemek için her seferinde bir buçuk dakika kanon çalmak gerekiyordu.
+`canon-run-test` 18. ölçüden başlıyor, ilk koşu 4,6 saniyede geliyor ve
+listenin başında duruyor.
+
+Kalıcı bir kütüphane parçası değil; mekanik oturunca silinebilir. Testler
+onun gerçekten aynı müzik olduğunu — sadece daha geç başladığını —
+doğruluyor, ve diğer bütün şarkıların `startBeat`'inin sıfır kaldığını.
+
+Bu aslında bir çalışma özelliğinin yarısı: "N. ölçüden başla" öğrenen
+herkesin istediği şey. Eksik olan yalnızca arayüzü.
 
 ### Neden base64 değil, varlık
 

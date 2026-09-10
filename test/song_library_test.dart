@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_flow/data/song_library.dart';
+import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/note.dart';
 
 import 'support/library.dart';
@@ -53,6 +54,42 @@ void main() {
         expect(song.duration.inMilliseconds, info.durationMs, reason: info.id);
         expect(low, info.lowMidi, reason: info.id);
         expect(high, info.highMidi, reason: info.id);
+      }
+    });
+
+    test('an excerpt is the piece from where it says, and nothing before', () {
+      // Cut so a mechanic buried eighty seconds into a piece can be tried in
+      // five. It has to be the same music, only later — not a re-render, not
+      // a different arrangement.
+      final excerpt = shipped('canon-run-test');
+      final whole = shipped('canon-in-d');
+      final from = SongLibrary.infoOf('canon-run-test')!.startBeat;
+      expect(from, greaterThan(0), reason: 'nothing was cut');
+
+      final kept = whole.notes.where((n) => n.beat >= from).toList();
+      expect(excerpt.notes, hasLength(kept.length));
+      for (var i = 0; i < kept.length; i++) {
+        expect(excerpt.notes[i].midi, kept[i].midi, reason: 'note $i');
+        expect(excerpt.notes[i].beat, closeTo(kept[i].beat - from, 1e-9),
+            reason: 'note $i');
+      }
+      expect(excerpt.notes.first.beat, 0, reason: 'it should start at once');
+    });
+
+    test('the excerpt reaches what it was cut for within a few seconds', () {
+      // Its whole reason to exist. If the runs move, this catches it.
+      final excerpt = shipped('canon-run-test');
+      final runs = Chart.build(excerpt).runs.values.toList()
+        ..sort((a, b) => a.first.beat.compareTo(b.first.beat));
+      expect(runs, isNotEmpty);
+      final seconds = runs.first.first.beat / excerpt.bpm * 60;
+      expect(seconds, lessThan(10), reason: 'the first run is $seconds s in');
+    });
+
+    test('everything else starts at its beginning', () {
+      for (final info in SongLibrary.all) {
+        if (info.id == 'canon-run-test') continue;
+        expect(info.startBeat, 0, reason: '${info.id} is not an excerpt');
       }
     });
 

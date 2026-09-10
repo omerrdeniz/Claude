@@ -29,6 +29,7 @@ class Score {
     this.leftVelocity = 0.55,
     this.bpm,
     this.beatsPerBar,
+    this.fromBar,
   }) : assert(url != null || local != null, 'a score has to come from somewhere');
 
   /// What the song is called in code, in the asset name, and in save data.
@@ -89,10 +90,31 @@ class Score {
   /// Overrides, for the rare score whose MIDI does not say, or lies.
   final double? bpm;
   final int? beatsPerBar;
+
+  /// Start the song at this bar, counting the first bar as 1.
+  ///
+  /// For excerpts cut to try something out. The slide only appears eighty
+  /// seconds into the canon, and nobody is going to play eighty seconds of
+  /// canon every time they want to see whether it feels right.
+  final int? fromBar;
 }
 
 /// The library, in the order it is offered.
 const List<Score> catalog = [
+  Score(
+    id: 'canon-run-test',
+    title: 'Kanon — koşu denemesi',
+    composer: 'Johann Pachelbel',
+    url: 'https://www.mutopiaproject.org/ftp/PachelbelJ/'
+        'Canon_per_3_Violini_e_Basso/Canon_per_3_Violini_e_Basso-lys.zip',
+    assemble: 'canon-in-d.ly',
+    // The canon's first run is at bar 19, seventy-nine seconds in. This
+    // starts a bar before it, so the mechanic arrives in seconds instead of
+    // after a minute and a half of playing.
+    fromBar: 18,
+    credit: 'Deneme parçası — Kanon\'un 18. ölçüsünden başlar, sürükleme '
+        'mekaniğini denemek için.',
+  ),
   Score(
     id: 'ode-to-joy',
     title: 'Neşeye Övgü',

@@ -22,6 +22,7 @@ class SongInfo {
     this.beatsPerQuarter = 1,
     this.rightVelocity = 0.75,
     this.leftVelocity = 0.55,
+    this.startBeat = 0,
   });
 
   final String id;
@@ -42,6 +43,13 @@ class SongInfo {
 
   final double rightVelocity;
   final double leftVelocity;
+
+  /// Where in the piece this song begins, in its own beats.
+  ///
+  /// Zero for everything the library ships as music. It is not zero for the
+  /// excerpts cut to try something out: a mechanic that only appears eighty
+  /// seconds into a four-minute piece cannot be tested by playing the piece.
+  final double startBeat;
 
   final int noteCount;
 
