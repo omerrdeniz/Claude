@@ -121,13 +121,16 @@ class _SongListScreenState extends State<SongListScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Which build this is. Without it there is no way to tell a
-                // fix that did not work from a fix that never arrived.
+                // Which build this is. Without it there is no way to tell
+                // a fix that did not work from a fix that never arrived —
+                // and it has to be legible to do that job. It was set at
+                // half the muted colour and the player could not find it.
                 Text(
                   versionLabel,
-                  style: TextStyle(
-                    color: AppTheme.textMuted.withValues(alpha: 0.5),
-                    fontSize: 11,
+                  style: const TextStyle(
+                    color: AppTheme.accentSoft,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
