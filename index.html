@@ -47,7 +47,7 @@
     Which build this page is. Stamped in by tool/deploy.sh; the script at the
     bottom uses it to notice when the phone is running an old one.
   -->
-  <meta name="piano-flow-build" content="57">
+  <meta name="piano-flow-build" content="58">
 
   <title>Piano Flow</title>
   <link rel="manifest" href="manifest.json">
@@ -116,7 +116,7 @@
       var stamp = document.querySelector('meta[name="piano-flow-build"]');
       var mine = stamp ? stamp.content : '';
       if (!mine || mine === 'BUILD' + '_STAMP') return; // a local build
-      fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+      fetch('build.json?t=' + Date.now(), { cache: 'no-store' })
         .then(function (response) { return response.json(); })
         .then(function (server) {
           if (!server.version || server.version === mine) return;
@@ -136,6 +136,6 @@
       }, { passive: false });
     });
   </script>
-  <script src="flutter_bootstrap.js?v=57" async></script>
+  <script src="flutter_bootstrap.js?v=58" async></script>
 </body>
 </html>
