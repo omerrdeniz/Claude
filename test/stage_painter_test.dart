@@ -26,6 +26,7 @@ ui.Picture paintFrame(Song song, double beat,
     List<RunBead> runBeads = const [],
     List<Spark> sparks = const [],
     double heat = 0,
+    Ground ground = AppTheme.defaultGround,
     Difficulty difficulty = Difficulty.normal}) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder, Offset.zero & size);
@@ -38,6 +39,7 @@ ui.Picture paintFrame(Song song, double beat,
     runBeads: runBeads,
     sparks: sparks,
     heat: heat,
+    ground: ground,
   ).paint(canvas, size);
   return recorder.endRecording();
 }
@@ -52,6 +54,7 @@ Future<int> savePng(Song song, double beat, String name,
     List<RunBead> runBeads = const [],
     List<Spark> sparks = const [],
     double heat = 0,
+    Ground ground = AppTheme.defaultGround,
     Difficulty difficulty = Difficulty.normal}) async {
   final picture = paintFrame(song, beat,
       litHands: litHands,
@@ -60,6 +63,7 @@ Future<int> savePng(Song song, double beat, String name,
       runBeads: runBeads,
       sparks: sparks,
       heat: heat,
+      ground: ground,
       difficulty: difficulty);
   final image = await picture.toImage(size.width.toInt(), size.height.toInt());
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -296,7 +300,15 @@ void main() {
           runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: false)]),
       // Inside one of the canon's two long runs, so the thread shows.
       'kanon': await savePng(shipped('canon-in-d'), 80.0, 'kanon',
+          ground: AppTheme.groundFor('canon-in-d'),
           runBeads: [beadOf(shipped('canon-in-d'), 80.0, tracked: true)]),
+      // Each piece brings its own light: Satie cold, Joplin warm.
+      'zemin-satie': await savePng(
+          shipped('gnossienne-1'), 20.0, 'zemin-satie',
+          ground: AppTheme.groundFor('gnossienne-1')),
+      'zemin-joplin': await savePng(
+          shipped('entertainer'), 20.0, 'zemin-joplin',
+          ground: AppTheme.groundFor('entertainer')),
     };
     for (final entry in sizes.entries) {
       // A stage drawn with nothing on it compresses to almost nothing.

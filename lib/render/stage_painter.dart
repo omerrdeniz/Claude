@@ -8,6 +8,7 @@ import '../music/note.dart';
 import '../game/stage_geometry.dart';
 import '../theme/app_theme.dart';
 import 'hit_sparks.dart';
+import 'stage_shader.dart';
 
 /// One note as it is drawn: where it sits across the screen, when it ends,
 /// and whether the finger is meant to be — and actually is — on it.
@@ -62,6 +63,8 @@ class StagePainter extends CustomPainter {
     this.playedNotes = const {},
     this.sparks = const [],
     this.heat = 0,
+    this.seconds = 0,
+    this.ground = AppTheme.defaultGround,
   });
 
   final Chart chart;
@@ -100,6 +103,12 @@ class StagePainter extends CustomPainter {
   /// The stage warms with it. Fifty notes in a row used to look exactly like
   /// three, which is a strange thing for a game to say nothing about.
   final double heat;
+
+  /// Seconds since the performance began, for anything that moves on its own.
+  final double seconds;
+
+  /// The colours this piece is played on. See [Ground].
+  final Ground ground;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -193,18 +202,34 @@ class StagePainter extends CustomPainter {
   }
 
   void _paintBackground(Canvas canvas, Size size, StageGeometry g) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF13132A), Color(0xFF08080F)],
-        ).createShader(Offset.zero & size),
+    final stage = Offset.zero & size;
+    final shader = StageShader.forStage(
+      size: size,
+      seconds: seconds,
+      heat: heat,
+      top: ground.top,
+      bottom: ground.bottom,
+      glow: ground.glow,
+      hitLineFraction: g.hitLineFraction,
     );
 
-    // A pool of light on the floor where the beams land, so the hit line feels
-    // like a place rather than a rule drawn across the screen.
+    if (shader != null) {
+      canvas.drawRect(stage, Paint()..shader = shader);
+      return;
+    }
+
+    // No shader: the ground the game had before there was one. Two gradients
+    // and no movement, but a game rather than a black screen.
+    canvas.drawRect(
+      stage,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [ground.top, ground.bottom],
+        ).createShader(stage),
+    );
+
     final glowCentre = Offset(size.width / 2, g.hitLineY);
     final glowRadius = size.width * (0.75 + heat * 0.35);
     canvas.drawCircle(
@@ -213,8 +238,8 @@ class StagePainter extends CustomPainter {
       Paint()
         ..shader = RadialGradient(
           colors: [
-            AppTheme.accent.withValues(alpha: 0.20 + heat * 0.22),
-            AppTheme.accent.withValues(alpha: 0.0),
+            ground.glow.withValues(alpha: 0.20 + heat * 0.22),
+            ground.glow.withValues(alpha: 0.0),
           ],
         ).createShader(
             Rect.fromCircle(center: glowCentre, radius: glowRadius)),
@@ -616,6 +641,8 @@ class StagePainter extends CustomPainter {
       old.holding != holding ||
       old.litHands != litHands ||
       old.heat != heat ||
+      old.seconds != seconds ||
+      old.ground != ground ||
       old.sparks.length != sparks.length ||
       old.runBeads.length != runBeads.length;
 }

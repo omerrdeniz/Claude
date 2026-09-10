@@ -70,6 +70,12 @@ flutter:
     # assets/piano/SALAMANDER-CC-BY.txt.
     - assets/piano/salamander.bin
 
+  # The playfield's ground is coloured by the GPU rather than drawn. See
+  # shaders/stage.frag and lib/render/stage_shader.dart, which falls back to
+  # a plain gradient anywhere the shader will not load.
+  shaders:
+    - shaders/stage.frag
+
   fonts:
     # Bundled rather than fetched: the app must look the same offline, and on
     # the web the default is downloaded from a font CDN. Inter is SIL OFL 1.1

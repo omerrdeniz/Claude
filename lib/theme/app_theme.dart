@@ -12,6 +12,56 @@ abstract final class AppTheme {
   static const Color textPrimary = Color(0xFFF2F2F7);
   static const Color textMuted = Color(0xFF9A9AB0);
 
+  /// The default ground: the dark violet field the game has always used.
+  static const Ground defaultGround = Ground(
+    top: Color(0xFF13132A),
+    bottom: Color(0xFF08080F),
+    glow: accent,
+  );
+
+  /// The light each piece is played in.
+  ///
+  /// Eight songs on one background is eight songs in one room. A piece has a
+  /// temperature — Satie is cold and still, Joplin is a warm room with people
+  /// in it, Chopin is night — and the ground is the cheapest place to say so.
+  ///
+  /// Chosen, not derived. A rule from the notes (low means warm, high means
+  /// cold, say) would be defensible and would get every one of them wrong:
+  /// the Bach and the nocturne sit in much the same register and could not be
+  /// further apart in what they are.
+  ///
+  /// Kept dark. The notes are bright and saturated and have to stay the
+  /// brightest thing on the screen; a ground that competes with them is a
+  /// ground that has to go.
+  static const Map<String, Ground> _grounds = {
+    // Cold, still, nocturnal.
+    'gnossienne-1': Ground(
+        top: Color(0xFF0E2226), bottom: Color(0xFF04090B), glow: Color(0xFF2FBFB8)),
+    // Candlelight.
+    'canon-in-d': Ground(
+        top: Color(0xFF241A0F), bottom: Color(0xFF0B0705), glow: Color(0xFFE8A33D)),
+    'canon-run-test': Ground(
+        top: Color(0xFF241A0F), bottom: Color(0xFF0B0705), glow: Color(0xFFE8A33D)),
+    // Daylight, and pleased about it.
+    'ode-to-joy': Ground(
+        top: Color(0xFF1E1A2E), bottom: Color(0xFF08070F), glow: Color(0xFFFFC65C)),
+    // Clean and cool, like the piece.
+    'prelude-in-c': Ground(
+        top: Color(0xFF101A2A), bottom: Color(0xFF05080D), glow: Color(0xFF5B9BD5)),
+    // Night.
+    'nocturne-op9-no2': Ground(
+        top: Color(0xFF141033), bottom: Color(0xFF05040F), glow: Color(0xFF7B6BE8)),
+    // A warm room with people in it.
+    'entertainer': Ground(
+        top: Color(0xFF2A1710), bottom: Color(0xFF0D0705), glow: Color(0xFFFF8A3D)),
+    // Rose, and a little sad.
+    'fur-elise': Ground(
+        top: Color(0xFF22132A), bottom: Color(0xFF0A050C), glow: Color(0xFFC96BE8)),
+  };
+
+  static Ground groundFor(String songId) =>
+      _grounds[songId] ?? defaultGround;
+
   /// How many fingers a moment needs, as colour.
   ///
   /// This is the one thing the player has to read ahead of time, and reading
@@ -58,4 +108,33 @@ abstract final class AppTheme {
       ),
     );
   }
+}
+
+/// The colours a piece is played on.
+///
+/// Every song used to be played on the same dark violet field. Eight songs on
+/// one background is eight songs in one room; the piece should bring its own
+/// light with it. Held as three colours rather than a picture so the ground
+/// can be a shader — see `shaders/stage.frag`.
+class Ground {
+  const Ground({required this.top, required this.bottom, required this.glow});
+
+  /// The far end of the stage, where the notes come from.
+  final Color top;
+
+  /// Underfoot, past the line.
+  final Color bottom;
+
+  /// The pool of light the notes land in.
+  final Color glow;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Ground &&
+      other.top == top &&
+      other.bottom == bottom &&
+      other.glow == glow;
+
+  @override
+  int get hashCode => Object.hash(top, bottom, glow);
 }

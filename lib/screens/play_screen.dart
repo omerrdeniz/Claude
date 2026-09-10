@@ -260,6 +260,8 @@ class _PlayScreenState extends State<PlayScreen>
                       // The stage warms as the streak climbs, and is at full
                       // heat by the time the multiplier maxes out.
                       heat: (_session.scoreboard.combo / 50).clamp(0.0, 1.0),
+                      seconds: _now.inMicroseconds / 1e6,
+                      ground: AppTheme.groundFor(widget.song.id),
                     ),
                   ),
                 ),
