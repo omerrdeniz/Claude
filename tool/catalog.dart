@@ -134,6 +134,29 @@ const List<Score> catalog = [
         '(Tobias Erbsland), tam eser.',
   ),
   Score(
+    id: 'entertainer',
+    title: 'The Entertainer',
+    composer: 'Scott Joplin',
+    url: 'https://www.mutopiaproject.org/ftp/JoplinS/entertainer/'
+        'entertainer.ly',
+    // Two score blocks: one for the page, one for the MIDI. The unfolding
+    // has to go round the second, which is the one carrying \midi.
+    unfoldAt: r'\context PianoStaff',
+    credit: 'Kamu malı (1902). Mutopia Project baskısı (Chris Sawer), '
+        '1902 orijinal baskısının tıpkıbasımı, tam eser.',
+  ),
+  Score(
+    id: 'gnossienne-1',
+    title: 'Gnossienne No. 1',
+    composer: 'Erik Satie',
+    url: 'https://www.mutopiaproject.org/ftp/SatieE/Gnossienne/no_1/no_1.ly',
+    // No voltas to open out — every repeat in the source is already an
+    // \repeat unfold — and its two score blocks both open with
+    // \new PianoStaff, so unfolding would land on the printed one.
+    credit: 'Kamu malı (1890). Mutopia Project baskısı (Knute Snortum), '
+        'Salabert 1913 baskısından, CC BY-SA 4.0, tam eser.',
+  ),
+  Score(
     id: 'nocturne-op9-no2',
     title: 'Nokturn, Mi Bemol Majör',
     composer: 'Frédéric Chopin',

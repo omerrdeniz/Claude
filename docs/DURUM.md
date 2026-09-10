@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı. Son güncelleme: şarkılar varlık dosyası oldu ve
 şarkı eklemek `tool/catalog.dart`'a bir kayıt eklemeye indi; Kanon kendi
-piyano düzenlememizle değişti.
+piyano düzenlememizle değişti; Joplin ve Satie eklendi.
 
 ## Proje
 
@@ -132,6 +132,26 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   geri istedi: gerçek tempolarında bazı parçalar elin yetişemeyeceği kadar
   hızlı. Şarkılar kendi temposunda yazılı kalıyor; yavaşlatma bir çalışma
   aracı. `%40 / %60 / %80 / Tam hız`.
+
+### Telifli şarkılar
+
+Oyuncu güncel bir pop şarkısı istedi (Manifest & Ajda Pekkan, "Hileli", 2025).
+Eklenemez ve bu bir tercih değil: repo açık ve her değişiklik `gh-pages`'ten
+herkese servis ediliyor, yani katalogda duran her şey dağıtılıyor. Notaların
+yasal bir kaynağı da yok — Mutopia ya da IMSLP'de 2025 tarihli bir parça
+bulunmaz.
+
+Yasal yol **MIDI içe aktarma** (yol haritası adım 8): dosya oyuncunun
+cihazında kalır, repoya da yayına da girmez. Okuyucu ve dönüştürücü hazır,
+eksik olan sadece dosya seçme ekranı. Oyuncuya önerildi, "şimdilik gerek yok"
+dedi.
+
+Bunun yerine kütüphaneyi **klasik dışına** açtık: Joplin'in ragtime'ı ve
+Satie. İkisi de kamu malı, ikisi de mevcut repertuvara hiç benzemiyor.
+Aynı raftaki diğer adaylar: Debussy'nin Clair de Lune'ü (Mutopia'da var,
+ama nüshada sayısal tempo yok ve 9/8 — vuruş birimi elle verilmeli),
+Arabesque 1 ve 2, Satie'nin Gnossienne 2 ve 3'ü, Joplin'in dokuz ragtime'ı
+daha.
 
 ### Reddedilenler — tekrar önermeyin
 
@@ -343,6 +363,8 @@ buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
 | `canon-in-d` | Kanon, Re Majör | 55 (♩) | 818 | 4:05 | Mutopia + Piano Flow düzenlemesi |
 | `fur-elise` | Für Elise | 144 (♪) | 1038 | 2:35 | Mutopia WoO 59 |
 | `prelude-in-c` | Prelüd, Do Majör | 60 (♩) | 549 | 2:20 | Mutopia BWV 846 |
+| `entertainer` | The Entertainer | 72 (♩) | 2621 | 4:12 | Mutopia, Joplin 1902 |
+| `gnossienne-1` | Gnossienne No. 1 | 100 (♩) | 832 | 3:16 | Mutopia, Satie 1890 |
 | `nocturne-op9-no2` | Nokturn, Mi Bemol Majör | 132 (♪) | 1231 | 3:22 | Mutopia Op. 9 No. 2 |
 
 ### Şarkı eklemek
@@ -463,6 +485,8 @@ Müziğin kendisi hepsinde kamu malı. Ama **baskılar aynı lisansta değil**:
 - **Kanon: CC BY 4.0** (Michael Fischer v. Mollard'ın nüshası). Atıf ister,
   share-alike istemez. Piyano düzenlemesi artık bizim, ama notalar onun
   nüshasından geldiği için atıf yine gerekiyor.
+- **Gnossienne: CC BY-SA 4.0** (Knute Snortum). Nokturn'le aynı durum.
+- The Entertainer: dizgici baskıyı kamu malına bırakmış.
 
 Şu an uyumluyuz: `source` alanında dizgici ve lisans yazıyor, oyun içinde
 şarkı listesinde görünüyor, `song_library_test.dart` bunu kontrol ediyor.

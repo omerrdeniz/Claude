@@ -74,6 +74,40 @@ const List<SongInfo> catalog = [
     highMidi: 81,
   ),
   SongInfo(
+    id: 'entertainer',
+    title: 'The Entertainer',
+    composer: 'Scott Joplin',
+    source: 'Kamu malı (1902). Mutopia Project baskısı (Chris '
+        'Sawer), 1902 orijinal baskısının tıpkıbasımı, tam '
+        'eser.',
+    bpm: 72,
+    beatsPerBar: 2,
+    beatsPerQuarter: 1,
+    rightVelocity: 0.75,
+    leftVelocity: 0.55,
+    noteCount: 2621,
+    durationMs: 252917,
+    lowMidi: 29,
+    highMidi: 90,
+  ),
+  SongInfo(
+    id: 'gnossienne-1',
+    title: 'Gnossienne No. 1',
+    composer: 'Erik Satie',
+    source: 'Kamu malı (1890). Mutopia Project baskısı (Knute '
+        'Snortum), Salabert 1913 baskısından, CC BY-SA 4.0, '
+        'tam eser.',
+    bpm: 100,
+    beatsPerBar: 4,
+    beatsPerQuarter: 1,
+    rightVelocity: 0.75,
+    leftVelocity: 0.55,
+    noteCount: 832,
+    durationMs: 196725,
+    lowMidi: 34,
+    highMidi: 83,
+  ),
+  SongInfo(
     id: 'nocturne-op9-no2',
     title: 'Nokturn, Mi Bemol Majör',
     composer: 'Frédéric Chopin',

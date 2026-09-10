@@ -16,9 +16,15 @@ void main() {
 
   testWidgets('lists every song, none of them locked', (tester) async {
     await pumpList(tester);
+    // Scrolled to, not just looked for: the library is past the point where
+    // it fits on a phone screen, and a list view only builds what is on it.
+    // This is the first test that would quietly stop checking the last song
+    // as songs are added.
     for (final song in SongLibrary.all) {
+      await tester.scrollUntilVisible(find.text(song.title), 120,
+          scrollable: find.byType(Scrollable).first);
       expect(find.text(song.title), findsOneWidget);
-      // Two of the three are Beethoven, so a composer may appear more than once.
+      // Beethoven wrote two of them, so a composer may appear more than once.
       expect(find.text(song.composer), findsAtLeastNWidgets(1));
     }
     expect(find.byIcon(Icons.lock), findsNothing);
