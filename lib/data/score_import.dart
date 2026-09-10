@@ -1,13 +1,13 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import '../music/midi_reader.dart';
 import '../music/note.dart';
 import '../music/song.dart';
+import 'song_info.dart';
 
 /// Turns an engraved score into a song the game can lay out.
 ///
-/// The scores in [scores.g.dart] are MIDI rendered straight from a published
+/// The songs in `assets/songs/` are MIDI rendered straight from a published
 /// LilyPond edition, so the pitches and rhythms are exactly what is on the
 /// page — which is the point, since the hand-written library before this was
 /// typed out from memory and had an octave wrong in it.
@@ -15,47 +15,39 @@ import '../music/song.dart';
 /// What an engraving will not tell us is how the piece should sit in a game:
 /// which note value the player counts as a beat, how loud each hand is, and
 /// what to do with ornaments that no finger could catch. That is what this
-/// does.
+/// does, from the [SongInfo] that `tool/build_library.dart` worked out at
+/// build time.
 abstract final class ScoreImport {
-  /// Read [base64Midi] and shape it for play.
-  ///
-  /// [beatsPerQuarter] converts MIDI's quarter notes into the beat the piece
-  /// is felt in — 2 for a piece in eighths, which is how 3/8 is counted.
-  static Song read(
-    String base64Midi, {
-    required String id,
-    required String title,
-    required String composer,
-    required String source,
-    required double bpm,
-    required int beatsPerBar,
-    double beatsPerQuarter = 1,
-    double rightVelocity = 0.75,
-    double leftVelocity = 0.55,
-  }) {
-    final raw = MidiReader.read(Uint8List.fromList(base64.decode(base64Midi)));
+  /// Read a rendered score and shape it for play.
+  static Song read(Uint8List midi, SongInfo info) {
+    final raw = MidiReader.read(midi);
 
     final notes = <Note>[];
     for (final note in raw.notes) {
       if (note.duration < _ornamentBelow) continue; // an ornament; see below
-      final beat = _snap(note.beat) * beatsPerQuarter;
-      final duration = _snap(note.duration) * beatsPerQuarter;
+      // [SongInfo.beatsPerQuarter] converts MIDI's quarter notes into the
+      // beat the piece is felt in — 2 for a piece in eighths, which is how
+      // 3/8 is counted.
+      final beat = _snap(note.beat) * info.beatsPerQuarter;
+      final duration = _snap(note.duration) * info.beatsPerQuarter;
       notes.add(Note(
         beat: beat,
         duration: duration,
         midi: note.midi,
-        velocity: note.hand == Hand.left ? leftVelocity : rightVelocity,
+        velocity: note.hand == Hand.left
+            ? info.leftVelocity
+            : info.rightVelocity,
         hand: note.hand,
       ));
     }
 
     return Song(
-      id: id,
-      title: title,
-      composer: composer,
-      bpm: bpm,
-      beatsPerBar: beatsPerBar,
-      source: source,
+      id: info.id,
+      title: info.title,
+      composer: info.composer,
+      bpm: info.bpm,
+      beatsPerBar: info.beatsPerBar,
+      source: info.source,
       notes: notes,
     );
   }

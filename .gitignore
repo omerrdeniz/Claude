@@ -46,3 +46,7 @@ app.*.map.json
 
 # Ses demosu üretilen bir çıktıdır: dart run tool/render_demo.dart
 *.wav
+
+# Rendered scores, rebuilt by tool/build_library.dart. The assets are
+# committed; this is only what saves re-rendering them.
+tool/.cache/

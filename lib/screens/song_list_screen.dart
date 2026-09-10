@@ -174,9 +174,9 @@ class _SongListScreenState extends State<SongListScreen> {
               onMeasure: _measureLatency,
             ),
             const SizedBox(height: 24),
-            for (final song in SongLibrary.all)
+            for (final info in SongLibrary.all)
               SongTile(
-                song: song,
+                info: info,
                 difficulty: _difficulty,
                 speed: _speed,
                 tolerance: _tolerance,

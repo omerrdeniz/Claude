@@ -1,20 +1,84 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_flow/data/song_library.dart';
 import 'package:piano_flow/music/note.dart';
 
+import 'support/library.dart';
+
 void main() {
   test('the library is not empty and ids are unique', () {
-    final songs = SongLibrary.all;
+    final songs = shippedSongs;
     expect(songs, isNotEmpty);
     expect(songs.map((s) => s.id).toSet(), hasLength(songs.length));
   });
 
   test('songs can be looked up by id', () {
-    expect(SongLibrary.byId('fur-elise')?.title, 'Für Elise');
-    expect(SongLibrary.byId('nope'), isNull);
+    expect(SongLibrary.infoOf('fur-elise')?.title, 'Für Elise');
+    expect(SongLibrary.infoOf('nope'), isNull);
   });
 
-  for (final song in SongLibrary.all) {
+  // Adding a song is one entry in tool/catalog.dart and a run of the builder.
+  // These are what catch a run that was forgotten, or half done: a catalogue
+  // that no longer matches the scores beside it fails quietly at run time,
+  // with a song that plays at the wrong tempo or is not there at all.
+  group('the catalogue and the scores agree', () {
+    test('every song has the score it names', () {
+      for (final info in SongLibrary.all) {
+        expect(File(info.asset).existsSync(), isTrue,
+            reason: '${info.id}: no ${info.asset} — run '
+                'tool/build_library.dart');
+      }
+    });
+
+    test('no score is shipped that no song claims', () {
+      final claimed = {for (final info in SongLibrary.all) info.asset};
+      final present = Directory('assets/songs')
+          .listSync()
+          .whereType<File>()
+          .map((f) => f.path)
+          .where((p) => p.endsWith('.mid'));
+      for (final path in present) {
+        expect(claimed, contains(path),
+            reason: '$path is not in the catalogue — a song was removed '
+                'without rebuilding');
+      }
+    });
+
+    test('what the catalogue says about a song is what the score says', () {
+      for (final info in SongLibrary.all) {
+        final song = shipped(info.id);
+        final (low, high) = song.pitchRange;
+        expect(song.notes.length, info.noteCount, reason: info.id);
+        expect(song.duration.inMilliseconds, info.durationMs, reason: info.id);
+        expect(low, info.lowMidi, reason: info.id);
+        expect(high, info.highMidi, reason: info.id);
+      }
+    });
+
+    test('an id is safe to use as a file name and as saved data', () {
+      for (final info in SongLibrary.all) {
+        expect(info.id, matches(RegExp(r'^[a-z0-9][a-z0-9-]*$')),
+            reason: '${info.id} would not survive a round trip');
+      }
+    });
+  });
+
+  testWidgets('a song loads through the asset bundle, as the app loads it',
+      (tester) async {
+    // The path everything else here sidesteps: rootBundle rather than the
+    // file system. If the asset directory ever falls out of pubspec.yaml,
+    // every other test still passes and the app opens to a list of songs
+    // that cannot be played.
+    final song = await SongLibrary.load('fur-elise');
+    expect(song.title, 'Für Elise');
+    expect(song.notes, isNotEmpty);
+    expect(identical(await SongLibrary.load('fur-elise'), song), isTrue,
+        reason: 'a song read twice should be read once');
+    expect(() => SongLibrary.load('nope'), throwsArgumentError);
+  });
+
+  for (final song in shippedSongs) {
     group(song.title, () {
       test('has notes, in order, within the MIDI range', () {
         expect(song.notes, isNotEmpty);
@@ -72,23 +136,23 @@ void main() {
   }
 
   test('chordsOf groups notes struck together', () {
-    final song = SongLibrary.odeToJoy;
+    final song = shipped('ode-to-joy');
     final chords = song.chordsOf(song.accompaniment);
     expect(chords.first, hasLength(3), reason: 'a triad is one tap');
   });
 
   test('Ode to Joy opens on the melody everyone knows', () {
-    final opening = SongLibrary.odeToJoy.melody.take(4).map((n) => n.midi);
+    final opening = shipped('ode-to-joy').melody.take(4).map((n) => n.midi);
     expect(opening, [64, 64, 65, 67], reason: 'E E F G');
   });
 
   test('Für Elise opens on its alternating semitone', () {
-    final opening = SongLibrary.furElise.melody.take(4).map((n) => n.midi);
+    final opening = shipped('fur-elise').melody.take(4).map((n) => n.midi);
     expect(opening, [76, 75, 76, 75], reason: 'E5 D#5 E5 D#5');
   });
 
   test('the Bach prelude repeats one figure under changing harmony', () {
-    final song = SongLibrary.preludeInC;
+    final song = shipped('prelude-in-c');
     final figure = song.melody.take(3).map((n) => n.midi).toList();
     // Written out from memory this sat an octave low; the engraved edition
     // puts the right hand above middle C, where it belongs.
@@ -105,7 +169,7 @@ void main() {
 
   group('the pieces are complete, at the tempo they are written at', () {
     test('Für Elise is the whole rondo, not just its theme', () {
-      final song = SongLibrary.furElise;
+      final song = shipped('fur-elise');
       // A B A C A with the repeats played out, counted in eighths.
       expect(song.lengthInBeats / song.beatsPerBar, greaterThan(100),
           reason: 'bars');
@@ -118,7 +182,7 @@ void main() {
     });
 
     test('the Bach prelude runs all thirty-five bars', () {
-      final song = SongLibrary.preludeInC;
+      final song = shipped('prelude-in-c');
       expect(song.lengthInBeats / song.beatsPerBar, closeTo(35, 0.5));
       expect(song.bpm, 60, reason: 'the edition marks the quarter at 60');
       // The last bar is the long tonic the piece settles onto.
@@ -127,12 +191,26 @@ void main() {
 
     test('Ode to Joy keeps Beethoven Allegro assai', () {
       // Half note = 80 in the Ninth, so the quarter is 160.
-      expect(SongLibrary.odeToJoy.bpm, 160);
-      expect(SongLibrary.odeToJoy.lengthInBeats / 4, closeTo(16, 0.5));
+      expect(shipped('ode-to-joy').bpm, 160);
+      expect(shipped('ode-to-joy').lengthInBeats / 4, closeTo(16, 0.5));
+    });
+
+    test('the canon is a piano arrangement, not a reading score', () {
+      // The transcription this started from folded all three violins and the
+      // bass onto two staves — faithful, and up to four notes thick in the
+      // right hand at every eighth. What is shipped is the leading voice over
+      // the ground, which is what anybody means by the Canon in D on a piano.
+      final song = shipped('canon-in-d');
+      final thickest = song
+          .chordsOf(song.melody)
+          .map((moment) => moment.length)
+          .reduce((a, b) => a > b ? a : b);
+      expect(thickest, lessThanOrEqualTo(2),
+          reason: 'the right hand is one violin, not three');
     });
 
     test('the canon opens on its ground bass, alone', () {
-      final song = SongLibrary.canonInD;
+      final song = shipped('canon-in-d');
       // Two bars of the ground before any voice enters: D A B F# G D G A.
       expect(
           song.accompaniment.take(8).map((n) => n.midi),
@@ -146,7 +224,7 @@ void main() {
     });
 
     test('the Chopin nocturne is the whole piece, cadenza and all', () {
-      final song = SongLibrary.nocturneOp9No2;
+      final song = shipped('nocturne-op9-no2');
       expect(song.bpm, 132, reason: 'the edition marks the eighth at 132');
       expect(song.beatsPerBar, 12, reason: '12/8');
       expect(song.lengthInBeats / song.beatsPerBar, greaterThan(35));
@@ -161,13 +239,13 @@ void main() {
     test('its engraving is credited, since that one is not public domain', () {
       // Chopin is long out of copyright but this typesetting is CC BY-SA,
       // which asks for the typesetter's name to travel with it.
-      expect(SongLibrary.nocturneOp9No2.source, contains('CC BY-SA'));
-      expect(SongLibrary.nocturneOp9No2.source, contains('Renato'));
+      expect(shipped('nocturne-op9-no2').source, contains('CC BY-SA'));
+      expect(shipped('nocturne-op9-no2').source, contains('Renato'));
     });
   });
 
   test('every note belongs to a hand', () {
-    for (final song in SongLibrary.all) {
+    for (final song in shippedSongs) {
       expect(song.notes.length,
           song.melody.length + song.accompaniment.length);
       expect(song.notes.every((n) => n.hand == Hand.right || n.hand == Hand.left),

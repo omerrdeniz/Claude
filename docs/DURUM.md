@@ -1,8 +1,9 @@
 # Durum ve devir notu
 
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
-sürdürebilmesi için yazıldı. Son güncelleme: Kanon, Re Majör eklendi ve
-hızlı geçitler için parmakla sürükleme mekaniği yazıldı.
+sürdürebilmesi için yazıldı. Son güncelleme: şarkılar varlık dosyası oldu ve
+şarkı eklemek `tool/catalog.dart`'a bir kayıt eklemeye indi; Kanon kendi
+piyano düzenlememizle değişti.
 
 ## Proje
 
@@ -255,12 +256,16 @@ lib/screens/   song_list_screen.dart  ekran ve ayarların durumu
                play_screen.dart  oyun alanı, saat, dokunuş yönlendirme
 lib/widgets/   score_hud.dart  oyun sırasındaki puan ve seri
                result_panel.dart  şarkı sonu
-lib/data/      song_library.dart  telifsiz şarkılar (getter değil, static final)
+lib/data/      song_library.dart  şarkıyı varlıktan okur; rootBundle'ın tek yeri
+               song_info.dart     bir şarkı hakkında, açmadan bilinenler
                score_import.dart  nüshadan gelen MIDI'yi oyuna uydurur
-               scores.g.dart      ÜRETİLMİŞ — gömülü Mutopia MIDI'leri
-tool/          render_song.dart, render_demo.dart  WAV üretici
+               catalog.g.dart     ÜRETİLMİŞ — şarkıların künyesi
+assets/songs/  ÜRETİLMİŞ — şarkıların kendisi, MIDI olarak
+tool/          catalog.dart       ŞARKI BURAYA EKLENİR
+               build_library.dart nüshaları indirir, varlıkları ve künyeyi üretir
+               scores/            kendi düzenlemelerimiz (.ly)
+               render_song.dart, render_demo.dart  WAV üretici
                fetch_samples.dart piyano kaydını indirir, salamander.bin üretir
-               fetch_scores.dart  nüshaları indirir, scores.g.dart'ı üretir
                inspect_midi.dart  MIDI'yi ölçü ölçü döker, nüshayla karşılaştırmak için
 docs/          magic-piano-analiz.md  mekanik incelemesi
 ```
@@ -332,42 +337,103 @@ buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
 
 ## Şarkılar
 
-| id | Ad | BPM | Kapsam | Kaynak |
-|---|---|---|---|---|
-| `ode-to-joy` | Neşeye Övgü | 160 (♩) | 16 ölçülük tam tema | Piano Flow düzenlemesi |
-| `canon-in-d` | Kanon, Re Majör | 55 (♩) | Tam eser, 4:05, 1947 nota | Mutopia + piyano düzenlemesi |
-| `fur-elise` | Für Elise | 144 (♪) | Tam eser, ~125 ölçü, tekrarlar açık | Mutopia WoO 59 |
-| `prelude-in-c` | Prelüd, Do Majör | 60 (♩) | Tam eser, 35 ölçü | Mutopia BWV 846 |
-| `nocturne-op9-no2` | Nokturn, Mi Bemol Majör | 132 (♪) | Tam eser, 37 ölçü, kadans dahil | Mutopia Op. 9 No. 2 |
+| id | Ad | BPM | Nota | Süre | Kaynak |
+|---|---|---|---|---|---|
+| `ode-to-joy` | Neşeye Övgü | 160 (♩) | 149 | 0:24 | Piano Flow düzenlemesi |
+| `canon-in-d` | Kanon, Re Majör | 55 (♩) | 818 | 4:05 | Mutopia + Piano Flow düzenlemesi |
+| `fur-elise` | Für Elise | 144 (♪) | 1038 | 2:35 | Mutopia WoO 59 |
+| `prelude-in-c` | Prelüd, Do Majör | 60 (♩) | 549 | 2:20 | Mutopia BWV 846 |
+| `nocturne-op9-no2` | Nokturn, Mi Bemol Majör | 132 (♪) | 1231 | 3:22 | Mutopia Op. 9 No. 2 |
 
-**Nota verisi artık hafızadan yazılmıyor.** Neşeye Övgü dışındaki her şey
-Mutopia Project'in LilyPond nüshalarından geliyor: `tool/fetch_scores.dart`
-kaynağı indirir, `convert-ly` ile günceller, `\unfoldRepeats` ile tekrarları
-açar, LilyPond'a MIDI ürettirir ve baytları base64 olarak
-`lib/data/scores.g.dart` içine yazar. `lib/data/score_import.dart` bu MIDI'yi
-oyuna uygun hale getirir.
+### Şarkı eklemek
 
-Kanon iki noktada diğerlerinden ayrılıyor ve araç bu yüzden iki tür kaynak
-biliyor. Eser **üç keman ve bas** için yazılmış, yani kopyalanacak bir klavye
-nüshası yok — her piyano hâli birinin düzenlemesi. Aldığımız düzenleme
-(Isaac David) Mutopia nüshasının üzerine bir **yama** olarak yayımlanmış, o
-yüzden kaynak tek bir `.ly` değil bir zip: açılıyor, `patch -p0` uygulanıyor,
-sonra arşivdeki **her** `.ly`/`.ily` dosyası `convert-ly`'den ve MIDI'ye
-hazırlamadan geçiyor. Sonuncusu şart: LilyPond kaynakları birbirini include
-ediyor ve iki dosya öteki bayat bir `\layout` hâlâ gravür motorunu çağırıp
-derlemeyi düşürüyor.
+**Bir şarkı eklemek `tool/catalog.dart`'a bir kayıt eklemektir.** En azı:
 
-Aracı çalıştırmak için internet, LilyPond, `unzip` ve `patch` gerekir:
-
-```bash
-apt-get install -y lilypond unzip patch
-dart run tool/fetch_scores.dart
+```dart
+Score(
+  id: 'moonlight-1',
+  title: 'Ay Işığı Sonatı, 1. bölüm',
+  composer: 'Ludwig van Beethoven',
+  url: 'https://www.mutopiaproject.org/ftp/.../moonlight.ly',
+  credit: 'Kamu malı (Op. 27 No. 2, 1801). Mutopia baskısı ...',
+),
 ```
 
-Varlık (asset) yerine base64 gömülmesinin sebebi: `SongLibrary` senkron
-kalsın. 52 çağrı noktası ve testler bunu varsayıyor. (Piyano kaydı bunun
-tersini yapıyor — varlıktan, asenkron, sentez yedeğiyle — çünkü orada
-senkron kalma zorunluluğu yok ve 2.5 MB gömülemez.)
+sonra
+
+```bash
+dart run tool/build_library.dart
+```
+
+Araç indirir, `convert-ly` ile günceller, MIDI'ye çevirir,
+`assets/songs/<id>.mid` yazar ve `lib/data/catalog.g.dart`'ı yeniden üretir.
+**Nüshadan okunabilen her şey nüshadan okunur:** tempo, ölçü, uzunluk, ses
+aralığı, nota sayısı. `SongLibrary` içinde hiçbir şarkı adı geçmez; liste
+kendiliğinden büyür.
+
+Elle verilmesi gereken yalnızca üç şey var, çünkü nüsha bunları söylemiyor:
+
+- `beatsPerQuarter` — parça sekizliklerle sayılıyorsa 2 (3/8, 12/8), yoksa 1.
+  Tempo da bundan çıkıyor: nüshanın dörtlük işareti çarpı bu.
+- `rightVelocity` / `leftVelocity` — nüshada nüans yok, MIDI'de her nota aynı
+  gürlükte. Kalın bir sol el (Chopin'inki neredeyse her sekizlikte üç nota)
+  ezginin altına çekilmezse üstüne biniyor.
+- `credit` — ne olduğu ve hangi lisansla geldiği. CC bir baskı için bu nezaket
+  değil, kullanma şartı.
+
+Araç dört tür kaynak biliyor:
+
+| | ne verilir |
+|---|---|
+| tek `.ly` | `url` |
+| parçalardan oluşan zip | `url` + `entry` |
+| başkasının nüshasına yama olarak yayımlanmış düzenleme | `url` + `patchUrl` + `entry` |
+| kendi düzenlememiz | `local`, ya da arşivin parçalarını kullanan bir montaj için `url` + `assemble` |
+
+Son ikisi `tool/scores/` altındaki kendi `.ly` dosyalarımız.
+
+Üretilen MIDI `tool/.cache/` altında saklanıyor ve anahtarı onu değiştirebilecek
+her şey; yani yüz şarkılık bir kataloğa bir şarkı eklemek bir şarkı kadar
+sürüyor. Önbellek commit edilmiyor, **varlıklar ediliyor** — uygulamayı
+derlemek için ne bu araç ne internet gerekiyor.
+
+### Neden base64 değil, varlık
+
+Notalar önce base64 olarak Dart'a gömülüydü. Dört şarkı için sorun değildi;
+yüz şarkı için ~1.5 MB Dart kaynağı demek ve **hepsi ilk şarkının ilk
+notasından önce indiriliyor**. Varlık olarak bir şarkı seçilene kadar hiçbir
+şeye mal olmuyor.
+
+Bunun bedeli `SongLibrary.load`'un asenkron olması. Karşılığında `SongLibrary.all`
+senkron ve ucuz kaldı — liste ekranının ihtiyacı olan her şey
+(`SongInfo`: ad, besteci, tempo, süre, nota sayısı, ses aralığı) üretilmiş
+sabit bir listede duruyor, notalar değil.
+
+`lib/data/song_library.dart` `rootBundle` kullanan **tek** yer; onu import
+etmek `dart:ui` getiriyor, o yüzden komut satırı araçları ve testlerin çoğu
+`catalog` ile `ScoreImport.read`'e gidip aynı dosyayı diskten okuyor.
+
+`test/song_library_test.dart` katalogla varlıkların birbirini tutmasını
+kontrol ediyor: her şarkının dosyası var mı, her dosya katalogda mı, katalogun
+söylediği nota sayısı/süre/aralık nüshanınkiyle aynı mı. Araç çalıştırılmayı
+unutulursa oyun sessizce yanlış tempoda çalar; bu testler onu yakalar.
+
+### Kanon: neden kendi düzenlememiz
+
+Eser **üç keman ve bas** için yazılmış, yani kopyalanacak bir klavye nüshası
+yok. Önce Isaac David'in Mutopia nüshasına yama olarak yayımladığı
+transkripsiyonu aldık: dört partiyi iki porteye katlıyor, sadık, ve her
+sekizlikte sağ el dört nota kalınlığında. Okuma partisyonu, piyano parçası
+değil — oyuncu haklı olarak "bu Canon in D'nin piyano hâli değil" dedi.
+
+Şimdiki hâli arşivin kendi parti dosyalarından kuruluyor
+(`tool/scores/canon-in-d.ly`): **sağ el birinci keman, sol el zemin bas.**
+İkisi de nüshadan olduğu gibi; hiçbir nota uydurulmadı, sadece seçildi.
+İkinci ve üçüncü kemanlar dışarıda, çünkü birinciyi aynı oktavda kovalıyorlar;
+klavyede uyum değil çakışma oluyor.
+
+1947 notadan 818'e indi ve `chordsOf(melody)` en fazla iki nota kalın — testte
+kilitli.
 
 `score_import.dart` nüshaya yalnızca şunları yapar — hepsi testli:
 
@@ -382,6 +448,10 @@ senkron kalma zorunluluğu yok ve 2.5 MB gömülemez.)
   dokunuşlar olarak çizilirdi.
 - **El başına gürlük.** Nüshada nüans yok; MIDI'de her nota aynı hızda.
 
+Bir uyarı: **arşivdeki her `.ly`/`.ily` `convert-ly`'den ve MIDI'ye
+hazırlamadan geçmeli.** LilyPond kaynakları birbirini include ediyor ve iki
+dosya öteki bayat bir `\layout` hâlâ gravür motorunu çağırıp derlemeyi
+düşürüyor.
 ### Lisans — hepsi aynı lisansta değil
 
 Müziğin kendisi hepsinde kamu malı. Ama **baskılar aynı lisansta değil**:
@@ -390,8 +460,9 @@ Müziğin kendisi hepsinde kamu malı. Ama **baskılar aynı lisansta değil**:
 - **Nokturn: CC BY-SA 3.0.** Dizgicinin (Renato Biolcati Rinaldi) adı
   anılmalı ve baskıdan türetilen her şey — `scores.g.dart`'taki MIDI ve
   ondan çıkan nota verisi dahil — aynı lisansı taşır.
-- **Kanon: CC BY 4.0**, hem nüsha (Michael Fischer v. Mollard) hem piyano
-  düzenlemesi (Isaac David). Atıf ister, share-alike istemez.
+- **Kanon: CC BY 4.0** (Michael Fischer v. Mollard'ın nüshası). Atıf ister,
+  share-alike istemez. Piyano düzenlemesi artık bizim, ama notalar onun
+  nüshasından geldiği için atıf yine gerekiyor.
 
 Şu an uyumluyuz: `source` alanında dizgici ve lisans yazıyor, oyun içinde
 şarkı listesinde görünüyor, `song_library_test.dart` bunu kontrol ediyor.
@@ -566,8 +637,16 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
    nota alınmıyor, kendi kendine hiçbir şey çalmıyor, tek tek basmak da
    hâlâ mümkün — yalnızca ikinci bir yol açıldı. **Ama henüz gerçek
    telefonda oynanmadı.** Bakılacaklar: `dragStep` (%1.2) parmağın doğal
-   hızına göre çok mu sıkı/gevşek; 150 ms eşiği Kanon'da dokunuşların
-   %28'ini kapsıyor, orada ip fazla mı görünüyor.
+   hızına göre çok mu sıkı/gevşek; eşik ve minimum uzunluk.
+
+   Eşik ölçümü (oyuncu sordu, karar verilmedi): nota araları kuantize
+   olduğu için 150 ile 200 ms arasında neredeyse hiçbir şey yok — 200'ün
+   tek kazancı Nokturn'de bir koşu, tek maliyeti Neşeye Övgü'de olmaması
+   gereken iki koşu, ve **210 ms'de uçurum var**: Für Elise'in on
+   altılıkları oraya düşüyor ve şarkının %90'ı tek bir sürüklemeye
+   dönüşüyor. 175 ms güvenli duruyor. Minimum uzunluğu 3'ten 4'e çıkarmak
+   Kanon'daki kısa ipleri temizler; Kanon kendi düzenlememize geçince
+   3'lük koşular 58'den 23'e zaten düştü.
 2. **Delik/kendi çalma ikilemi çözülmedi, sadece seçeneğe bağlandı.**
    Doldurma kapalı gelirse Nokturn'ün üçte ikisi sessiz; açılırsa oyun
    basmadığınız her şeyi çalıyor. Üçüncü bir yol olabilir ve zorluk

@@ -1,22 +1,47 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_flow/data/score_import.dart';
-import 'package:piano_flow/data/scores.g.dart' as scores;
+import 'package:piano_flow/data/song_info.dart';
 import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/music/song.dart';
 
 /// What the import is allowed to change about an engraved score, and what it
 /// has to leave exactly as the edition has it.
 void main() {
+  /// A rendered score, as shipped.
+  Uint8List score(String id) =>
+      File('assets/songs/$id.mid').readAsBytesSync();
+
+  /// The settings the import works from. Deliberately not the shipped ones:
+  /// these tests are about what the import does with a description, not about
+  /// any particular song's.
+  SongInfo facts({
+    double bpm = 60,
+    int beatsPerBar = 4,
+    double beatsPerQuarter = 1,
+    double rightVelocity = 0.75,
+    double leftVelocity = 0.55,
+  }) =>
+      SongInfo(
+        id: 'test',
+        title: 'Test',
+        composer: 'Test',
+        source: 'Mutopia',
+        bpm: bpm,
+        beatsPerBar: beatsPerBar,
+        beatsPerQuarter: beatsPerQuarter,
+        rightVelocity: rightVelocity,
+        leftVelocity: leftVelocity,
+        noteCount: 0,
+        durationMs: 0,
+        lowMidi: 0,
+        highMidi: 0,
+      );
+
   test('an engraved score reads as a playable song', () {
-    final song = ScoreImport.read(
-      scores.preludeInC,
-      id: 'test',
-      title: 'Test',
-      composer: 'Bach',
-      source: 'Mutopia',
-      bpm: 60,
-      beatsPerBar: 4,
-    );
+    final song = ScoreImport.read(score('prelude-in-c'), facts());
 
     expect(song.id, 'test');
     expect(song.bpm, 60);
@@ -28,16 +53,8 @@ void main() {
   });
 
   test('the beat can be a note value other than the quarter', () {
-    Song read(double beatsPerQuarter) => ScoreImport.read(
-          scores.furElise,
-          id: 'test',
-          title: 'Test',
-          composer: 'Beethoven',
-          source: 'Mutopia',
-          bpm: 144,
-          beatsPerBar: 3,
-          beatsPerQuarter: beatsPerQuarter,
-        );
+    Song read(double beatsPerQuarter) => ScoreImport.read(score('fur-elise'),
+        facts(bpm: 144, beatsPerBar: 3, beatsPerQuarter: beatsPerQuarter));
 
     final inQuarters = read(1);
     final inEighths = read(2);
@@ -46,32 +63,15 @@ void main() {
   });
 
   test('each hand gets its own weight, since the engraving has none', () {
-    final song = ScoreImport.read(
-      scores.preludeInC,
-      id: 'test',
-      title: 'Test',
-      composer: 'Bach',
-      source: 'Mutopia',
-      bpm: 60,
-      beatsPerBar: 4,
-      rightVelocity: 0.8,
-      leftVelocity: 0.4,
-    );
+    final song = ScoreImport.read(score('prelude-in-c'),
+        facts(rightVelocity: 0.8, leftVelocity: 0.4));
     expect(song.melody.every((n) => n.velocity == 0.8), isTrue);
     expect(song.accompaniment.every((n) => n.velocity == 0.4), isTrue);
   });
 
   test('grace notes are dropped rather than left untappable', () {
-    final song = ScoreImport.read(
-      scores.furElise,
-      id: 'test',
-      title: 'Test',
-      composer: 'Beethoven',
-      source: 'Mutopia',
-      bpm: 144,
-      beatsPerBar: 3,
-      beatsPerQuarter: 2,
-    );
+    final song = ScoreImport.read(score('fur-elise'),
+        facts(bpm: 144, beatsPerBar: 3, beatsPerQuarter: 2));
     // Für Elise carries three ornaments — two grace notes and an
     // appoggiatura — each a sliver of stolen time before the note it
     // decorates. Nothing that short survives the import.
@@ -82,16 +82,8 @@ void main() {
   });
 
   test('onsets land on a grid, so a chord stays one touch', () {
-    final song = ScoreImport.read(
-      scores.furElise,
-      id: 'test',
-      title: 'Test',
-      composer: 'Beethoven',
-      source: 'Mutopia',
-      bpm: 144,
-      beatsPerBar: 3,
-      beatsPerQuarter: 2,
-    );
+    final song = ScoreImport.read(score('fur-elise'),
+        facts(bpm: 144, beatsPerBar: 3, beatsPerQuarter: 2));
     // Twenty-four steps to the eighth: thirty-seconds and triplets alike.
     for (final note in song.notes) {
       final steps = note.beat * 24;
@@ -101,19 +93,12 @@ void main() {
   });
 
   test('the hands come out of the edition the right way round', () {
-    for (final score in [scores.furElise, scores.preludeInC]) {
-      final song = ScoreImport.read(
-        score,
-        id: 'test',
-        title: 'Test',
-        composer: 'x',
-        source: 'x',
-        bpm: 100,
-        beatsPerBar: 4,
-      );
+    for (final id in ['fur-elise', 'prelude-in-c']) {
+      final song = ScoreImport.read(score(id), facts(bpm: 100));
       double average(Iterable<Note> ns) =>
           ns.map((n) => n.midi).reduce((a, b) => a + b) / ns.length;
-      expect(average(song.accompaniment), lessThan(average(song.melody)));
+      expect(average(song.accompaniment), lessThan(average(song.melody)),
+          reason: id);
     }
   });
 }

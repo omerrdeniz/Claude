@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:piano_flow/data/song_library.dart';
 import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/music/song.dart';
 import 'package:piano_flow/screens/play_screen.dart';
+
+import 'support/library.dart';
 
 void main() {
   /// The number on the scoreboard.
@@ -22,7 +23,7 @@ void main() {
   }
 
   testWidgets('shows the song being played', (tester) async {
-    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: SongLibrary.furElise)));
+    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: shipped('fur-elise'))));
     expect(find.text('Für Elise'), findsOneWidget);
     expect(find.textContaining('Ludwig van Beethoven'), findsOneWidget);
     expect(find.text('0'), findsOneWidget, reason: 'the score starts at zero');
@@ -30,7 +31,7 @@ void main() {
   });
 
   testWidgets('tapping a beam scores', (tester) async {
-    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: SongLibrary.odeToJoy)));
+    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: shipped('ode-to-joy'))));
     // Let the first note travel down to the line.
     await play(tester, const Duration(milliseconds: 1900), frames: 40);
 
@@ -85,7 +86,7 @@ void main() {
   });
 
   testWidgets('pause and resume are offered', (tester) async {
-    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: SongLibrary.furElise)));
+    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: shipped('fur-elise'))));
     expect(find.byIcon(Icons.pause), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.pause));
@@ -98,7 +99,7 @@ void main() {
   });
 
   testWidgets('restarting puts the score back to zero', (tester) async {
-    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: SongLibrary.odeToJoy)));
+    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: shipped('ode-to-joy'))));
     await play(tester, const Duration(milliseconds: 1900), frames: 40);
     for (var beam = 0; beam < 4; beam++) {
       final stage = tester.getRect(find.byType(PlayScreen));
@@ -114,7 +115,7 @@ void main() {
 
   testWidgets('runs a whole song without throwing', (tester) async {
     await tester.pumpWidget(
-        MaterialApp(home: PlayScreen(song: SongLibrary.preludeInC)));
+        MaterialApp(home: PlayScreen(song: shipped('prelude-in-c'))));
     // The prelude is sixteen beats at 72bpm, plus the lead-in.
     await play(tester, const Duration(seconds: 18), frames: 120);
     expect(tester.takeException(), isNull);
@@ -142,7 +143,7 @@ void main() {
       (tester) async {
     // The lift is what ends a held note, so the wiring for it has to exist.
     await tester.pumpWidget(MaterialApp(
-        home: PlayScreen(song: SongLibrary.odeToJoy, speed: 0.6)));
+        home: PlayScreen(song: shipped('ode-to-joy'), speed: 0.6)));
     await play(tester, const Duration(milliseconds: 2200), frames: 40);
 
     final stage = tester.getRect(find.byType(PlayScreen));
@@ -155,7 +156,7 @@ void main() {
 
   testWidgets('both sides of the screen accept a finger', (tester) async {
     await tester.pumpWidget(MaterialApp(
-        home: PlayScreen(song: SongLibrary.odeToJoy, speed: 0.6)));
+        home: PlayScreen(song: shipped('ode-to-joy'), speed: 0.6)));
     await play(tester, const Duration(milliseconds: 2200), frames: 40);
 
     final stage = tester.getRect(find.byType(PlayScreen));
@@ -171,7 +172,7 @@ void main() {
   });
 
   testWidgets('leaving the screen shuts the game down cleanly', (tester) async {
-    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: SongLibrary.furElise)));
+    await tester.pumpWidget(MaterialApp(home: PlayScreen(song: shipped('fur-elise'))));
     await play(tester, const Duration(seconds: 2));
     await tester.pumpWidget(const MaterialApp(home: SizedBox()));
     expect(tester.takeException(), isNull);

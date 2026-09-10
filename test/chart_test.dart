@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:piano_flow/data/song_library.dart';
 import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/music/song.dart';
+
+import 'support/library.dart';
 
 Song songOf(List<Note> notes, {double bpm = 120}) => Song(
       id: 'test',
@@ -60,7 +61,7 @@ void main() {
 
     test('every note is either played or played for the player', () {
       for (final difficulty in Difficulty.values) {
-        for (final song in SongLibrary.all) {
+        for (final song in shippedSongs) {
           final chart = Chart.build(song, difficulty: difficulty);
           final tapped = chart.taps.expand((t) => t.notes).length;
           expect(tapped + chart.autoNotes.length, song.notes.length,
@@ -122,7 +123,7 @@ void main() {
 
     test('notes stay on the screen', () {
       for (final difficulty in Difficulty.values) {
-        for (final song in SongLibrary.all) {
+        for (final song in shippedSongs) {
           for (final tap in Chart.build(song, difficulty: difficulty).taps) {
             expect(tap.across, inInclusiveRange(0.0, 1.0));
           }
@@ -266,7 +267,7 @@ void main() {
     });
 
     test('taps stay in time order', () {
-      for (final song in SongLibrary.all) {
+      for (final song in shippedSongs) {
         var previous = -1.0;
         for (final tap in Chart.build(song).taps) {
           expect(tap.beat, greaterThanOrEqualTo(previous));
@@ -346,7 +347,7 @@ void main() {
     test('the pieces that prompted this have them', () {
       // The rondo's coda and the nocturne's cadenza are what a hand cannot
       // do; if these ever come back empty the mechanic has quietly died.
-      for (final song in [SongLibrary.furElise, SongLibrary.nocturneOp9No2]) {
+      for (final song in [shipped('fur-elise'), shipped('nocturne-op9-no2')]) {
         final chart = Chart.build(song, difficulty: Difficulty.normal);
         expect(chart.runs, isNotEmpty, reason: song.title);
         final longest = chart.runs.values
@@ -357,7 +358,7 @@ void main() {
     });
 
     test('every run is in time order and long enough to be one', () {
-      for (final song in SongLibrary.all) {
+      for (final song in shippedSongs) {
         for (final run in Chart.build(song).runs.values) {
           expect(run.length, greaterThanOrEqualTo(Chart.runLength));
           for (var i = 1; i < run.length; i++) {

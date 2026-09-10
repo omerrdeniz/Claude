@@ -3,13 +3,14 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:piano_flow/data/song_library.dart';
 import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/song.dart';
 import 'package:piano_flow/game/stage_geometry.dart';
 import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/render/stage_painter.dart';
 import 'package:piano_flow/theme/app_theme.dart';
+
+import 'support/library.dart';
 
 const Size phone = Size(390, 844);
 const Size phoneLandscape = Size(844, 390);
@@ -63,7 +64,7 @@ Set<(double, int)> heldAt(Song song, double beat) => {
 
 void main() {
   test('a long note only waits at the line if it is being held', () {
-    final song = SongLibrary.odeToJoy;
+    final song = shipped('ode-to-joy');
     // Well past the line, so a pinned head and a falling one differ.
     expect(
         () => paintFrame(song, 7.6, heldNotes: heldAt(song, 6.0)),
@@ -92,7 +93,7 @@ void main() {
 
   test('the playfield paints in landscape too', () {
     expect(
-        () => paintFrame(SongLibrary.odeToJoy, 6, size: phoneLandscape),
+        () => paintFrame(shipped('ode-to-joy'), 6, size: phoneLandscape),
         returnsNormally);
   });
 
@@ -121,7 +122,7 @@ void main() {
   test('a chord band never crosses the divide between the hands', () {
     // Both hands playing chords at once: the two bands must stay on their own
     // sides, which is what grouping by hand as well as by moment guarantees.
-    final chart = Chart.build(SongLibrary.odeToJoy, difficulty: Difficulty.hard);
+    final chart = Chart.build(shipped('ode-to-joy'), difficulty: Difficulty.hard);
     final moments = <double, List<Tap>>{};
     for (final tap in chart.taps) {
       (moments[tap.beat] ??= []).add(tap);
@@ -143,7 +144,7 @@ void main() {
       final g = StageGeometry(size: size);
       final radius = g.noteRadius;
       for (final difficulty in Difficulty.values) {
-        for (final song in SongLibrary.all) {
+        for (final song in shippedSongs) {
           for (final tap in Chart.build(song, difficulty: difficulty).taps) {
             final x = g.xAtPosition(tap.across);
             expect(x - radius, greaterThanOrEqualTo(0),
@@ -160,20 +161,20 @@ void main() {
     // Not an appearance test so much as a promise: the line must never be
     // there on easy, where a touch on either side counts for anything.
     expect(
-        () => paintFrame(SongLibrary.odeToJoy, 5, difficulty: Difficulty.easy),
+        () => paintFrame(shipped('ode-to-joy'), 5, difficulty: Difficulty.easy),
         returnsNormally);
     expect(
-        () => paintFrame(SongLibrary.odeToJoy, 5, difficulty: Difficulty.hard),
+        () => paintFrame(shipped('ode-to-joy'), 5, difficulty: Difficulty.hard),
         returnsNormally);
   });
 
   test('a beam lit by a hit still paints', () {
-    expect(() => paintFrame(SongLibrary.odeToJoy, 6.0, litHands: {Hand.left: 1.0, Hand.right: 0.2}),
+    expect(() => paintFrame(shipped('ode-to-joy'), 6.0, litHands: {Hand.left: 1.0, Hand.right: 0.2}),
         returnsNormally);
   });
 
   test('painting a frame does not throw', () {
-    for (final song in SongLibrary.all) {
+    for (final song in shippedSongs) {
       for (final beat in [-2.0, 0.0, 3.5, 12.0, 1000.0]) {
         expect(() => paintFrame(song, beat), returnsNormally,
             reason: '${song.title} at beat $beat');
@@ -185,11 +186,11 @@ void main() {
     // The ribbon is the only thing on screen that says these notes are not
     // to be tapped one at a time. Drawn with it and without it, the two
     // frames have to differ — otherwise the mechanic is invisible.
-    final withRun = paintFrame(SongLibrary.furElise, 156.0);
-    final withoutRun = paintFrame(SongLibrary.preludeInC, 5.0);
+    final withRun = paintFrame(shipped('fur-elise'), 156.0);
+    final withoutRun = paintFrame(shipped('prelude-in-c'), 5.0);
     expect(withRun.approximateBytesUsed,
         isNot(withoutRun.approximateBytesUsed));
-    final chart = Chart.build(SongLibrary.furElise);
+    final chart = Chart.build(shipped('fur-elise'));
     final onScreen = chart
         .visibleAt(156.0, 4)
         .where((t) => t.runId != null)
@@ -200,48 +201,48 @@ void main() {
   test('an empty window still paints the stage', () {
     // Before the first note there is nothing to draw but beams and the line;
     // that must still be a picture, not a blank screen.
-    expect(() => paintFrame(SongLibrary.furElise, -50), returnsNormally);
+    expect(() => paintFrame(shipped('fur-elise'), -50), returnsNormally);
   });
 
   test('renders the playfield to PNG', () async {
     final sizes = <String, int>{
-      'fur-elise-giris': await savePng(SongLibrary.furElise, 0.5, 'fur-elise-giris'),
-      'fur-elise-akis': await savePng(SongLibrary.furElise, 7.0, 'fur-elise-akis'),
-      'ode-to-joy': await savePng(SongLibrary.odeToJoy, 6.0, 'ode-to-joy'),
-      'prelude-in-c': await savePng(SongLibrary.preludeInC, 5.0, 'prelude-in-c'),
+      'fur-elise-giris': await savePng(shipped('fur-elise'), 0.5, 'fur-elise-giris'),
+      'fur-elise-akis': await savePng(shipped('fur-elise'), 7.0, 'fur-elise-akis'),
+      'ode-to-joy': await savePng(shipped('ode-to-joy'), 6.0, 'ode-to-joy'),
+      'prelude-in-c': await savePng(shipped('prelude-in-c'), 5.0, 'prelude-in-c'),
       // A beam still glowing from a hit a moment ago.
-      'vurus-ani': await savePng(SongLibrary.odeToJoy, 6.05, 'vurus-ani',
+      'vurus-ani': await savePng(shipped('ode-to-joy'), 6.05, 'vurus-ani',
           litHands: {Hand.right: 0.8}),
       // Chords: colour by finger count, with a band tying each one together.
-      'akorlar': await savePng(SongLibrary.odeToJoy, 5.0, 'akorlar'),
-      'eller-ayri': await savePng(SongLibrary.preludeInC, 5.0, 'eller-ayri'),
+      'akorlar': await savePng(shipped('ode-to-joy'), 5.0, 'akorlar'),
+      'eller-ayri': await savePng(shipped('prelude-in-c'), 5.0, 'eller-ayri'),
       // One finger, three notes: the pips have to say so.
-      'kolay-akor': await savePng(SongLibrary.odeToJoy, 5.0, 'kolay-akor',
+      'kolay-akor': await savePng(shipped('ode-to-joy'), 5.0, 'kolay-akor',
           difficulty: Difficulty.easy),
       // The same held note, caught and not caught. Caught, it waits on the
       // line with its bar shortening above it; missed, it falls past and
       // goes, tail and all.
-      'tutma-basili': await savePng(SongLibrary.odeToJoy, 6.6, 'tutma-basili',
-          heldNotes: heldAt(SongLibrary.odeToJoy, 6.0)),
+      'tutma-basili': await savePng(shipped('ode-to-joy'), 6.6, 'tutma-basili',
+          heldNotes: heldAt(shipped('ode-to-joy'), 6.0)),
       'tutma-basilmadi': await savePng(
-          SongLibrary.odeToJoy, 6.6, 'tutma-basilmadi'),
+          shipped('ode-to-joy'), 6.6, 'tutma-basilmadi'),
       'zor-parmaklama': await savePng(
-          SongLibrary.odeToJoy, 5.0, 'zor-parmaklama',
+          shipped('ode-to-joy'), 5.0, 'zor-parmaklama',
           difficulty: Difficulty.hard),
       'akorlar-yatay': await savePng(
-          SongLibrary.odeToJoy, 5.0, 'akorlar-yatay',
+          shipped('ode-to-joy'), 5.0, 'akorlar-yatay',
           size: phoneLandscape),
       // Sideways: more beams, so the hands can divide the keyboard.
       'yatay-ode-to-joy': await savePng(
-          SongLibrary.odeToJoy, 6.0, 'yatay-ode-to-joy',
+          shipped('ode-to-joy'), 6.0, 'yatay-ode-to-joy',
           size: phoneLandscape),
       'yatay-prelude': await savePng(
-          SongLibrary.preludeInC, 5.0, 'yatay-prelude',
+          shipped('prelude-in-c'), 5.0, 'yatay-prelude',
           size: phoneLandscape),
       // A run: the rondo's chromatic descent, sixty-two notes no hand can
       // tap, with the ribbon threading them into one slide.
-      'hizli-akis': await savePng(SongLibrary.furElise, 156.0, 'hizli-akis'),
-      'kanon': await savePng(SongLibrary.canonInD, 103.0, 'kanon'),
+      'hizli-akis': await savePng(shipped('fur-elise'), 156.0, 'hizli-akis'),
+      'kanon': await savePng(shipped('canon-in-d'), 103.0, 'kanon'),
     };
     for (final entry in sizes.entries) {
       // A stage drawn with nothing on it compresses to almost nothing.

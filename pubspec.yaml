@@ -60,6 +60,11 @@ flutter:
   uses-material-design: true
 
   assets:
+    # The songs, rendered from published editions by tool/build_library.dart.
+    # A directory rather than a list of files: adding a song should not mean
+    # editing this, and at a hundred songs a list would be unreadable.
+    - assets/songs/
+
     # The recorded piano. Alexander Holm's Salamander Grand Piano (a Yamaha
     # C5), CC BY 3.0, packed by tool/fetch_samples.dart. See
     # assets/piano/SALAMANDER-CC-BY.txt.

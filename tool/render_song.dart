@@ -9,7 +9,8 @@ import 'dart:typed_data';
 
 import 'package:piano_flow/audio/sample_bank.dart';
 import 'package:piano_flow/audio/synth_engine.dart';
-import 'package:piano_flow/data/song_library.dart';
+import 'package:piano_flow/data/catalog.g.dart';
+import 'package:piano_flow/data/score_import.dart';
 import 'package:piano_flow/music/song.dart';
 
 import 'wav.dart';
@@ -19,17 +20,22 @@ const int sampleRate = 44100;
 void main(List<String> args) {
   if (args.isEmpty || args.first == '--list') {
     stdout.writeln('Şarkılar:');
-    for (final song in SongLibrary.all) {
-      stdout.writeln('  ${song.id.padRight(14)} ${song.title} — $song');
+    for (final info in catalog) {
+      stdout.writeln('  ${info.id.padRight(18)} ${info.title} — '
+          '${info.noteCount} nota @ ${info.bpm.round()} bpm');
     }
     return;
   }
 
-  final song = SongLibrary.byId(args.first);
-  if (song == null) {
+  final matches = catalog.where((info) => info.id == args.first);
+  if (matches.isEmpty) {
     stderr.writeln('Bilinmeyen şarkı: ${args.first}');
     exit(1);
   }
+
+  // The same asset the app reads, off disk: there is no Flutter bundle here.
+  final info = matches.single;
+  final song = ScoreImport.read(File(info.asset).readAsBytesSync(), info);
 
   final path = args.length > 1 ? args[1] : '${song.id}.wav';
   writeWav(path, render(song), sampleRate: sampleRate);
