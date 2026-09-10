@@ -181,12 +181,18 @@ class _PlayScreenState extends State<PlayScreen>
     // sounded, so nothing should look as though it did.
     if (outcome.scored) {
       _litHands[outcome.hand] = 1.0;
-      // One spark per note, where the note actually is. A three-note chord
-      // should look like three things happening, because it is.
+      // One spark per touch, carrying every note of it. A three-note chord
+      // still looks like three things happening — the painter draws a plume
+      // per note — but it lays them out the way it laid the notes out, which
+      // it can only do with the chord whole.
       final quality = _session.judge.quality(outcome.errorMs);
-      for (final across in outcome.places) {
+      if (outcome.places.isNotEmpty) {
         _sparks.add(Spark(
-            across: across, voices: outcome.voices, quality: quality));
+          places: outcome.places,
+          hand: outcome.hand,
+          voices: outcome.voices,
+          quality: quality,
+        ));
       }
     }
     if (_session.scoreboard.combo > _combo) _comboAt = _now;

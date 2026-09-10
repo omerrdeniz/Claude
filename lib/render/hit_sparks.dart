@@ -1,3 +1,5 @@
+import '../music/note.dart';
+
 /// What a hit leaves behind on the line.
 ///
 /// The game's whole promise is that touching the screen makes music, and for
@@ -10,13 +12,31 @@
 /// behaves the same every time is one that can be tested.
 class Spark {
   Spark({
-    required this.across,
+    required this.places,
+    required this.hand,
     required this.voices,
     required this.quality,
   });
 
-  /// Where on the hit line it happened, 0 at the left edge and 1 at the right.
-  final double across;
+  /// Where on the hit line it happened, 0 at the left edge and 1 at the right
+  /// — every note of the touch, not one of them.
+  ///
+  /// A chord arrives here as it comes out of the chart, at the positions its
+  /// pitches give it. That is **not** where those notes are drawn: notes too
+  /// close together would overlap, so the painter opens the chord out before
+  /// drawing it, and a chord near the edge of a hand's zone gets shifted
+  /// bodily to stay inside. Sparks placed at the raw positions therefore sat
+  /// beside their own notes — invisible on a single note, plainly crooked on
+  /// a chord, which is exactly how it was reported.
+  ///
+  /// So the whole chord travels together and the painter lays it out the same
+  /// way it lays the notes out. Splitting it into one spark per note would
+  /// throw away the only thing that layout needs: which notes are in it.
+  final List<double> places;
+
+  /// Which hand played it, since each hand has its own half of the screen to
+  /// be laid out within.
+  final Hand hand;
 
   /// How many notes sounded together, which is what colours it.
   final int voices;

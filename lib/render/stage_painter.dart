@@ -150,6 +150,7 @@ class StagePainter extends CustomPainter {
     final radius = g.noteRadius;
 
     for (final spark in sparks) {
+      if (spark.places.isEmpty) continue;
       final life = spark.age.clamp(0.0, 1.0);
       final open = 1 - (1 - life) * (1 - life); // quick out, slow settle
       // Bright for most of its life and then away quickly, rather than
@@ -158,8 +159,10 @@ class StagePainter extends CustomPainter {
       // milliseconds of nearly nothing.
       final burn = 1 - life * life * life;
       final strength = 0.7 + spark.quality * 0.3;
-      final x = g.xAtPosition(spark.across);
       final colour = AppTheme.chordColor(spark.voices);
+      // Laid out exactly as the notes were, or a chord's light stands beside
+      // the notes it came from.
+      final places = _spreadPlaces(spark.places, g, radius, spark.hand);
 
       // The plume: a shaft driven down through the line, bright where it
       // leaves the note and fading out along its length.
@@ -170,33 +173,37 @@ class StagePainter extends CustomPainter {
       // the hit was.
       final reach = radius * (1.2 + open * 3.6);
       final half = radius * (1.0 - open * 0.45);
-      final shaft = Rect.fromLTRB(x - half, y, x + half, y + reach);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(shaft, Radius.circular(half)),
-        Paint()
-          ..shader = ui.Gradient.linear(
-            Offset(x, y),
-            Offset(x, y + reach),
-            [
-              Color.lerp(colour, Colors.white, 0.7)!
-                  .withValues(alpha: burn * strength),
-              Color.lerp(colour, Colors.white, 0.2)!
-                  .withValues(alpha: 0.7 * burn * strength),
-              colour.withValues(alpha: 0.0),
-            ],
-            const [0.0, 0.35, 1.0],
-          ),
-      );
-
       // The core: white, bigger than a note, and gone in a breath. This is
       // the part the eye reads as the hit itself.
       final flash = (1 - life * 1.8).clamp(0.0, 1.0);
-      if (flash > 0) {
-        canvas.drawCircle(
-          Offset(x, y),
-          radius * (0.8 + (1 - flash) * 1.1),
-          Paint()..color = Colors.white.withValues(alpha: flash),
+
+      for (final place in places) {
+        final x = g.xAtPosition(place);
+        final shaft = Rect.fromLTRB(x - half, y, x + half, y + reach);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(shaft, Radius.circular(half)),
+          Paint()
+            ..shader = ui.Gradient.linear(
+              Offset(x, y),
+              Offset(x, y + reach),
+              [
+                Color.lerp(colour, Colors.white, 0.7)!
+                    .withValues(alpha: burn * strength),
+                Color.lerp(colour, Colors.white, 0.2)!
+                    .withValues(alpha: 0.7 * burn * strength),
+                colour.withValues(alpha: 0.0),
+              ],
+              const [0.0, 0.35, 1.0],
+            ),
         );
+
+        if (flash > 0) {
+          canvas.drawCircle(
+            Offset(x, y),
+            radius * (0.8 + (1 - flash) * 1.1),
+            Paint()..color = Colors.white.withValues(alpha: flash),
+          );
+        }
       }
     }
   }
@@ -520,23 +527,39 @@ class StagePainter extends CustomPainter {
     if (dots.length < 2 || g.size.width <= 0) return dots;
 
     final sorted = [...dots]..sort((a, b) => a.across.compareTo(b.across));
+    final places = _spreadPlaces(
+        [for (final dot in sorted) dot.across], g, radius, hand);
+
+    return [
+      for (var i = 0; i < sorted.length; i++) sorted[i].movedTo(places[i]),
+    ];
+  }
+
+  /// The same layout, over bare positions.
+  ///
+  /// Notes and the sparks they leave have to come out in the same places, and
+  /// the only way to be sure of that is for both to go through here.
+  List<double> _spreadPlaces(
+    List<double> places,
+    StageGeometry g,
+    double radius,
+    Hand hand,
+  ) {
+    if (places.length < 2 || g.size.width <= 0) return places;
+
     final (zoneStart, zoneEnd) = chart.separatesHands
         ? (hand == Hand.left
             ? (Chart.leftZoneStart, Chart.leftZoneEnd)
             : (Chart.rightZoneStart, Chart.rightZoneEnd))
         : (Chart.leftZoneStart, Chart.rightZoneEnd);
 
-    final places = StageGeometry.spreadChord(
-      [for (final dot in sorted) dot.across],
+    return StageGeometry.spreadChord(
+      [...places]..sort(),
       // Edge to edge plus a little daylight, in the 0..1 the chart works in.
       minGap: radius * 2.3 / g.size.width,
       zoneStart: zoneStart,
       zoneEnd: zoneEnd,
     );
-
-    return [
-      for (var i = 0; i < sorted.length; i++) sorted[i].movedTo(places[i]),
-    ];
   }
 
   /// The band tying a chord's notes together.

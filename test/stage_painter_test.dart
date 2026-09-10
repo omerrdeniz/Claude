@@ -94,6 +94,42 @@ RunBead beadOf(Song song, double beat, {required bool tracked}) {
       tracked: tracked);
 }
 
+
+/// A canvas that only remembers where things were drawn.
+///
+/// There is no way to look inside a finished [ui.Picture], and this test needs
+/// to know one thing that cannot be seen from outside: whether a chord's
+/// sparks come out at the same places as the chord's notes. Everything the
+/// painter draws with is void, so recording it is a matter of catching the
+/// calls — plus the translate the note heads are drawn through, since they are
+/// baked around the origin and moved into place.
+class _Recorder implements Canvas {
+  final List<Offset> circles = [];
+  final List<Rect> rects = [];
+  Offset _shift = Offset.zero;
+  final List<Offset> _saved = [];
+
+  @override
+  void save() => _saved.add(_shift);
+
+  @override
+  void restore() => _shift = _saved.isEmpty ? Offset.zero : _saved.removeLast();
+
+  @override
+  void translate(double dx, double dy) => _shift += Offset(dx, dy);
+
+  @override
+  void drawCircle(Offset c, double radius, Paint paint) =>
+      circles.add(c + _shift);
+
+  @override
+  void drawRRect(RRect rrect, Paint paint) =>
+      rects.add(rrect.outerRect.shift(_shift));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
 void main() {
   test('a long note only waits at the line if it is being held', () {
     final song = shipped('ode-to-joy');
@@ -230,6 +266,72 @@ void main() {
     expect(onScreen, greaterThan(3), reason: 'nothing to thread');
   });
 
+  test("a chord's sparks land on its notes, not beside them", () {
+    // The bug the player saw: sparks were spawned at the positions the chart
+    // gives a chord's notes, but the painter opens a chord out before drawing
+    // it so its notes do not overlap. On a single note the two agree; on a
+    // chord the light stood beside the notes it came from.
+    const g = StageGeometry(size: phone);
+    // Tight enough that the painter has to move it: a chord whose notes are
+    // closer together than a note is wide. A chord already standing apart is
+    // drawn where its pitches put it and would prove nothing.
+    final minGap = g.noteRadius * 2.3 / phone.width;
+    Chart? chart;
+    Tap? tap;
+    for (final song in shippedSongs) {
+      final built = Chart.build(song);
+      for (final candidate in built.taps) {
+        final places = [...candidate.noteAcross]..sort();
+        if (places.length < 2) continue;
+        final tight = [
+          for (var i = 1; i < places.length; i++) places[i] - places[i - 1],
+        ].any((gap) => gap < minGap - 1e-9);
+        if (tight) {
+          chart = built;
+          tap = candidate;
+          break;
+        }
+      }
+      if (tap != null) break;
+    }
+    expect(tap, isNotNull, reason: 'no chord close enough to be opened out');
+
+    final recorder = _Recorder();
+    StagePainter(
+      chart: chart!,
+      // Half a beat early, so the notes are still above the line and the
+      // spark is on it: the two are then told apart by height alone.
+      beat: tap!.beat - 0.5,
+      windowInBeats: 4,
+      sparks: [
+        Spark(
+          places: tap.noteAcross,
+          hand: tap.hand,
+          voices: tap.voices,
+          quality: 1,
+        )..age = 0.2,
+      ],
+    ).paint(recorder, phone);
+
+    final line = g.hitLineY;
+    // The plumes: the only thing drawn below the line.
+    final plumes = [
+      for (final rect in recorder.rects)
+        if (rect.top >= line - 0.5) rect.center.dx,
+    ]..sort();
+    expect(plumes, hasLength(tap.noteAcross.length));
+
+    // The notes of that chord: heads still on their way down.
+    final heads = [
+      for (final centre in recorder.circles)
+        if (centre.dy < line - 1) centre.dx,
+    ];
+    for (final plume in plumes) {
+      expect(heads.any((head) => (head - plume).abs() < 0.5), isTrue,
+          reason: 'a spark at $plume has no note above it');
+    }
+  });
+
   test('an empty window still paints the stage', () {
     // Before the first note there is nothing to draw but beams and the line;
     // that must still be a picture, not a blank screen.
@@ -270,10 +372,10 @@ void main() {
           litHands: {Hand.right: 0.9},
           heat: 0.9,
           sparks: [
-            Spark(across: 0.72, voices: 2, quality: 1)..age = 0.03,
-            Spark(across: 0.30, voices: 3, quality: 0.9)..age = 0.20,
-            Spark(across: 0.20, voices: 3, quality: 0.8)..age = 0.45,
-            Spark(across: 0.86, voices: 1, quality: 0.6)..age = 0.75,
+            Spark(places: [0.70, 0.74], hand: Hand.right, voices: 2, quality: 1)..age = 0.03,
+            Spark(places: [0.28, 0.29, 0.30], hand: Hand.left, voices: 3, quality: 0.9)..age = 0.20,
+            Spark(places: [0.20, 0.26, 0.33], hand: Hand.left, voices: 3, quality: 0.8)..age = 0.45,
+            Spark(places: [0.86], hand: Hand.right, voices: 1, quality: 0.6)..age = 0.75,
           ]),
       'zor-parmaklama': await savePng(
           shipped('ode-to-joy'), 5.0, 'zor-parmaklama',
