@@ -19664,16 +19664,16 @@ break
 case 2:s="Eller ayr\u0131, akorun her notas\u0131 ayr\u0131 parmakla"
 break
 default:s=null}return s},
-akV(b0,b1){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5=A.akT(b0,b1),a6=a5.a,a7=A.c([],t.Ll),a8=t.XI,a9=A.r(a8,t.BC)
-for(s=b1!==B.b7,r=A.W(a6).h("ad<1>"),q=0;q<2;++q){p=B.BD[q]
-o=s?new A.ad(a6,new A.Nv(p),r):a6
+akV(b1,b2){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6=A.akT(b1,b2),a7=a6.a,a8=A.c([],t.Ll),a9=t.XI,b0=A.r(a9,t.BC)
+for(s=b2!==B.b7,r=A.W(a7).h("ad<1>"),q=0;q<2;++q){p=B.BD[q]
+o=s?new A.ad(a7,new A.Nv(p),r):a7
 n=J.bp(o)
 if(n.gP(o))continue
 for(n=n.gN(o),m=127,l=0;n.p();){k=n.gF()
 if(k.gc3()<m)m=k.gc3()
-if(k.gc3()>l)l=k.gc3()}a9.m(0,p,new A.an(m,l))}j=new A.Nu(a9,b1)
-for(r=A.acB(a6),n=r.length,k=t.n,i=b1===B.fT,h=t.tS,g=t.XP,q=0;q<r.length;r.length===n||(0,A.x)(r),++q){f=r[q]
-e=A.r(a8,g)
+if(k.gc3()>l)l=k.gc3()}b0.m(0,p,new A.an(m,l))}j=new A.Nu(b0,b2)
+for(r=A.acB(a7),n=r.length,k=t.n,i=b2===B.fT,h=t.tS,g=t.XP,q=0;q<r.length;r.length===n||(0,A.x)(r),++q){f=r[q]
+e=A.r(a9,g)
 for(d=B.b.gN(f);d.p();){c=d.gF()
 p=s?c.gju():B.b9
 b=e.j(0,p)
@@ -19685,16 +19685,18 @@ if(i)for(c=J.b2(a0);c.p();){b=c.gF()
 a1=j.$2(p,b.gc3())
 b=new A.d8(B.b.gV(f).gcE(),A.c([b],h),p,a1)
 b.e=A.c([a1],k)
-a7.push(b)}else{c=A.c([],k)
+a8.push(b)}else{c=A.c([],k)
 for(b=J.b2(a0);b.p();)c.push(j.$2(p,b.gF().gc3()))
 b=new A.d8(B.b.gV(f).gcE(),a0,p,B.b.jE(c,new A.Nw())/c.length)
 b.e=c
-a7.push(b)}}}B.b.cW(a7,new A.Nx())
-for(a2=0;a8=a7.length,a2<a8;a2=a3){a3=a2
-while(!0){if(!(a3<a8&&Math.abs(a7[a3].a-a7[a2].a)<=0.03))break;++a3}for(a4=a2;a4<a3;++a4){a8=a7[a4]
-r=B.b.bA(a7,a2,a3)
-a8.w=new A.ad(r,new A.Ny(a7,a4),A.W(r).h("ad<1>")).og(0,0,new A.Nz())}}a8=A.akU(a7,b0,s)
-return new A.Nr(b0,b1,A.lz(a7,t.MG),A.lz(a5.b,t.KA),A.NZ(a8,t.S,t.LY))},
+a8.push(b)}}}B.b.cW(a8,new A.Nx())
+a2=0.7*b1.d/60
+for(a9=a8.length,q=0;q<a9;++q)a8[q].x=a2
+for(a3=0;a9=a8.length,a3<a9;a3=a4){a4=a3
+while(!0){if(!(a4<a9&&Math.abs(a8[a4].a-a8[a3].a)<=0.03))break;++a4}for(a5=a3;a5<a4;++a5){a9=a8[a5]
+r=B.b.bA(a8,a3,a4)
+a9.w=new A.ad(r,new A.Ny(a8,a5),A.W(r).h("ad<1>")).og(0,0,new A.Nz())}}a9=A.akU(a8,b1,s)
+return new A.Nr(b1,b2,A.lz(a8,t.MG),A.lz(a6.b,t.KA),A.NZ(a9,t.S,t.LY))},
 akU(a,a0,a1){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d=60/a0.d,c=t.LY,b=A.r(t.XI,c)
 for(s=a.length,r=t.Ll,q=0;q<a.length;a.length===s||(0,A.x)(a),++q){p=a[q]
 o=a1?p.c:B.b9
@@ -19739,7 +19741,8 @@ _.d=d
 _.e=$
 _.f=null
 _.r=0
-_.w=1},
+_.w=1
+_.x=1.4},
 a_M:function a_M(){},
 a_N:function a_N(){},
 Nr:function Nr(a,b,c,d,e){var _=this
@@ -62499,7 +62502,7 @@ m=j.c.LU(n)
 j.w9(p)
 j.z.A4(m)
 j.Gc(p,n)
-if(p.gem()>=1.25){l=j.fx++
+if(p.gem()>=p.x){l=j.fx++
 k=J.kG(p.b,new A.Wk(),t.S)
 k=A.Q(k,k.$ti.h("av.E"))
 j.fr.m(0,l,new A.H5(o,k,o+p.gem()))}else l=i
@@ -62801,7 +62804,7 @@ for(f=f.gN(g);f.p();){e=f.gF()
 for(a=e.b,a0=J.bp(a),a1=e.a,a2=0;a2<a0.gD(a);++a2){a3=a0.j(a,a2)
 a4=e.e
 a4===$&&A.a()
-b.push(new A.em(a4[a2],a3.gc3(),a1+a3.gem(),e.gem()>=1.25,i.n(0,new A.an(a1,a3.gc3()))))}}a5=B.b.eQ(b,new A.a_h())?c:d
+b.push(new A.em(a4[a2],a3.gc3(),a1+a3.gem(),e.gem()>=e.x,i.n(0,new A.an(a1,a3.gc3()))))}}a5=B.b.eQ(b,new A.a_h())?c:d
 a6=a5>1?B.c.aS(1-(a5-1)/0.16,0,1):B.c.aS(0.35+B.c.aS(d,0,1)*0.65,0,1)
 if(a6<=0.01)continue
 a7=B.l3[B.h.aS(p.w-1,0,3)]
@@ -63314,7 +63317,7 @@ return A.T($async$q4,r)},
 U(a){var s,r,q,p,o,n,m,l,k,j,i,h,g,f=this,e=null,d=A.a4(a).ok.e
 d=A.c_("Piano Flow",d==null?e:d.a1v(B.b8,1.2),e)
 s=t.E
-r=A.iA(A.c([B.A9,B.vy,A.c_("f7c347f",A.fS(e,e,B.a7.bb(0.5),e,e,e,e,e,e,e,e,11,e,e,e,e,e,!0,e,e,e,e,e,e,e,e),e)],s),B.aj,B.av,B.aa)
+r=A.iA(A.c([B.A9,B.vy,A.c_("v51 \xb7 be5c158",A.fS(e,e,B.a7.bb(0.5),e,e,e,e,e,e,e,e,11,e,e,e,e,e,!0,e,e,e,e,e,e,e,e),e)],s),B.aj,B.av,B.aa)
 q=f.d
 p=A.alC(q)
 o=f.e
