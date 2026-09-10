@@ -266,9 +266,10 @@ void main() {
           litHands: {Hand.right: 0.9},
           heat: 0.9,
           sparks: [
-            Spark(across: 0.72, voices: 2, quality: 1)..age = 0.02,
-            Spark(across: 0.30, voices: 3, quality: 0.8)..age = 0.30,
-            Spark(across: 0.20, voices: 3, quality: 0.5)..age = 0.8,
+            Spark(across: 0.72, voices: 2, quality: 1)..age = 0.03,
+            Spark(across: 0.30, voices: 3, quality: 0.9)..age = 0.20,
+            Spark(across: 0.20, voices: 3, quality: 0.8)..age = 0.45,
+            Spark(across: 0.86, voices: 1, quality: 0.6)..age = 0.75,
           ]),
       'zor-parmaklama': await savePng(
           shipped('ode-to-joy'), 5.0, 'zor-parmaklama',

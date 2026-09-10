@@ -112,16 +112,29 @@ class StagePainter extends CustomPainter {
     _paintSparks(canvas, geometry);
   }
 
-  /// The light a hit leaves on the line: a short flare where the note landed.
+  /// The light a hit leaves: a white core on the line, and a plume falling
+  /// away below it.
   ///
-  /// It flares out a little and dies where it is. An expanding ring was tried
-  /// first and had to go — with a dozen a second, rings travelling outwards
-  /// cross each other and the notes above them, and the line turns into
-  /// ripples on water. What is wanted is "that note went off here", which is
-  /// a thing that happens in one place.
+  /// Three goes at this, and the failures are worth keeping because each was
+  /// wrong for a different reason.
   ///
-  /// Discs and no blur: a blur filter here costs more per frame than the rest
-  /// of the screen put together.
+  /// 1. **Rings expanding outwards.** A dozen a second cross each other and
+  ///    the notes above them; the player called it ripples on water.
+  /// 2. **A small flare where the note was.** Note-sized and note-coloured,
+  ///    so it read as a note gone slightly dim — as good as nothing.
+  /// 3. **A bloom lying along the line.** Invisible: the hit line is the
+  ///    brightest thing on the screen, and lighting it up a bit more says
+  ///    nothing at all.
+  ///
+  /// What works is putting the burst where there is room for it. Below the
+  /// line the screen is empty — no notes ever go there — so a plume falling
+  /// through reads instantly, cannot collide with anything coming down, and
+  /// several at once simply stand side by side at their own pitches. The
+  /// core stays on the line and stays **white**, because white is the one
+  /// colour no note is.
+  ///
+  /// Discs and ovals, no blur: a blur filter here costs more per frame than
+  /// the rest of the screen put together.
   void _paintSparks(Canvas canvas, StageGeometry g) {
     if (sparks.isEmpty) return;
     final y = g.hitLineY;
@@ -129,26 +142,51 @@ class StagePainter extends CustomPainter {
 
     for (final spark in sparks) {
       final life = spark.age.clamp(0.0, 1.0);
-      // Quick out, slow fade: the first instant is the hit, the rest is it
-      // leaving.
-      final open = 1 - (1 - life) * (1 - life);
-      final fade = (1 - life) * (1 - life) * (0.55 + spark.quality * 0.45);
-      final at = Offset(g.xAtPosition(spark.across), y);
+      final open = 1 - (1 - life) * (1 - life); // quick out, slow settle
+      // Bright for most of its life and then away quickly, rather than
+      // dimming from the first frame. A hit has to be *seen*, and three
+      // hundred milliseconds of steadily fading light is three hundred
+      // milliseconds of nearly nothing.
+      final burn = 1 - life * life * life;
+      final strength = 0.7 + spark.quality * 0.3;
+      final x = g.xAtPosition(spark.across);
       final colour = AppTheme.chordColor(spark.voices);
 
-      canvas.drawCircle(
-        at,
-        radius * (0.85 + open * 0.55),
-        Paint()..color = colour.withValues(alpha: 0.55 * fade),
+      // The plume: a shaft driven down through the line, bright where it
+      // leaves the note and fading out along its length.
+      //
+      // A linear gradient down the shaft, not a radial one over an oval: a
+      // radial gradient spreads the same light over an area and what reaches
+      // the eye is a faint smudge. This keeps all of it at the line, where
+      // the hit was.
+      final reach = radius * (1.2 + open * 3.6);
+      final half = radius * (1.0 - open * 0.45);
+      final shaft = Rect.fromLTRB(x - half, y, x + half, y + reach);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(shaft, Radius.circular(half)),
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(x, y),
+            Offset(x, y + reach),
+            [
+              Color.lerp(colour, Colors.white, 0.7)!
+                  .withValues(alpha: burn * strength),
+              Color.lerp(colour, Colors.white, 0.2)!
+                  .withValues(alpha: 0.7 * burn * strength),
+              colour.withValues(alpha: 0.0),
+            ],
+            const [0.0, 0.35, 1.0],
+          ),
       );
 
-      // A hot core for the first moment only.
-      final flash = (1 - life * 4).clamp(0.0, 1.0);
+      // The core: white, bigger than a note, and gone in a breath. This is
+      // the part the eye reads as the hit itself.
+      final flash = (1 - life * 1.8).clamp(0.0, 1.0);
       if (flash > 0) {
         canvas.drawCircle(
-          at,
-          radius * (0.30 + flash * 0.30),
-          Paint()..color = Colors.white.withValues(alpha: 0.85 * flash),
+          Offset(x, y),
+          radius * (0.8 + (1 - flash) * 1.1),
+          Paint()..color = Colors.white.withValues(alpha: flash),
         );
       }
     }

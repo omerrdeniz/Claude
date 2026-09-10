@@ -38,7 +38,7 @@ class Spark {
 /// second, and an uncapped list is a way to make the game stutter exactly
 /// where it should feel best.
 class SparkField {
-  SparkField({this.lifeMs = 260, this.limit = 16});
+  SparkField({this.lifeMs = 330, this.limit = 16});
 
   /// How long a spark lasts.
   final double lifeMs;
