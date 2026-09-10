@@ -1,8 +1,8 @@
 # Durum ve devir notu
 
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
-sürdürebilmesi için yazıldı. Son güncelleme: elden bırakılmak zorunda kalınan
-tutmalı notalar artık kesilmiyor; telefon eski derlemeyi tutmuyor.
+sürdürebilmesi için yazıldı. Son güncelleme: vuruş geri bildirimi eklendi;
+kütüphane 18 parçaya indirildi.
 
 ## Proje
 
@@ -257,6 +257,10 @@ herkese servis ediliyor, yani katalogda duran her şey dağıtılıyor. Notalar�
 yasal bir kaynağı da yok — Mutopia ya da IMSLP'de 2025 tarihli bir parça
 bulunmaz.
 
+Aynısı **Mariage d'Amour** için de geçerli (Paul de Senneville, 1978, telif
+Coronet-Delphine Music). Yaygın olarak Chopin'e atfedilir — "Spring Waltz"
+diye dolaşır — ama Chopin değil ve kamu malı değil.
+
 Yasal yol **MIDI içe aktarma** (yol haritası adım 8): dosya oyuncunun
 cihazında kalır, repoya da yayına da girmez. Okuyucu ve dönüştürücü hazır,
 eksik olan sadece dosya seçme ekranı. Oyuncuya önerildi, "şimdilik gerek yok"
@@ -510,42 +514,50 @@ buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
 
 ## Şarkılar
 
-Yirmi sekiz parça, hepsi kamu malı, hepsi basılı nüshadan.
+On sekiz parça, hepsi kamu malı, hepsi basılı nüshadan. Liste **en sakinden
+en yoğuna** sıralı ve her satırın yanında saniyede kaç dokunuş istediği yazıyor.
 
-| id | Ad | Besteci | BPM | Nota | Süre |
+| Ad | Besteci | BPM | Nota | Süre | Dokunuş/sn |
 |---|---|---|---|---|---|
-| `canon-run-test` | Canon in D (run test) | Pachelbel | 55 | 624 | 2:51 |
-| `ode-to-joy` | Ode to Joy | Beethoven | 160 | 149 | 0:24 |
-| `canon-in-d` | Canon in D | Pachelbel | 55 | 818 | 4:05 |
-| `fur-elise` | Für Elise | Beethoven | 144 | 1038 | 2:35 |
-| `prelude-in-c` | Prelude in C, BWV 846 | Bach | 60 | 549 | 2:20 |
-| `entertainer` | The Entertainer | Joplin | 72 | 2621 | 4:12 |
-| `gnossienne-1` | Gnossienne No. 1 | Satie | 100 | 832 | 3:16 |
-| `nocturne-op9-no2` | Nocturne Op. 9 No. 2 | Chopin | 132 | 1231 | 3:22 |
-| `moonlight-1` | Moonlight Sonata (1st movement) | Beethoven | 60 | 1144 | 4:36 |
-| `pathetique-2` | Pathétique Sonata (2nd movement) | Beethoven | 36 | 1626 | 4:03 |
-| `rondo-alla-turca` | Rondo alla Turca | Mozart | 126 | 2463 | 3:25 |
-| `k545-1` | Sonata facile, K. 545 (1st movement) | Mozart | 132 | 2568 | 4:25 |
-| `clair-de-lune` | Clair de Lune | Debussy | 120 | 1494 | 5:22 |
-| `arabesque-1` | Première Arabesque | Debussy | 100 | 1458 | 4:13 |
-| `gymnopedie-1` | Gymnopédie No. 1 | Satie | 66 | 455 | 3:32 |
-| `gymnopedie-3` | Gymnopédie No. 3 | Satie | 66 | 326 | 2:43 |
-| `fantaisie-impromptu` | Fantaisie-Impromptu | Chopin | 168 | 2998 | 3:17 |
-| `prelude-op28-4` | Prelude Op. 28 No. 4 | Chopin | 56 | 600 | 1:48 |
-| `prelude-op28-7` | Prelude Op. 28 No. 7 | Chopin | 66 | 168 | 0:43 |
-| `prelude-op28-15` | Prelude Op. 28 No. 15 (Raindrop) | Chopin | 80 | 1518 | 4:27 |
-| `nocturne-op9-no1` | Nocturne Op. 9 No. 1 | Chopin | 116 | 1714 | 4:24 |
-| `waltz-op64-no1` | Minute Waltz, Op. 64 No. 1 | Chopin | 280 | 1370 | 1:29 |
-| `mountain-king` | In the Hall of the Mountain King | Grieg | 138 | 1453 | 2:32 |
-| `traumerei` | Träumerei | Schumann | 56 | 341 | 1:43 |
-| `invention-1` | Invention No. 1, BWV 772 | Bach | 84 | 458 | 1:02 |
-| `impromptu-op90-4` | Impromptu Op. 90 No. 4 | Schubert | 130 | 5843 | 7:33 |
-| `consolation-3` | Consolation No. 3 | Liszt | 52 | 1032 | 4:40 |
-| `waltz-op39-15` | Waltz Op. 39 No. 15 | Brahms | 116 | 720 | 1:07 |
+| Gymnopédie No. 2 | Satie | 66 | 371 | 2:57 | 1.1 |
+| Prelude Op. 28 No. 20 | Chopin | 42 | 286 | 1:14 | 1.5 |
+| Sonata K. 331 (theme) | Mozart | 112 | 476 | 1:55 | 2.8 |
+| Gnossienne No. 1 | Satie | 100 | 832 | 3:16 | 3.2 |
+| Canon in D | Pachelbel | 55 | 818 | 4:05 | 3.3 |
+| Canon in D (run test) | Pachelbel | 55 | 624 | 2:51 | 3.6 |
+| Menuett, WoO 82 | Beethoven | 112 | 1160 | 3:15 | 3.7 |
+| Ode to Joy | Beethoven | 160 | 149 | 0:24 | 3.8 |
+| Prelude in C, BWV 846 | Bach | 60 | 549 | 2:20 | 3.9 |
+| Nocturne Op. 9 No. 2 | Chopin | 132 | 1231 | 3:22 | 4.0 |
+| Minuet in G minor, BWV Anh. 115 | Petzold | 140 | 398 | 1:22 | 4.6 |
+| Melodie, Op. 68 No. 1 | Schumann | 92 | 303 | 1:02 | 4.7 |
+| Minuet in G, BWV Anh. 114 | Petzold | 140 | 408 | 1:22 | 4.9 |
+| La Candeur, Op. 100 No. 1 | Burgmüller | 152 | 340 | 1:00 | 4.9 |
+| The Entertainer | Joplin | 72 | 2621 | 4:12 | 5.4 |
+| Für Elise | Beethoven | 144 | 1038 | 2:35 | 5.9 |
+| L'Arabesque, Op. 100 No. 2 | Burgmüller | 152 | 357 | 0:43 | 6.2 |
+| Albumblatt, Op. 12 No. 3 | Grieg | 112 | 614 | 1:08 | 6.7 |
 
-**Adlar orijinal dilinde ya da yerleşik İngilizcesiyle**, Türkçeleştirilmiyor:
-"Für Elise", "Clair de Lune", "Ode to Joy". Künye metinleri Türkçe — onlar ad
-değil, cümle.
+**Adlar orijinal dilinde ya da yerleşik İngilizcesiyle**, Türkçeleştirilmiyor.
+Künye metinleri Türkçe — onlar ad değil, cümle.
+
+### Bir kez 38'e çıkıp 18'e döndü
+
+Bir partide yirmi "yaygın" klasik parça eklendi: Ay Işığı, Pathétique,
+Rondo alla Turca, K545, Clair de Lune, Arabesque, Fantaisie-Impromptu, üç
+Chopin prelüdü, Minute Waltz, Dağ Kralı, Träumerei, envansiyon, Schubert
+impromptusü, Liszt Consolation'ı, Brahms valsi, iki Gymnopédie.
+
+Oyuncu kaldırttı. Sebebi ölçülebilir: "yaygın" diye seçilmişlerdi, ama yaygın
+çalınabilir demek değil. Fantaisie-Impromptu saniyede **14,9** dokunuş
+istiyordu, Minute Waltz 11,0 — bu oyunun hedefi ise hiç piyano çalmamış
+birinin iyi ses çıkarması. Kararı geri almak `tool/catalog.dart`'tan yirmi
+kaydı silip aracı yeniden çalıştırmak oldu.
+
+Kalıcı olarak kalan iki şey: **dokunuş/saniye ölçüsü** (`SongInfo.tapCount`,
+liste onunla sıralanıyor ve her satırda Sakin/Akıcı/Hızlı/Çok hızlı yazıyor)
+ve o parti sırasında araca eklenen bütün nüsha temizliği — `\layout` ve
+`\paper` blokları, yorumlar, eski Scheme çağrıları, otomatik `\unfoldRepeats`.
 
 ### Şarkı eklemek
 
@@ -719,11 +731,14 @@ Müziğin kendisi hepsinde kamu malı. Ama **baskılar aynı lisansta değil**:
 - **Nokturn: CC BY-SA 3.0.** Dizgicinin (Renato Biolcati Rinaldi) adı
   anılmalı ve baskıdan türetilen her şey — `scores.g.dart`'taki MIDI ve
   ondan çıkan nota verisi dahil — aynı lisansı taşır.
+- Petzold menuetleri, Beethoven'ın menueti, iki Burgmüller, Mozart'ın KV 331
+  teması, Chopin'in 20. prelüdü, Gymnopédie No. 2, The Entertainer: dizgiciler
+  baskıyı kamu malına bırakmış.
+- Schumann'ın Melodie'si ve Grieg'in Albumblatt'ı: CC BY-SA.
 - **Kanon: CC BY 4.0** (Michael Fischer v. Mollard'ın nüshası). Atıf ister,
   share-alike istemez. Piyano düzenlemesi artık bizim, ama notalar onun
   nüshasından geldiği için atıf yine gerekiyor.
 - **Gnossienne: CC BY-SA 4.0** (Knute Snortum). Nokturn'le aynı durum.
-- The Entertainer: dizgici baskıyı kamu malına bırakmış.
 
 Şu an uyumluyuz: `source` alanında dizgici ve lisans yazıyor, oyun içinde
 şarkı listesinde görünüyor, `song_library_test.dart` bunu kontrol ediyor.
