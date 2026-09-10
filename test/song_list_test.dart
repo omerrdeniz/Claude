@@ -7,6 +7,10 @@ import 'package:piano_flow/screens/play_screen.dart';
 import 'package:piano_flow/screens/song_list_screen.dart';
 
 void main() {
+  /// Named from the catalogue: the library is long enough now that writing a
+  /// song's name into a test is writing down which one happens to be first.
+  final firstSong = SongLibrary.all.first.title;
+
   /// A tall surface, so the whole list fits without scrolling.
   Future<void> pumpList(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(420, 1400));
@@ -85,7 +89,8 @@ void main() {
     await tester.tap(find.ancestor(
         of: find.text('%40'), matching: find.byType(InkWell)));
     await tester.pump();
-    await tester.tap(find.text('Neşeye Övgü'));
+    await tester.scrollUntilVisible(find.text(firstSong), 200);
+    await tester.tap(find.text(firstSong));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -139,8 +144,8 @@ void main() {
     expect(find.text('+30 ms'), findsOneWidget);
     expect(find.text('Dokunuşların 30 ms erken sayılıyor'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Neşeye Övgü'), 200);
-    await tester.tap(find.text('Neşeye Övgü'));
+    await tester.scrollUntilVisible(find.text(firstSong), 200);
+    await tester.tap(find.text(firstSong));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

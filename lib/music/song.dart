@@ -70,8 +70,11 @@ class Song {
   /// Notes grouped by onset: everything struck together is one tap.
   ///
   /// The tolerance absorbs the jitter of a human-performed MIDI file, where
-  /// the notes of a chord land a few milliseconds apart.
-  List<List<Note>> chordsOf(Iterable<Note> voice, {double tolerance = 0.03}) {
+  /// the notes of a chord land a few milliseconds apart. It is thirty
+  /// milliseconds by default — a length of time, converted here into this
+  /// song's beats, because a hand does not know what a beat is.
+  List<List<Note>> chordsOf(Iterable<Note> voice, {double? tolerance}) {
+    tolerance ??= 0.03 * bpm / 60;
     final sorted = [...voice]..sort((a, b) => a.beat.compareTo(b.beat));
     final out = <List<Note>>[];
     for (final note in sorted) {

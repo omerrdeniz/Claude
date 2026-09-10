@@ -71,7 +71,6 @@ String _recipeOf(Score score) => [
       score.url ?? '',
       score.patchUrl ?? '',
       score.entry ?? '',
-      score.unfoldAt ?? '',
       for (final name in [score.local, score.assemble])
         if (name != null) File('$_scoreDir/$name').readAsStringSync(),
     ].join(' ');
@@ -159,19 +158,16 @@ Future<List<int>> _render(Score score) async {
         .whereType<File>()
         .where((f) => f.path.endsWith('.ly') || f.path.endsWith('.ily'));
     for (final file in sources) {
-      await _run('convert-ly', ['-e', file.path], entry.parent.path);
+      // Best effort: an included file without a \version of its own makes
+      // convert-ly complain and skip it, which is fine — there is nothing
+      // there to upgrade. LilyPond itself is the judge of whether the result
+      // compiles.
+      await _run('convert-ly', ['-e', file.path], entry.parent.path,
+          mustSucceed: false);
       await file.writeAsString(_shapeForMidi(await file.readAsString()));
     }
 
-    if (score.unfoldAt != null) {
-      final text = await entry.readAsString();
-      if (!text.contains(score.unfoldAt!)) {
-        throw StateError('${score.id}: no "${score.unfoldAt}" to unfold '
-            'repeats around — the upstream file has changed shape');
-      }
-      await entry.writeAsString(text.replaceFirst(
-          score.unfoldAt!, r'\unfoldRepeats ' + score.unfoldAt!));
-    }
+    await entry.writeAsString(_unfolded(await entry.readAsString(), score.id));
 
     await _run('lilypond',
         ['-dno-point-and-click', '-o', score.id, entry.path], entry.parent.path);
@@ -193,11 +189,14 @@ Future<File> _unpack(Score score, Directory work) async {
   await archive.writeAsBytes(await _download(score.url!));
   await _run('unzip', ['-q', '-o', archive.path], work.path);
 
-  final unpacked = work.listSync().whereType<Directory>().firstWhere(
-        (d) => d.path.endsWith('-lys'),
-        orElse: () => throw StateError(
-            '${score.id}: the archive did not unpack into a folder of sources'),
-      );
+  // Most archives unpack into a folder named for themselves; some spill
+  // their files straight out.
+  final unpacked = work
+          .listSync()
+          .whereType<Directory>()
+          .where((d) => d.path.endsWith('-lys'))
+          .firstOrNull ??
+      work;
 
   if (score.patchUrl != null) {
     final patch = File('${work.path}/arrangement.patch');
@@ -219,13 +218,96 @@ Future<File> _unpack(Score score, Directory work) async {
   return entry;
 }
 
+/// Put `\unfoldRepeats` around the music the MIDI is rendered from, so a
+/// volta bracket comes out as the notes a performer actually plays.
+///
+/// It has to go in the right `\score` block. Editions routinely carry two —
+/// one for the page and one for the MIDI — and putting it round the printed
+/// one changes nothing audible while looking as though it worked. That was a
+/// per-score setting once, which is a thing to get wrong quietly on every
+/// score added; now the block is found by looking for the one that has a
+/// `\midi` in it.
+///
+/// Inside that block it goes immediately after the opening brace, in front
+/// of whatever music expression follows — which may be `{ ... }`, `<< ... >>`,
+/// a `\new PianoStaff`, or the bare name of a variable holding any of those.
+/// Editions use all four, and a rule that looked for staves missed the ones
+/// that keep their staves in a variable.
+///
+/// Applied to every score, repeats or not: unfolding a piece that has none
+/// does nothing.
+String _unfolded(String text, String id) {
+  final blocks = _blocksOf(text, r'\score');
+  final sounding =
+      blocks.where((b) => text.substring(b.$1, b.$2).contains(r'\midi'));
+  final target = sounding.isEmpty ? blocks : sounding;
+  if (target.isEmpty) throw StateError(r'no \score block to render in ' + id);
+
+  final block = target.first;
+  var at = text.indexOf('{', block.$1) + 1;
+  // A score may open with its own header; the music comes after it.
+  final header = RegExp(r'^\s*\\header\s*\{').firstMatch(text.substring(at));
+  if (header != null) {
+    final headerBlock = _blocksOf(text.substring(at), r'\header').first;
+    at += headerBlock.$2;
+  }
+  return '${text.substring(0, at)} \\unfoldRepeats ${text.substring(at)}';
+}
+
+/// Every `\name { ... }` block in [text], as (start, end) offsets, braces
+/// matched so a nested block does not end its parent early.
+List<(int, int)> _blocksOf(String text, String keyword) {
+  // Word-bounded: `\score` must not match the `\scoreAll` that half the
+  // Chopin editions keep their music in. That one cost an afternoon.
+  final word = RegExp('${RegExp.escape(keyword)}' r'(?![A-Za-z])');
+  final out = <(int, int)>[];
+  var i = 0;
+  while (true) {
+    final found = word.firstMatch(text.substring(i));
+    if (found == null) return out;
+    final start = i + found.start;
+    final open = text.indexOf('{', start);
+    if (open == -1) return out;
+    var depth = 0;
+    var at = open;
+    while (at < text.length) {
+      if (text[at] == '{') depth++;
+      if (text[at] == '}') depth--;
+      at++;
+      if (depth == 0) break;
+    }
+    out.add((start, at));
+    i = at;
+  }
+}
+
 /// Strip a source of everything that only matters when engraving.
 ///
 /// Rendering the picture takes far longer than the MIDI and produces a PDF
 /// nothing here reads. It also sidesteps a pile of old engraving syntax that
 /// no longer compiles.
 String _shapeForMidi(String text) {
-  var out = _stripLayout(text);
+  // `\layout` is how a score is engraved and `\paper` is the page it is
+  // engraved on. Neither has anything to do with what the piece sounds like,
+  // and both carry old syntax that fails the build long after the MIDI has
+  // been written — the worst kind of failure to have to read.
+  // Comments first, and not only for tidiness: a commented-out `\midi` is
+  // how one edition offers a MIDI score you have to switch on, and reading
+  // it as a real one sends the unfolding into the printed score instead.
+  var out = _uncommented(text);
+  out = _stripBlocks(out, r'\layout');
+  out = _stripBlocks(out, r'\paper');
+  // Beaming is a picture. `override-auto-beam-setting` is old Scheme that
+  // convert-ly leaves alone in files claiming a recent version, and it stops
+  // the build dead — after LilyPond has already written a perfectly good
+  // MIDI, which is the worst kind of failure to trust.
+  for (final call in ['override-auto-beam-setting', 'revert-auto-beam-setting']) {
+    out = _stripScheme(out, call);
+  }
+  // Some editions already unfold their MIDI score, in syntax whose Scheme
+  // procedure has since changed shape and now fails to load. Ours goes on
+  // afterwards and does the same job, so this one just goes.
+  out = out.replaceAll(RegExp(r'\\applyMusic\s+#unfold-repeats'), '');
   // `set-octavation` is a Scheme call convert-ly leaves alone in files that
   // already claim a recent version. It draws the 8va bracket and moves the
   // printed notes under it; the sounding pitch is what the source says either
@@ -235,15 +317,74 @@ String _shapeForMidi(String text) {
   return out;
 }
 
-/// Cut every `\layout { ... }` block out of [text], braces matched.
-///
-/// A regular expression will not do it: these blocks nest, and the one in the
-/// Chopin carries a whole `\context` inside it.
-String _stripLayout(String text) {
+/// Cut every `#(name ...)` Scheme call out of [text], parens matched.
+String _stripScheme(String text, String name) {
   final out = StringBuffer();
   var i = 0;
   while (true) {
-    final start = text.indexOf(r'\layout', i);
+    final start = text.indexOf('#($name', i);
+    if (start == -1) {
+      out.write(text.substring(i));
+      return out.toString();
+    }
+    out.write(text.substring(i, start));
+
+    var depth = 0;
+    var at = start + 1;
+    while (at < text.length) {
+      if (text[at] == '(') depth++;
+      if (text[at] == ')') depth--;
+      at++;
+      if (depth == 0) break;
+    }
+    if (depth != 0) throw StateError('unbalanced parens after #($name');
+    i = at;
+  }
+}
+
+/// Drop LilyPond's comments: `%{ ... %}` blocks and `%` to end of line.
+///
+/// Quotes are tracked, so a per cent sign inside a title stays where it is.
+String _uncommented(String text) {
+  final out = StringBuffer();
+  var quoted = false;
+  var block = false;
+  for (var i = 0; i < text.length; i++) {
+    final c = text[i];
+    if (block) {
+      if (c == '%' && i + 1 < text.length && text[i + 1] == '}') {
+        block = false;
+        i++;
+      }
+      continue;
+    }
+    if (c == '"' && (i == 0 || text[i - 1] != r'\')) quoted = !quoted;
+    if (!quoted && c == '%') {
+      if (i + 1 < text.length && text[i + 1] == '{') {
+        block = true;
+        i++;
+        continue;
+      }
+      while (i < text.length && text[i] != '\n') {
+        i++;
+      }
+      out.write('\n');
+      continue;
+    }
+    out.write(c);
+  }
+  return out.toString();
+}
+
+/// Cut every `\keyword { ... }` block out of [text], braces matched.
+///
+/// A regular expression will not do it: these blocks nest, and the `\layout`
+/// in the Chopin carries a whole `\context` inside it.
+String _stripBlocks(String text, String keyword) {
+  final out = StringBuffer();
+  var i = 0;
+  while (true) {
+    final start = text.indexOf(keyword, i);
     if (start == -1) {
       out.write(text.substring(i));
       return out.toString();
@@ -251,7 +392,7 @@ String _stripLayout(String text) {
     out.write(text.substring(i, start));
 
     final open = text.indexOf('{', start);
-    if (open == -1) throw StateError(r'a \layout with no block after it');
+    if (open == -1) throw StateError('a $keyword with no block after it');
     var depth = 0;
     var at = open;
     while (at < text.length) {
@@ -260,7 +401,7 @@ String _stripLayout(String text) {
       at++;
       if (depth == 0) break;
     }
-    if (depth != 0) throw StateError(r'unbalanced braces in a \layout block');
+    if (depth != 0) throw StateError('unbalanced braces in a $keyword block');
     i = at;
   }
 }
@@ -344,8 +485,10 @@ Future<List<int>> _download(String url) async {
   }
 }
 
-Future<void> _run(String executable, List<String> args, String cwd) async {
+Future<void> _run(String executable, List<String> args, String cwd,
+    {bool mustSucceed = true}) async {
   final result = await Process.run(executable, args, workingDirectory: cwd);
+  if (result.exitCode != 0 && !mustSucceed) return;
   if (result.exitCode != 0) {
     stderr.writeln(result.stdout);
     stderr.writeln(result.stderr);

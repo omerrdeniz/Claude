@@ -1,8 +1,8 @@
 # Durum ve devir notu
 
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
-sürdürebilmesi için yazıldı. Son güncelleme: sürükleme mekaniği baştan
-yazıldı — artık takip edilen bir boncuk var.
+sürdürebilmesi için yazıldı. Son güncelleme: kütüphane 28 parçaya çıktı,
+adlar orijinal diline döndü.
 
 ## Proje
 
@@ -454,16 +454,42 @@ buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
 
 ## Şarkılar
 
-| id | Ad | BPM | Nota | Süre | Kaynak |
+Yirmi sekiz parça, hepsi kamu malı, hepsi basılı nüshadan.
+
+| id | Ad | Besteci | BPM | Nota | Süre |
 |---|---|---|---|---|---|
-| `canon-run-test` | Kanon — koşu denemesi | 55 (♩) | 624 | 2:51 | Kanon'un 18. ölçüsünden |
-| `ode-to-joy` | Neşeye Övgü | 160 (♩) | 149 | 0:24 | Piano Flow düzenlemesi |
-| `canon-in-d` | Kanon, Re Majör | 55 (♩) | 818 | 4:05 | Mutopia + Piano Flow düzenlemesi |
-| `fur-elise` | Für Elise | 144 (♪) | 1038 | 2:35 | Mutopia WoO 59 |
-| `prelude-in-c` | Prelüd, Do Majör | 60 (♩) | 549 | 2:20 | Mutopia BWV 846 |
-| `entertainer` | The Entertainer | 72 (♩) | 2621 | 4:12 | Mutopia, Joplin 1902 |
-| `gnossienne-1` | Gnossienne No. 1 | 100 (♩) | 832 | 3:16 | Mutopia, Satie 1890 |
-| `nocturne-op9-no2` | Nokturn, Mi Bemol Majör | 132 (♪) | 1231 | 3:22 | Mutopia Op. 9 No. 2 |
+| `canon-run-test` | Canon in D (run test) | Pachelbel | 55 | 624 | 2:51 |
+| `ode-to-joy` | Ode to Joy | Beethoven | 160 | 149 | 0:24 |
+| `canon-in-d` | Canon in D | Pachelbel | 55 | 818 | 4:05 |
+| `fur-elise` | Für Elise | Beethoven | 144 | 1038 | 2:35 |
+| `prelude-in-c` | Prelude in C, BWV 846 | Bach | 60 | 549 | 2:20 |
+| `entertainer` | The Entertainer | Joplin | 72 | 2621 | 4:12 |
+| `gnossienne-1` | Gnossienne No. 1 | Satie | 100 | 832 | 3:16 |
+| `nocturne-op9-no2` | Nocturne Op. 9 No. 2 | Chopin | 132 | 1231 | 3:22 |
+| `moonlight-1` | Moonlight Sonata (1st movement) | Beethoven | 60 | 1144 | 4:36 |
+| `pathetique-2` | Pathétique Sonata (2nd movement) | Beethoven | 36 | 1626 | 4:03 |
+| `rondo-alla-turca` | Rondo alla Turca | Mozart | 126 | 2463 | 3:25 |
+| `k545-1` | Sonata facile, K. 545 (1st movement) | Mozart | 132 | 2568 | 4:25 |
+| `clair-de-lune` | Clair de Lune | Debussy | 120 | 1494 | 5:22 |
+| `arabesque-1` | Première Arabesque | Debussy | 100 | 1458 | 4:13 |
+| `gymnopedie-1` | Gymnopédie No. 1 | Satie | 66 | 455 | 3:32 |
+| `gymnopedie-3` | Gymnopédie No. 3 | Satie | 66 | 326 | 2:43 |
+| `fantaisie-impromptu` | Fantaisie-Impromptu | Chopin | 168 | 2998 | 3:17 |
+| `prelude-op28-4` | Prelude Op. 28 No. 4 | Chopin | 56 | 600 | 1:48 |
+| `prelude-op28-7` | Prelude Op. 28 No. 7 | Chopin | 66 | 168 | 0:43 |
+| `prelude-op28-15` | Prelude Op. 28 No. 15 (Raindrop) | Chopin | 80 | 1518 | 4:27 |
+| `nocturne-op9-no1` | Nocturne Op. 9 No. 1 | Chopin | 116 | 1714 | 4:24 |
+| `waltz-op64-no1` | Minute Waltz, Op. 64 No. 1 | Chopin | 280 | 1370 | 1:29 |
+| `mountain-king` | In the Hall of the Mountain King | Grieg | 138 | 1453 | 2:32 |
+| `traumerei` | Träumerei | Schumann | 56 | 341 | 1:43 |
+| `invention-1` | Invention No. 1, BWV 772 | Bach | 84 | 458 | 1:02 |
+| `impromptu-op90-4` | Impromptu Op. 90 No. 4 | Schubert | 130 | 5843 | 7:33 |
+| `consolation-3` | Consolation No. 3 | Liszt | 52 | 1032 | 4:40 |
+| `waltz-op39-15` | Waltz Op. 39 No. 15 | Brahms | 116 | 720 | 1:07 |
+
+**Adlar orijinal dilinde ya da yerleşik İngilizcesiyle**, Türkçeleştirilmiyor:
+"Für Elise", "Clair de Lune", "Ode to Joy". Künye metinleri Türkçe — onlar ad
+değil, cümle.
 
 ### Şarkı eklemek
 
@@ -501,6 +527,26 @@ Elle verilmesi gereken yalnızca üç şey var, çünkü nüsha bunları söylem
 - `credit` — ne olduğu ve hangi lisansla geldiği. CC bir baskı için bu nezaket
   değil, kullanma şartı.
 
+Araç nüshalardaki eskimiş sözdizimini kendi temizliyor — yirmi parça
+eklerken çıkanların hepsi kalıcı olarak çözüldü, çünkü hepsi bir sonraki
+partide yine çıkacak cinsten:
+
+- **`\layout` ve `\paper` blokları atılıyor.** İkisi de yalnız basılı sayfayı
+  ilgilendiriyor ve ikisi de MIDI yazıldıktan *sonra* derlemeyi düşürüyor —
+  okunması en zor hata türü.
+- **Yorumlar atılıyor.** Süs değil: bir nüsha MIDI bloğunu yorum içinde
+  saklıyor ve onu gerçek sanmak tekrar-açmayı yanlış score'a gönderiyor.
+- **Eski Scheme çağrıları** (`override-auto-beam-setting`,
+  `revert-auto-beam-setting`, `set-octavation`, `\applyMusic #unfold-repeats`)
+  ayıklanıyor. Hepsi ya çizimle ilgili ya da bizim zaten yaptığımız şey.
+- **`convert-ly` başarısızlığı ölümcül değil**: `\version`'ı olmayan bir
+  include dosyasına takılıyor, ki yükseltilecek bir şeyi de yok.
+- **`\unfoldRepeats` artık elle verilmiyor.** Araç `\midi` içeren `\score`
+  bloğunu bulup müziği onun içinde sarıyor. Eskiden her parça için "hangi
+  metnin önüne" diye bir alan vardı; sessizce yanlış score'a koymak için
+  birebir uygun bir tasarım. (`\score` ararken kelime sınırı şart: yarım
+  Chopin nüshası müziğini `\scoreAll` adlı bir değişkende tutuyor.)
+
 Araç dört tür kaynak biliyor:
 
 | | ne verilir |
@@ -533,6 +579,26 @@ doğruluyor, ve diğer bütün şarkıların `startBeat`'inin sıfır kaldığı
 
 Bu aslında bir çalışma özelliğinin yarısı: "N. ölçüden başla" öğrenen
 herkesin istediği şey. Eksik olan yalnızca arayüzü.
+
+### Vuruş değil saniye — üçüncü kez
+
+Bu oyunda üç ayrı eşik vuruş cinsinden yazılmıştı ve üçü de her parçada
+başka bir süre anlamına geliyordu. El vuruş nedir bilmez.
+
+| Eşik | Vuruşken | Şimdi |
+|---|---|---|
+| Basılı tutma (`Tap.holdSeconds`) | 469–1364 ms arası | 0.7 sn |
+| Aynı anda sayılma (`Chart.onsetSeconds`) | 14–33 ms arası | 0.03 sn |
+| Kolay modda seyreltme (`Chart._divideVoices`) | **188–545 ms arası** | **hâlâ vuruş** |
+
+Sonuncusu duruyor: "Kolay", Kanon'da 545 ms, Ode to Joy'da 188 ms aralık
+bırakıyor — yani en kolay şarkının Kolay modu en zorunkinden üç kat sıkı.
+Aynı düzeltme, aşağıda "Sıradaki iş"te.
+
+Aynı anda sayılma eşiği yirmi parça eklenince patladı: Chopin'in çapraz
+ritimleri gerçekten iki eli on beş milisaniye arayla koyuyor
+(Fantaisie-Impromptu), Minute Waltz'ın süslemesi yirmi iki milisaniye. Bunlar
+bozuk içe aktarma değil, müziğin kendisi.
 
 ### Neden base64 değil, varlık
 

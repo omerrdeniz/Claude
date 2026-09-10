@@ -171,6 +171,7 @@ class Chart {
   static Hand handAt(double across) => across < 0.5 ? Hand.left : Hand.right;
 
   static Chart build(Song song, {Difficulty difficulty = Difficulty.normal}) {
+    final onsetTolerance = onsetToleranceAt(song.bpm);
     final (played, auto) = _divideVoices(song, difficulty);
     final taps = <Tap>[];
 
@@ -205,7 +206,7 @@ class Chart {
           : rightZoneStart + position * (rightZoneEnd - rightZoneStart);
     }
 
-    for (final moment in _byOnset(played)) {
+    for (final moment in _byOnset(played, onsetTolerance)) {
       // Within a moment, the hands are answered separately when the level
       // separates them; otherwise the whole moment is one touch.
       final groups = <Hand, List<Note>>{};
@@ -320,6 +321,7 @@ class Chart {
   static Map<int, List<Tap>> _findRuns(
       List<Tap> taps, Song song, bool separatesHands) {
     final secondsPerBeat = 60 / song.bpm;
+    final onsetTolerance = onsetToleranceAt(song.bpm);
     final byHand = <Hand, List<Tap>>{};
     for (final tap in taps) {
       (byHand[separatesHands ? tap.hand : Hand.right] ??= []).add(tap);
@@ -363,13 +365,26 @@ class Chart {
     return runs;
   }
 
-  /// How far apart two notes can be and still count as struck together. Wide
-  /// enough to absorb the jitter of a human-performed MIDI file.
-  static const double onsetTolerance = 0.03;
+  /// How far apart two notes can be and still count as struck together, in
+  /// seconds.
+  ///
+  /// Wide enough to absorb the jitter of a human-performed MIDI file, and to
+  /// take in the ornaments some editions write out as real notes rather than
+  /// grace notes — the Minute Waltz has a pair twenty-two milliseconds apart,
+  /// which no hand plays as two touches and no ear hears as two attacks.
+  ///
+  /// **In seconds, and that matters.** It was in beats, which made it 14 ms
+  /// in the Rondo and 33 in the canon; the third setting in this game to
+  /// have been written in beats and mean something different in every piece.
+  static const double onsetSeconds = 0.03;
+
+  /// The same, in the beats of a piece at [bpm].
+  static double onsetToleranceAt(double bpm) => onsetSeconds * bpm / 60;
 
   /// Split the song into what the player plays and what plays itself.
   static (List<Note>, List<Note>) _divideVoices(
       Song song, Difficulty difficulty) {
+    final onsetTolerance = onsetToleranceAt(song.bpm);
     final all = [...song.melody, ...song.accompaniment];
     if (difficulty != Difficulty.easy) return (all, const []);
 
@@ -382,7 +397,7 @@ class Chart {
     final passed = <Note>[];
     var lastKept = double.negativeInfinity;
 
-    for (final moment in _byOnset(all)) {
+    for (final moment in _byOnset(all, onsetTolerance)) {
       if (moment.first.beat >= lastKept + minGap - 0.001) {
         lastKept = moment.first.beat;
         kept.addAll(moment);
@@ -394,7 +409,7 @@ class Chart {
   }
 
   /// Group notes that are struck together.
-  static List<List<Note>> _byOnset(List<Note> notes) {
+  static List<List<Note>> _byOnset(List<Note> notes, double onsetTolerance) {
     final sorted = [...notes]..sort((a, b) => a.beat.compareTo(b.beat));
     final out = <List<Note>>[];
     for (final note in sorted) {

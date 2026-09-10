@@ -155,9 +155,16 @@ void main() {
 
       // Not a promise that every touch can be caught — at their written
       // tempo these pieces run past what a finger can do, and Chopin's
-      // thirty-second triplets leave 76 ms. What it catches is an import
-      // gone wrong: an ornament left in, or a chord split into a stutter of
-      // separate touches a few milliseconds apart.
+      // thirty-second triplets leave 76 ms. What it catches is a chord split
+      // into a stutter of separate touches a few milliseconds apart, which
+      // is what a bad import looks like.
+      //
+      // The bound is the tolerance itself: anything at or under it has
+      // already been gathered into one touch, so a gap below it means the
+      // gathering did not work. It used to be a flat 50 ms, which was fine
+      // for four simple pieces and wrong the moment Chopin's cross-rhythms
+      // arrived — the Fantaisie-Impromptu really does put a right hand
+      // fifteen milliseconds off the left, and that is the music.
       test('no two touches land close enough to be one mangled chord', () {
         final moments = song.chordsOf(song.notes);
         expect(moments, isNotEmpty);
@@ -165,7 +172,7 @@ void main() {
         for (var i = 1; i < moments.length; i++) {
           final gap = (moments[i].first.beat - moments[i - 1].first.beat) *
               secondsPerBeat;
-          expect(gap, greaterThan(0.05),
+          expect(gap, greaterThan(Chart.onsetSeconds),
               reason: 'two moments ${(gap * 1000).round()} ms apart');
         }
       });
