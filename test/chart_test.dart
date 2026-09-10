@@ -283,13 +283,24 @@ void main() {
     List<Tap> runOf(Chart chart) =>
         chart.runs.isEmpty ? const [] : chart.runs.values.single;
 
-    test('three notes in a row close together make one', () {
+    test('notes close together and going on long enough make one', () {
+      final chart = Chart.build(
+        songOf([for (var i = 0; i < 6; i++) note(i * 0.25, 60 + i)]),
+        difficulty: Difficulty.normal,
+      );
+      expect(runOf(chart), hasLength(6));
+      expect(chart.taps.map((t) => t.runIndex), [0, 1, 2, 3, 4, 5]);
+    });
+
+    test('a flurry too short to get a finger onto is left as taps', () {
+      // Three notes an eighth of a second apart are over in a quarter of a
+      // second. The player could not catch them and there was nothing to
+      // gain: three taps is three taps.
       final chart = Chart.build(
         songOf([for (var i = 0; i < 3; i++) note(i * 0.25, 60 + i)]),
         difficulty: Difficulty.normal,
       );
-      expect(runOf(chart).map((t) => t.beat), [0, 0.25, 0.5]);
-      expect(chart.taps.map((t) => t.runIndex), [0, 1, 2]);
+      expect(chart.runs, isEmpty);
     });
 
     test('two are a flourish, not a run', () {
@@ -312,13 +323,14 @@ void main() {
     test('it ends where the hurry ends', () {
       final chart = Chart.build(
         songOf([
-          for (var i = 0; i < 4; i++) note(i * 0.25, 60 + i),
-          note(4, 72), // a beat and a half later: the hand has caught up
-          note(5, 74),
+          for (var i = 0; i < 6; i++) note(i * 0.25, 60 + i),
+          note(6, 72), // well over a beat later: the hand has caught up
+          note(7, 74),
         ]),
         difficulty: Difficulty.normal,
       );
-      expect(runOf(chart).map((t) => t.beat), [0, 0.25, 0.5, 0.75]);
+      expect(runOf(chart).map((t) => t.beat),
+          [0, 0.25, 0.5, 0.75, 1.0, 1.25]);
     });
 
     test('a chord is a moment, not a hurry', () {
@@ -333,13 +345,13 @@ void main() {
     test('the other hand does not break it', () {
       final chart = Chart.build(
         songOf([
-          for (var i = 0; i < 4; i++) note(i * 0.25, 72 + i),
+          for (var i = 0; i < 6; i++) note(i * 0.25, 72 + i),
           note(0.3, 48, hand: Hand.left),
           note(0.6, 50, hand: Hand.left),
         ]),
         difficulty: Difficulty.normal,
       );
-      expect(runOf(chart).map((t) => t.beat), [0, 0.25, 0.5, 0.75],
+      expect(runOf(chart), hasLength(6),
           reason: 'a left-hand note landing inside a right-hand run is not '
               'part of it and does not interrupt it');
     });
@@ -359,8 +371,12 @@ void main() {
 
     test('every run is in time order and long enough to be one', () {
       for (final song in shippedSongs) {
+        final secondsPerBeat = 60 / song.bpm;
         for (final run in Chart.build(song).runs.values) {
           expect(run.length, greaterThanOrEqualTo(Chart.runLength));
+          expect((run.last.beat - run.first.beat) * secondsPerBeat,
+              greaterThanOrEqualTo(Chart.runSeconds - 1e-9),
+              reason: '${song.title}: a run too short to join');
           for (var i = 1; i < run.length; i++) {
             expect(run[i].beat, greaterThan(run[i - 1].beat));
             expect(run[i].hand, run[i - 1].hand);

@@ -566,11 +566,11 @@ void main() {
   });
 
   group('following a run', () {
-    // Four notes an eighth of a second apart, rising: too fast to tap one at
-    // a time, and spread across the hand's zone so following them is real
-    // movement rather than holding still.
+    // Eight notes an eighth of a second apart, rising: too fast to tap one at
+    // a time, long enough to be worth joining, and spread across the hand's
+    // zone so following them is real movement rather than holding still.
     Song fastRun() =>
-        songOf([for (var i = 0; i < 4; i++) note(i * 0.25, 72 + i)]);
+        songOf([for (var i = 0; i < 8; i++) note(i * 0.25, 72 + i)]);
 
     /// Where each note of the run sits across the screen.
     List<double> placesOf(PlaySession session) =>
@@ -618,11 +618,50 @@ void main() {
           reason: 'but the run can be got hold of');
     });
 
-    test('a finger far from the bead takes nothing', () {
+    test('a finger anywhere in that hand takes the run', () {
+      // Aiming at the ring was too much to ask in the moment before a
+      // passage nobody can play. Entry is free; staying with it is not.
       final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
       seek(session, 0);
-      final away = session.runBeads.single.across + PlaySession.dragReach + 0.02;
-      expect(session.beginDrag(away.clamp(0.0, 1.0)), isNull);
+      for (final at in [Chart.rightZoneStart, 0.75, Chart.rightZoneEnd]) {
+        final fresh = sessionFor(fastRun(), difficulty: Difficulty.normal);
+        seek(fresh, 0);
+        expect(fresh.beginDrag(at), isNotNull, reason: 'at $at');
+      }
+    });
+
+    test('a finger in the other hand takes nothing', () {
+      final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
+      seek(session, 0);
+      expect(session.beginDrag(left), isNull,
+          reason: 'the run is in the right hand');
+    });
+
+    test('slowing the song down gives longer to get onto the bead', () {
+      // The practice speed is what a player reaches for when something is
+      // too fast to catch. It used to make no difference here at all.
+      double leadSeconds(double speed) {
+        final session = PlaySession(
+          chart: Chart.build(fastRun(), difficulty: Difficulty.normal),
+          audio: PianoAudio(engine: RecordingEngine()),
+          speed: speed,
+        )..start();
+        // Walk back until the bead is gone; that is how much warning there is.
+        var beats = 0.0;
+        while (beats < 20) {
+          session.update(Duration(
+              microseconds: ((-beats + session.leadInBeats) /
+                      session.beatsPerSecond *
+                      1e6)
+                  .round()));
+          if (session.runBeads.isEmpty) break;
+          beats += 0.05;
+        }
+        return beats / session.beatsPerSecond;
+      }
+
+      expect(leadSeconds(0.6), greaterThan(leadSeconds(1.0) * 1.5),
+          reason: 'at 60% speed there should be far more warning');
     });
 
     test('following the bead plays the run', () {
@@ -632,7 +671,7 @@ void main() {
         session.drag(drag, places[i]);
         seek(session, i * 0.25 + 0.05);
       }
-      expect(engine.struck.map((s) => s.$1), [72, 73, 74, 75]);
+      expect(engine.struck.map((s) => s.$1), [72, 73, 74, 75, 76, 77, 78, 79]);
       expect(session.scoreboard.counts[Verdict.miss], 0);
     });
 
@@ -642,7 +681,7 @@ void main() {
       // change of direction — the run dropped a note.
       final (session, drag) = joined();
       final places = placesOf(session);
-      session.drag(drag, places[1]); // within reach of the first three
+      session.drag(drag, places[1]); // within reach of the first few
       for (var i = 0; i < 3; i++) {
         seek(session, i * 0.25 + 0.05);
       }
@@ -654,11 +693,11 @@ void main() {
       // And the balance: staying put is only worth the notes within reach.
       final (session, drag) = joined();
       session.drag(drag, placesOf(session).first);
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 8; i++) {
         seek(session, i * 0.25 + 0.05);
       }
-      seek(session, 3);
-      expect(engine.struck.map((s) => s.$1), isNot(contains(75)),
+      seek(session, 4);
+      expect(engine.struck.map((s) => s.$1), isNot(contains(79)),
           reason: 'the run walked away from the finger');
       expect(session.scoreboard.counts[Verdict.miss], greaterThan(0));
     });
@@ -666,16 +705,16 @@ void main() {
     test('a run can be joined halfway through', () {
       // Missing the opening note used to cost the whole passage, with no way
       // back in.
-      final (session, drag) = joined(atBeat: 0.5);
-      session.drag(drag, placesOf(session)[3]);
-      seek(session, 0.8);
-      expect(engine.struck.map((s) => s.$1), [74, 75],
+      final (session, drag) = joined(atBeat: 1.0);
+      session.drag(drag, placesOf(session)[5]);
+      seek(session, 1.4);
+      expect(engine.struck.map((s) => s.$1), [76, 77],
           reason: 'the notes already gone are gone; the rest is playable');
     });
 
     test('a run never runs ahead of the music', () {
       final (session, drag) = joined();
-      session.drag(drag, placesOf(session)[3]); // finger already at the end
+      session.drag(drag, placesOf(session)[7]); // finger already at the end
       seek(session, 0.05);
       expect(engine.struck, isEmpty,
           reason: 'the later notes are not due yet');

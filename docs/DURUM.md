@@ -144,8 +144,29 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   Toplama değil, ekleme: koşunun notalarına tek tek basmak hâlâ mümkün ve
   aynı şekilde puanlanıyor.
 
-  Kapsam (Normal): Für Elise dokunuşlarının %12'si (3 koşu, en uzunu **62
-  nota**), Kanon %19, Nokturn %4, Neşeye Övgü ve Prelüd %0.
+  **Üçüncü düzeltme turu — kısa koşular kaldırıldı.** Oyuncu: *"sürüklemelerin
+  başlangıcını yakalamak çok zor, özellikle 3'lü olanları %60 hızda bile
+  yakalayamıyorum."* Üç ayrı sebep vardı:
+
+  1. **Kütüphanede iki tür hızlı geçit var, arada hiçbir şey yok:** çeyrek
+     saniyede biten 3 notalık çırpıntılar (26 tane) ve 11–62 notalık, 1–6
+     saniye süren gerçek koşular (13 tane). Çırpıntılar sürükleme olarak
+     sunuluyordu; 273 ms'de hareket eden bir halkaya parmak koymak yazı tura
+     ve üç dokunuş zaten üç dokunuş. Artık bir koşunun **en az 0.6 saniye**
+     sürmesi gerekiyor (`Chart.runSeconds`). Geriye kalan her koşu 11 nota
+     ve üstü.
+  2. **Boncuğa nişan almak gerekiyordu.** Artık o eldeki herhangi bir yere
+     dokunmak koşuyu alıyor. Girişi zorlaştırmanın koruduğu bir şey yok —
+     koşuya girmek yalnızca zaten çalamayacağın notaları ekliyor; mekaniğin
+     asıl istediği beceri *takipte kalmak*, onu `dragReach` hâlâ istiyor.
+  3. **Yavaşlatmak işe yaramıyordu.** `dragLeadMs` gerçek milisaniye
+     cinsindendi, yani %60 hızda da boncuk ilk notadan 500 ms önce
+     beliriyordu. Şimdi şarkının kendi zamanında (900 ms), yani %60'ta 1.5
+     saniye. Bir şey yakalanamayacak kadar hızlıysa insanın uzandığı ayar
+     bu; hiçbir şey yapmıyor olması kabul edilemezdi.
+
+  Kapsam (Normal, düzeltmelerden sonra): Kanon 8 koşu (hepsi 11 nota),
+  Für Elise 2 (46 ve 62 nota), Nokturn 2 (11 ve 14), diğerleri yok.
 
 - **Basılı tutma eşiği saniye cinsinden.** Bir nota, sesi 0.7 saniyeden uzun
   sürüyorsa basılı tutmalı sayılıyor (`Tap.holdSeconds`); `Chart.build` bunu
@@ -716,9 +737,9 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
    Cevap sürükleme mekaniği oldu (yukarıda, "Kabul edilenler"). Kimseden
    nota alınmıyor, kendi kendine hiçbir şey çalmıyor, tek tek basmak da
    hâlâ mümkün — yalnızca ikinci bir yol açıldı. **Ama henüz gerçek
-   telefonda oynanmadı** (ilk sürümü oynandı ve reddedildi; yukarıya bakın).
-   Bakılacaklar: `dragReach` (%15) çok mu geniş/dar; `dragLeadMs` (500 ms)
-   raya girmeye yetiyor mu; eşik ve minimum uzunluk.
+   telefonda oynanmadı** (ilk iki sürümü oynandı ve reddedildi; yukarıya
+   bakın). Bakılacaklar: `dragReach` (%15) çok mu geniş/dar; `dragLeadMs`
+   (900 ms) raya girmeye yetiyor mu.
 
    Eşik ölçümü (oyuncu sordu, karar verilmedi): nota araları kuantize
    olduğu için 150 ile 200 ms arasında neredeyse hiçbir şey yok — 200'ün

@@ -451,13 +451,19 @@ class PlaySession {
   /// Told when a run plays a note under a finger, so the screen can react.
   void Function(TapOutcome outcome)? onDragNote;
 
-  /// How long before its first note a run puts its bead on the line.
+  /// How long before its first note a run puts its bead on the line, in the
+  /// song's own time.
   ///
-  /// Longer than the judging window on purpose. The window is how late a
-  /// touch may be; this is how early a hand may get itself into position,
-  /// and a passage no one can tap is one you want to be on the rails for
-  /// before it arrives, not one you dive at.
-  static const double dragLeadMs = 500;
+  /// Far longer than the judging window, and for a different reason. The
+  /// window is how late a touch may be; this is how long a hand has to get
+  /// itself into position, and a person needs a quarter of a second just to
+  /// react to the ring appearing.
+  ///
+  /// In the song's time rather than the player's, so that **slowing a piece
+  /// down gives more of it**. It used to be in real milliseconds, which
+  /// meant the practice speed — the one thing a player reaches for when
+  /// something is too fast to catch — did not help at all.
+  static const double dragLeadMs = 900;
 
   /// Where each run on screen has got to, for the finger and the eye alike.
   ///
@@ -465,7 +471,7 @@ class PlaySession {
   /// it does not vanish from under a finger that is still on it.
   List<RunBead> get runBeads {
     if (chart.runs.isEmpty) return const [];
-    final lead = dragLeadMs / 1000 * beatsPerSecond;
+    final lead = dragLeadMs / 1000 * chart.song.bpm / 60;
     final tail = judge.windowMs / 1000 * beatsPerSecond;
     final now = _judgedBeat;
 
@@ -500,28 +506,37 @@ class PlaySession {
     return run.last.across;
   }
 
-  /// A finger went down at [across]. If a run's bead is under it, the finger
-  /// takes the run; returns the token the screen hands back to [drag].
+  /// A finger went down at [across]. If a run is on screen in that hand, the
+  /// finger takes it; returns the token the screen hands back to [drag].
   ///
-  /// Deliberately not tied to catching the run's first note. That was the
-  /// first version's worst failure: miss the opening note and the whole
-  /// passage was gone, with no way back in. A run can be joined wherever it
-  /// has got to, which is what a person expects of something they can see
-  /// moving.
+  /// **Anywhere in the hand, not on the bead.** Aiming at the ring was the
+  /// second version's failure: a finger has to arrive somewhere precise, in
+  /// the moment before a passage nobody can play, and the player could not
+  /// do it. There is nothing to protect by making entry hard — joining a run
+  /// only ever adds notes you could otherwise not play, and the skill the
+  /// mechanic is actually about is *staying* with the bead, which [dragReach]
+  /// still asks for.
+  ///
+  /// Nor is it tied to catching the run's first note; that was the first
+  /// version's failure. A run can be joined wherever it has got to.
   int? beginDrag(double across) {
     if (!_running) return null;
     final hand = Chart.handAt(across);
 
+    RunBead? nearest;
     for (final bead in runBeads) {
       if (chart.separatesHands && bead.hand != hand) continue;
-      if ((bead.across - across).abs() > dragReach) continue;
       if (_drags.values.any((drag) => drag.runId == bead.runId)) continue;
-
-      final id = _nextDragId++;
-      _drags[id] = _Drag(runId: bead.runId, across: across);
-      return id;
+      if (nearest == null ||
+          (bead.across - across).abs() < (nearest.across - across).abs()) {
+        nearest = bead;
+      }
     }
-    return null;
+    if (nearest == null) return null;
+
+    final id = _nextDragId++;
+    _drags[id] = _Drag(runId: nearest.runId, across: across);
+    return id;
   }
 
   /// The finger following a run has moved to [across].

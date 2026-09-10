@@ -288,6 +288,20 @@ class Chart {
   /// notes are a flourish; three are a run.
   static const int runLength = 3;
 
+  /// How long a run has to last to be worth joining, in seconds.
+  ///
+  /// The library turns out to hold exactly two kinds of fast passage, with
+  /// nothing in between: flurries of three notes over in a quarter of a
+  /// second (26 of them), and real runs of eleven to sixty-two notes lasting
+  /// one to six seconds (13 of them).
+  ///
+  /// The flurries were being offered as slides and the player could not
+  /// catch them — reasonably, since getting a finger onto a moving ring
+  /// inside 273 ms is a coin toss, and three taps is three taps anyway. The
+  /// slide is for passages a hand cannot answer at all; a quarter of a
+  /// second is not one of those, however tight its notes are.
+  static const double runSeconds = 0.6;
+
   /// Find the stretches too fast to tap, hand by hand.
   ///
   /// Hand by hand because the two are answered separately and independently:
@@ -316,7 +330,8 @@ class Chart {
             gapBeats > onsetTolerance && gapBeats * secondsPerBeat <= runGapSeconds;
         if (continues) continue;
 
-        if (i - start >= runLength) {
+        final span = (line[i - 1].beat - line[start].beat) * secondsPerBeat;
+        if (i - start >= runLength && span >= runSeconds) {
           final run = line.sublist(start, i);
           final id = nextId++;
           for (var j = 0; j < run.length; j++) {
