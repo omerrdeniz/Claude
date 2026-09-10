@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../game/chart.dart';
+import '../game/play_session.dart' show RunBead;
 import '../music/note.dart';
 import '../game/stage_geometry.dart';
 import '../theme/app_theme.dart';
@@ -50,6 +51,7 @@ class StagePainter extends CustomPainter {
     this.litHands = const {},
     this.holding = false,
     this.heldNotes = const {},
+    this.runBeads = const [],
   });
 
   final Chart chart;
@@ -72,6 +74,9 @@ class StagePainter extends CustomPainter {
   /// held, and pinning it there would draw a promise the player never made —
   /// it carries on down and leaves, tail and all, like any other missed note.
   final Set<(double, int)> heldNotes;
+
+  /// Where each run on screen has got to, and whether a finger is on it.
+  final List<RunBead> runBeads;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -253,6 +258,65 @@ class StagePainter extends CustomPainter {
     }
 
     _paintRunPaths(canvas, g, visible);
+    _paintRunBeads(canvas, g);
+  }
+
+  /// The bead a run is on: the note due now, sitting on the hit line.
+  ///
+  /// This is the whole of what makes a run playable rather than something
+  /// that happens near your hand. The thread says where the passage goes;
+  /// the bead says where it is *now*, and following it with a finger is the
+  /// game. Drawn last, over everything, because it is the thing to look at.
+  void _paintRunBeads(Canvas canvas, StageGeometry g) {
+    for (final bead in runBeads) {
+      final centre = Offset(g.xAtPosition(bead.across), g.hitLineY);
+      final radius = g.noteRadius * 1.15;
+
+      // A disc of the floor behind it, so the ring reads as a ring and not
+      // as one more note. A run's beads touch each other; an outline drawn
+      // straight over them disappears into the crowd, which is no use for
+      // the one thing on screen that is asking to be touched.
+      canvas.drawCircle(
+        centre,
+        radius,
+        Paint()..color = const Color(0xFF08080F).withValues(alpha: 0.75),
+      );
+
+      if (bead.tracked) {
+        // A finger is on it: light it up, so the hand can feel it is on the
+        // rails without looking away from the notes coming down.
+        canvas.drawCircle(
+          centre,
+          radius * 2.2,
+          Paint()
+            ..shader = RadialGradient(
+              colors: [
+                AppTheme.accentSoft.withValues(alpha: 0.45),
+                AppTheme.accentSoft.withValues(alpha: 0.0),
+              ],
+            ).createShader(
+                Rect.fromCircle(center: centre, radius: radius * 2.2)),
+        );
+        canvas.drawCircle(
+          centre,
+          radius,
+          Paint()..color = Colors.white.withValues(alpha: 0.85),
+        );
+      }
+
+      // Hollow when nobody is on it — a ring on the line saying "here, put a
+      // finger here" rather than a note pretending to have been played.
+      canvas.drawCircle(
+        centre,
+        radius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = bead.tracked ? 3.0 : 2.4
+          ..color = bead.tracked
+              ? Colors.white
+              : AppTheme.accentSoft.withValues(alpha: 0.95),
+      );
+    }
   }
 
   /// The thread through a run: a line joining notes that arrive faster than a
@@ -434,7 +498,8 @@ class StagePainter extends CustomPainter {
       old.chart != chart ||
       old.windowInBeats != windowInBeats ||
       old.holding != holding ||
-      old.litHands != litHands;
+      old.litHands != litHands ||
+      old.runBeads.length != runBeads.length;
 }
 
 /// The paints a note is drawn with, kept between frames.

@@ -94,7 +94,11 @@ class _PlayScreenState extends State<PlayScreen>
       approachSeconds: widget.approachSeconds,
       latencyOffsetMs: widget.latencyOffsetMs,
       speed: widget.speed,
-    )..onMiss = (_) => setState(() {});
+    );
+    _session.onMiss = (_) => setState(() {});
+    // Runs play from inside the clock's own setState, so this only records —
+    // wrapping it in another would be a setState inside a setState.
+    _session.onDragNote = _record;
     _audio.start();
     // Not awaited: the synthesiser covers the first moments, and a song that
     // waits on a download to begin is worse than one that improves as it
@@ -128,24 +132,26 @@ class _PlayScreenState extends State<PlayScreen>
     _audio.nudge();
 
     final across = (position.dx / size.width).clamp(0.0, 1.0);
+
+    // A run is joined by putting a finger on its bead, not by catching its
+    // first note — so this is asked whatever the touch itself did, and a
+    // touch that found no note at all can still take the run.
+    final dragId = _session.beginDrag(across);
+    if (dragId != null) _dragByPointer[pointer] = dragId;
+
     final outcome = _session.tap(across);
     if (outcome == null) return;
 
     if (outcome.holdId != null) _heldByPointer[pointer] = outcome.holdId!;
-    if (outcome.dragId != null) _dragByPointer[pointer] = outcome.dragId!;
-
-    _show(outcome);
+    setState(() => _record(outcome));
   }
 
-  /// A finger already on the screen moved. If it entered a run, the run
-  /// follows it: see [PlaySession.drag].
+  /// A finger already on the screen moved. If it is following a run, that is
+  /// where the run now thinks the finger is.
   void _onDrag(int pointer, Offset position, Size size) {
     final dragId = _dragByPointer[pointer];
     if (dragId == null) return;
-
-    final across = (position.dx / size.width).clamp(0.0, 1.0);
-    final outcome = _session.drag(dragId, across);
-    if (outcome != null) _show(outcome);
+    _session.drag(dragId, (position.dx / size.width).clamp(0.0, 1.0));
   }
 
   /// A finger came off the screen. If it was holding a long note, that note
@@ -159,15 +165,13 @@ class _PlayScreenState extends State<PlayScreen>
     if (_session.releaseHold(holdId)) setState(() {});
   }
 
-  /// Put what just happened on the screen.
-  void _show(TapOutcome outcome) {
-    setState(() {
-      // A near miss reports itself but does not light anything: nothing
-      // sounded, so nothing should look as though it did.
-      if (outcome.scored) _litHands[outcome.hand] = 1.0;
-      _lastOutcome = outcome;
-      _lastOutcomeAt = _now;
-    });
+  /// Remember what just happened, for the next frame to show.
+  void _record(TapOutcome outcome) {
+    // A near miss reports itself but does not light anything: nothing
+    // sounded, so nothing should look as though it did.
+    if (outcome.scored) _litHands[outcome.hand] = 1.0;
+    _lastOutcome = outcome;
+    _lastOutcomeAt = _now;
   }
 
   void _togglePause() {
@@ -227,6 +231,7 @@ class _PlayScreenState extends State<PlayScreen>
                       litHands: Map.of(_litHands),
                       holding: _session.isHolding,
                       heldNotes: _session.heldNotes,
+                      runBeads: _session.runBeads,
                     ),
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/music/song.dart';
 import 'package:piano_flow/screens/play_screen.dart';
@@ -47,8 +48,11 @@ void main() {
     expect(scored, isTrue, reason: 'a tap on the right beam should score');
   });
 
-  testWidgets('sliding carries a run the finger could never tap', (tester) async {
-    // Twelve notes an eighth of a second apart, all in the right hand.
+  testWidgets('following a run plays notes no finger could tap',
+      (tester) async {
+    // Twelve notes an eighth of a second apart, rising a semitone at a time,
+    // all in the right hand. The chart spreads them across that hand's zone,
+    // so playing them means walking a finger across it.
     final song = Song(
       id: 'run',
       title: 'Run',
@@ -64,24 +68,28 @@ void main() {
     await play(tester, const Duration(milliseconds: 1900), frames: 40);
 
     final stage = tester.getRect(find.byType(PlayScreen));
-    final start = Offset(stage.left + stage.width * 0.75, stage.center.dy);
-    final finger = await tester.startGesture(start);
-    await tester.pump(const Duration(milliseconds: 16));
-    final afterOneTap = scoreOf(tester);
-    expect(afterOneTap, greaterThan(0), reason: 'the run was never entered');
+    // Where the chart puts note i, in this widget's own coordinates.
+    double xOf(int i) =>
+        stage.left +
+        stage.width *
+            (Chart.rightZoneStart +
+                (Chart.rightZoneEnd - Chart.rightZoneStart) * i / 11);
 
-    // Now keep sliding without ever lifting.
-    for (var i = 0; i < 6; i++) {
+    final finger = await tester.startGesture(Offset(xOf(0), stage.center.dy));
+    await tester.pump(const Duration(milliseconds: 16));
+    final afterOneTouch = scoreOf(tester);
+    expect(afterOneTouch, greaterThan(0), reason: 'the run was never joined');
+
+    // Walk with it, one note at a time, without ever lifting.
+    for (var i = 1; i < 12; i++) {
       await tester.pump(const Duration(milliseconds: 125));
-      await finger.moveBy(const Offset(8, 0));
+      await finger.moveTo(Offset(xOf(i), stage.center.dy));
       await tester.pump(const Duration(milliseconds: 4));
     }
     await finger.up();
     await tester.pump();
 
-    // The streak counter only appears past one, so seeing it at all means the
-    // slide played notes the finger never tapped.
-    expect(scoreOf(tester), greaterThan(afterOneTap),
+    expect(scoreOf(tester), greaterThan(afterOneTouch * 4),
         reason: 'the run did not follow the finger');
   });
 

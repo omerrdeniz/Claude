@@ -49,21 +49,41 @@ class _Hold {
   final double endBeat;
 }
 
-/// A finger sliding through a run.
+/// A finger following a run.
 class _Drag {
-  _Drag({required this.runId, required this.index, required this.across});
+  _Drag({required this.runId, required this.across});
 
   final int runId;
 
-  /// The last note of the run that has been dealt with.
-  int index;
-
-  /// Where the finger was when this was last looked at.
+  /// Where the finger is now, as a fraction across the screen.
   double across;
 
-  /// How far it has moved since the last note sounded. Direction does not
-  /// matter — a slide back the other way is still a slide.
-  double travelled = 0;
+  /// The last note of the run that has been dealt with, or -1 before any.
+  int index = -1;
+}
+
+/// The bead a run is currently on: the note due now, sitting on the hit line.
+///
+/// It is what the finger follows. Without something to follow, a slide is a
+/// finger waved at a screen and the notes arriving on their own — which is
+/// exactly how the first version of this felt.
+class RunBead {
+  const RunBead({
+    required this.runId,
+    required this.hand,
+    required this.across,
+    required this.tracked,
+  });
+
+  final int runId;
+  final Hand hand;
+
+  /// Where on the hit line it sits, 0 at the left edge and 1 at the right.
+  final double across;
+
+  /// Whether a finger is on it. A bead nobody is following still moves; it
+  /// just plays nothing.
+  final bool tracked;
 }
 
 /// Runs one performance: keeps the clock, matches taps to notes, plays the
@@ -257,6 +277,7 @@ class PlaySession {
         leadInBeats;
 
     _playAccompaniment();
+    _playRuns();
     _playWaitingNotes();
     _fillMissedNotes();
     _expireMissedTaps();
@@ -384,7 +405,6 @@ class PlaySession {
       errorMs: errorMs,
       notes: tapTarget.notes,
       holdId: holdId,
-      dragId: _beginDrag(tapTarget, across),
     );
   }
 
@@ -414,93 +434,152 @@ class PlaySession {
     }
   }
 
-  /// Fingers sliding through a run.
+  /// Fingers following a run.
   final Map<int, _Drag> _drags = {};
   int _nextDragId = 1;
 
-  /// How far the finger has to slide to earn the next note of a run, as a
-  /// fraction of the screen's width.
+  /// How far from the note it is playing a finger may be and still be
+  /// following the run, as a fraction of the screen's width.
   ///
-  /// Small, and it has to be: the fastest run in the library gives it
-  /// seventy-six milliseconds, four or five frames. What this is really
-  /// asking is whether the finger is still moving — a hand that stops gets
-  /// nothing, which is what keeps the slide a gesture rather than a rest.
-  static const double dragStep = 0.012;
+  /// About a finger's width either side on a phone. Generous on purpose: the
+  /// skill being asked for is staying with a passage, not hitting a target.
+  /// It is also what stops a parked finger from collecting a whole run —
+  /// the beads of a real run travel most of the hand's zone, so a hand that
+  /// does not travel with them falls off.
+  static const double dragReach = 0.15;
 
-  /// A touch that landed on a run leaves the finger able to slide through it.
-  /// Returns the token the screen hands back to [drag].
-  int? _beginDrag(Tap target, double across) {
-    final runId = target.runId;
-    if (runId == null) return null;
-    final run = chart.runs[runId];
-    if (run == null || target.runIndex + 1 >= run.length) return null;
+  /// Told when a run plays a note under a finger, so the screen can react.
+  void Function(TapOutcome outcome)? onDragNote;
 
-    final id = _nextDragId++;
-    _drags[id] = _Drag(runId: runId, index: target.runIndex, across: across);
-    return id;
+  /// How long before its first note a run puts its bead on the line.
+  ///
+  /// Longer than the judging window on purpose. The window is how late a
+  /// touch may be; this is how early a hand may get itself into position,
+  /// and a passage no one can tap is one you want to be on the rails for
+  /// before it arrives, not one you dive at.
+  static const double dragLeadMs = 500;
+
+  /// Where each run on screen has got to, for the finger and the eye alike.
+  ///
+  /// The bead keeps its place a judging window past the run's last note, so
+  /// it does not vanish from under a finger that is still on it.
+  List<RunBead> get runBeads {
+    if (chart.runs.isEmpty) return const [];
+    final lead = dragLeadMs / 1000 * beatsPerSecond;
+    final tail = judge.windowMs / 1000 * beatsPerSecond;
+    final now = _judgedBeat;
+
+    final beads = <RunBead>[];
+    for (final entry in chart.runs.entries) {
+      final run = entry.value;
+      if (now < run.first.beat - lead) continue;
+      if (now > run.last.beat + tail) continue;
+      final across = _beadAcross(run, now);
+      beads.add(RunBead(
+        runId: entry.key,
+        hand: run.first.hand,
+        across: across,
+        tracked: _drags.values.any((drag) =>
+            drag.runId == entry.key && (drag.across - across).abs() <= dragReach),
+      ));
+    }
+    return beads;
   }
 
-  /// The finger that entered a run has moved to [across].
-  ///
-  /// This is the answer to a passage no hand can tap: press the first note,
-  /// then keep sliding and the rest of the run comes to the finger. The song
-  /// still decides *when* each note sounds — a slide never runs ahead of the
-  /// music, and never drags behind it — so what the gesture is being asked
-  /// for is that it keep going. Stop moving and the run goes on without you,
-  /// note by note, as misses.
-  ///
-  /// Returns what the note that just sounded was worth, or null if this move
-  /// did not reach one.
-  TapOutcome? drag(int dragId, double across) {
-    if (!_running) return null;
-    final drag = _drags[dragId];
-    if (drag == null) return null;
-
-    drag.travelled += (across - drag.across).abs();
-    drag.across = across;
-
-    final run = chart.runs[drag.runId]!;
-    while (drag.index + 1 < run.length) {
-      final next = run[drag.index + 1];
-      final errorMs = (_judgedBeat - next.beat) / beatsPerSecond * 1000;
-
-      // Not its moment yet. The travel already banked is kept, so a finger
-      // that is moving catches the note the instant it comes due.
-      if (errorMs < 0) return null;
-
-      // Gone: expired as a miss while the finger was still, taken by another
-      // finger, or simply too late now. Step over it without spending the
-      // slide — it is already someone else's business.
-      if (errorMs > judge.windowMs || !_isPending(next)) {
-        drag.index++;
-        continue;
-      }
-
-      if (drag.travelled < dragStep) return null;
-      drag.index++;
-      drag.travelled = 0;
-
-      final verdict = judge.verdictFor(errorMs);
-      _resolve(next);
-      scoreboard.register(verdict);
-      _sound(next, errorMs);
-
-      return TapOutcome(
-        verdict: verdict,
-        hand: next.hand,
-        errorMs: errorMs,
-        notes: next.notes,
-        dragId: dragId,
-      );
+  /// The bead slides between one note's place and the next rather than
+  /// jumping, so what the finger is chasing moves the way the music does.
+  static double _beadAcross(List<Tap> run, double beat) {
+    if (beat <= run.first.beat) return run.first.across;
+    if (beat >= run.last.beat) return run.last.across;
+    for (var i = 1; i < run.length; i++) {
+      if (beat >= run[i].beat) continue;
+      final span = run[i].beat - run[i - 1].beat;
+      final t = span <= 0 ? 0.0 : (beat - run[i - 1].beat) / span;
+      return run[i - 1].across + (run[i].across - run[i - 1].across) * t;
     }
+    return run.last.across;
+  }
 
-    // The run is over; the finger is just a finger again.
-    _drags.remove(dragId);
+  /// A finger went down at [across]. If a run's bead is under it, the finger
+  /// takes the run; returns the token the screen hands back to [drag].
+  ///
+  /// Deliberately not tied to catching the run's first note. That was the
+  /// first version's worst failure: miss the opening note and the whole
+  /// passage was gone, with no way back in. A run can be joined wherever it
+  /// has got to, which is what a person expects of something they can see
+  /// moving.
+  int? beginDrag(double across) {
+    if (!_running) return null;
+    final hand = Chart.handAt(across);
+
+    for (final bead in runBeads) {
+      if (chart.separatesHands && bead.hand != hand) continue;
+      if ((bead.across - across).abs() > dragReach) continue;
+      if (_drags.values.any((drag) => drag.runId == bead.runId)) continue;
+
+      final id = _nextDragId++;
+      _drags[id] = _Drag(runId: bead.runId, across: across);
+      return id;
+    }
     return null;
   }
 
+  /// The finger following a run has moved to [across].
+  ///
+  /// Only its position is recorded. Nothing sounds here: the notes of a run
+  /// are played by the clock, in [_playRuns], so a finger that is in the
+  /// right place keeps playing whether it is moving fast, moving slowly or
+  /// turning around. The first version fired a note per move event and
+  /// charged a distance for each one, which meant every direction change —
+  /// the moment a finger is briefly still — dropped a note.
+  void drag(int dragId, double across) => _drags[dragId]?.across = across;
+
   /// The finger came off, or the run is over.
   void endDrag(int dragId) => _drags.remove(dragId);
+
+  /// Play the notes of every run a finger is following.
+  ///
+  /// The song still decides *when*; what the finger decides is *whether*, by
+  /// being near the note that is due. Position rather than motion is the
+  /// whole of the change: it is what makes the bead worth following, and
+  /// what lets a hand that drifts off hear itself drift off.
+  void _playRuns() {
+    for (final dragId in _drags.keys.toList()) {
+      final drag = _drags[dragId]!;
+      final run = chart.runs[drag.runId];
+      if (run == null) {
+        _drags.remove(dragId);
+        continue;
+      }
+
+      while (drag.index + 1 < run.length) {
+        final next = run[drag.index + 1];
+        final errorMs = (_judgedBeat - next.beat) / beatsPerSecond * 1000;
+        if (errorMs < 0) break; // not due yet
+        drag.index++;
+
+        // Gone: already played, or expired while nobody was on it.
+        if (!_isPending(next) || errorMs > judge.windowMs) continue;
+        // The finger has drifted off the bead. The note is left to expire,
+        // which is how a run tells you that you have lost it.
+        if ((next.across - drag.across).abs() > dragReach) continue;
+
+        final verdict = judge.verdictFor(errorMs);
+        _resolve(next);
+        scoreboard.register(verdict);
+        _sound(next, errorMs);
+        onDragNote?.call(TapOutcome(
+          verdict: verdict,
+          hand: next.hand,
+          errorMs: errorMs,
+          notes: next.notes,
+          dragId: dragId,
+        ));
+      }
+
+      if (drag.index + 1 >= run.length) _drags.remove(dragId);
+    }
+  }
 
   /// Notes the finger is currently keeping down.
   final Map<int, _Hold> _holds = {};

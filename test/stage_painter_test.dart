@@ -7,6 +7,7 @@ import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/song.dart';
 import 'package:piano_flow/game/stage_geometry.dart';
 import 'package:piano_flow/music/note.dart';
+import 'package:piano_flow/game/play_session.dart' show RunBead;
 import 'package:piano_flow/render/stage_painter.dart';
 import 'package:piano_flow/theme/app_theme.dart';
 
@@ -21,6 +22,7 @@ ui.Picture paintFrame(Song song, double beat,
     Map<Hand, double> litHands = const {},
     Size size = phone,
     Set<(double, int)> heldNotes = const {},
+    List<RunBead> runBeads = const [],
     Difficulty difficulty = Difficulty.normal}) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder, Offset.zero & size);
@@ -30,6 +32,7 @@ ui.Picture paintFrame(Song song, double beat,
     windowInBeats: window,
     litHands: litHands,
     heldNotes: heldNotes,
+    runBeads: runBeads,
   ).paint(canvas, size);
   return recorder.endRecording();
 }
@@ -41,11 +44,13 @@ Future<int> savePng(Song song, double beat, String name,
     {Map<Hand, double> litHands = const {},
     Size size = phone,
     Set<(double, int)> heldNotes = const {},
+    List<RunBead> runBeads = const [],
     Difficulty difficulty = Difficulty.normal}) async {
   final picture = paintFrame(song, beat,
       litHands: litHands,
       size: size,
       heldNotes: heldNotes,
+      runBeads: runBeads,
       difficulty: difficulty);
   final image = await picture.toImage(size.width.toInt(), size.height.toInt());
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -61,6 +66,20 @@ Set<(double, int)> heldAt(Song song, double beat) => {
       for (final note in song.notes)
         if ((note.beat - beat).abs() < 0.01) (note.beat, note.midi),
     };
+
+/// The bead a run is on at [beat], as the session would report it.
+RunBead beadOf(Song song, double beat, {required bool tracked}) {
+  final chart = Chart.build(song);
+  final entry = chart.runs.entries.firstWhere((e) =>
+      beat >= e.value.first.beat && beat <= e.value.last.beat);
+  final run = entry.value;
+  final at = run.lastWhere((tap) => tap.beat <= beat, orElse: () => run.first);
+  return RunBead(
+      runId: entry.key,
+      hand: at.hand,
+      across: at.across,
+      tracked: tracked);
+}
 
 void main() {
   test('a long note only waits at the line if it is being held', () {
@@ -242,6 +261,13 @@ void main() {
       // A run: the rondo's chromatic descent, sixty-two notes no hand can
       // tap, with the ribbon threading them into one slide.
       'hizli-akis': await savePng(shipped('fur-elise'), 156.0, 'hizli-akis'),
+      // The bead a run is followed by: hollow when nobody is on it, lit when
+      // a finger is.
+      'kosu-boncugu': await savePng(shipped('fur-elise'), 156.0, 'kosu-boncugu',
+          runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: true)]),
+      'kosu-boncugu-bos': await savePng(
+          shipped('fur-elise'), 156.0, 'kosu-boncugu-bos',
+          runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: false)]),
       'kanon': await savePng(shipped('canon-in-d'), 103.0, 'kanon'),
     };
     for (final entry in sizes.entries) {

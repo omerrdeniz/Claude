@@ -1,9 +1,8 @@
 # Durum ve devir notu
 
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
-sürdürebilmesi için yazıldı. Son güncelleme: şarkılar varlık dosyası oldu ve
-şarkı eklemek `tool/catalog.dart`'a bir kayıt eklemeye indi; Kanon kendi
-piyano düzenlememizle değişti; Joplin ve Satie eklendi.
+sürdürebilmesi için yazıldı. Son güncelleme: sürükleme mekaniği baştan
+yazıldı — artık takip edilen bir boncuk var.
 
 ## Proje
 
@@ -94,36 +93,60 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   **asgari** aralığı zorluyor: zaten açık duran bir akor (oktav, onlu) perdenin
   koyduğu yerde kalıyor, sıra hiç değişmiyor, hiçbir nota diğer elin yarısına
   itilmiyor.
-- **Hızlı geçitler parmakla sürülerek çalınır.** Oyuncunun isteği:
+- **Hızlı geçitler bir boncuğu takip ederek çalınır.** Oyuncunun isteği:
   *"çok sayıda nota arka arkaya belirli bir hızın üzerinde geliyorsa tek tek
   basmak zor oluyor... ilk notaya basalım, sonra basılı tutmaya devam ederek
   sağa veya sola sürükleyerek sonraki notalara basmış olalım."*
 
   Aynı elde, aralarında **150 ms veya daha az** olan **en az 3** nota bir
-  "koşu" (`Chart.runs`) sayılır. İlk notaya basılır, parmak kaldırılmadan
-  sürüklenir; koşunun kalanı parmağa gelir.
+  "koşu" (`Chart.runs`) sayılır.
 
-  İki karar:
-  - **Zamanı şarkı verir, hareketi parmak.** Sürükleme notayı öne çekmez;
-    her nota kendi anında seslenir. Parmağın yaptığı, o anın *gelip
-    gelmediğine* değil, koşunun devam edip etmediğine karar vermek.
-  - **Parmak durursa hiçbir şey çalmaz.** Bir sonraki nota için ekran
-    genişliğinin `%1.2`'si kadar yol gerekiyor (`PlaySession.dragStep`);
-    yön önemsiz, sağa da sola da olur. Duran el koşuyu kaçırır. Böylece
-    sürükleme bir jest olarak kalıyor, ekrana konmuş bir parmak olarak değil.
+  **İlk sürüm başarısızdı ve nedenleri kayda değer.** Oyuncu dört şikâyeti
+  birden işaretledi: notalar arası kopuyor, ben bir şey yapmıyormuşum gibi,
+  koşuya giremiyorum, zamanlama parmağıma uymuyor. Dördü de aynı üç yanlış
+  karardan çıkıyordu:
+
+  1. **Hareket miktarı ölçülüyordu.** Her nota için belirli bir mesafe
+     isteniyordu ve sayaç her notada sıfırlanıyordu. Parmak yön değiştirirken
+     bir an duruyor — tam o anda nota düşüyordu. "Kopuyor" buydu.
+  2. **Nota, parmak hareketi olayında çalınıyordu**, saatte değil; kare başına
+     en fazla bir nota.
+  3. **Takip edilecek bir şey yoktu.** Ekranda koşunun ipi vardı ama "şu an
+     neredeyiz" diyen hiçbir şey yoktu. Parmak sadece "hâlâ oynuyor mu"
+     sorusuna cevap veriyordu; oyuncunun "bir şey yapmıyormuşum gibi" demesi
+     bundan.
+
+  **Şimdiki hâli — boncuk.** Koşunun o an çalınması gereken notası vuruş
+  çizgisinin üstünde bir halka olarak duruyor ve perde değiştikçe çizgi
+  boyunca kayıyor (`PlaySession.runBeads`, `RunBead`). Oyun şu:
+
+  - **Konum önemli, hareket değil.** Notalar saatten çalınıyor
+    (`_playRuns`, `update` içinde); parmak sadece o notaya yakın mı diye
+    bakılıyor (`dragReach` = ekran genişliğinin %15'i, telefonda bir parmak
+    genişliği kadar iki yana). Duran parmak da çalar — ama koşunun boncuğu
+    elin bölgesinin çoğunu kat ettiği için duran parmak koşuyu kaybeder.
+    Yön değiştirmek artık bedava.
+  - **Koşuya her yerinden girilir.** İlk notayı tutturmak şart değil;
+    boncuğun üstüne parmak koymak yeter (`beginDrag`). Eskiden ilk notayı
+    kaçıran tüm geçidi kaybediyordu.
+  - **Boncuk koşudan önce geliyor.** İlk notadan `dragLeadMs` = 500 ms önce
+    çizgide beliriyor — değerlendirme penceresinden (210 ms) uzun, çünkü
+    kimsenin basamayacağı bir geçide dalmak değil, önceden raya girmek
+    gerekiyor.
+  - **Geri bildirim.** Boncuk boşken koyu zeminli, vurgu renginde bir halka
+    ("buraya parmak koy"); parmak üstündeyken beyaz, dolu ve haleli. Her
+    çalan nota vuruş çizgisini de yakıyor.
+
+  Zamanı hâlâ şarkı veriyor. Parmağın hızının müziği hızlandırması denenmedi
+  ve **istenmiyor**: sol el şarkının saatinde çalıyor, koşu ondan kopamaz.
+  Parmağa uyan şey zamanlama değil, takip edilecek görünür bir şey olması.
 
   Toplama değil, ekleme: koşunun notalarına tek tek basmak hâlâ mümkün ve
   aynı şekilde puanlanıyor.
 
-  **Görünürlük:** koşunun notaları ekranda parlak ince bir iplikle birbirine
-  dikiliyor (`StagePainter._paintRunPaths`). Önce notaların *altına* çizildi
-  ve kayboldu — bu hızda toplar birbirine değiyor, arkadaki çizgi boyunca
-  örtülüyor. Üstten geçince "boncukların arasından geçen ip" gibi okunuyor.
-
   Kapsam (Normal): Für Elise dokunuşlarının %12'si (3 koşu, en uzunu **62
-  nota**), Kanon %28 (57 koşu, en uzunu 11), Nokturn %4 (5 koşu, en uzunu
-  14), Neşeye Övgü ve Prelüd %0 — ikisi de bunu gerektirecek kadar hızlı
-  değil.
+  nota**), Kanon %19, Nokturn %4, Neşeye Övgü ve Prelüd %0.
+
 - **Tolerans bir ayardır.** `TimingTolerance { wide, normal, tight }` —
   çarpanlar 1.8 / 1.0 / 0.6. Erken basışlar kuyruğa alınıp **kendi vuruşunda**
   seslendirilir (quantize anahtarı), geç basışlar hemen çalar.
@@ -660,8 +683,9 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
    Cevap sürükleme mekaniği oldu (yukarıda, "Kabul edilenler"). Kimseden
    nota alınmıyor, kendi kendine hiçbir şey çalmıyor, tek tek basmak da
    hâlâ mümkün — yalnızca ikinci bir yol açıldı. **Ama henüz gerçek
-   telefonda oynanmadı.** Bakılacaklar: `dragStep` (%1.2) parmağın doğal
-   hızına göre çok mu sıkı/gevşek; eşik ve minimum uzunluk.
+   telefonda oynanmadı** (ilk sürümü oynandı ve reddedildi; yukarıya bakın).
+   Bakılacaklar: `dragReach` (%15) çok mu geniş/dar; `dragLeadMs` (500 ms)
+   raya girmeye yetiyor mu; eşik ve minimum uzunluk.
 
    Eşik ölçümü (oyuncu sordu, karar verilmedi): nota araları kuantize
    olduğu için 150 ile 200 ms arasında neredeyse hiçbir şey yok — 200'ün

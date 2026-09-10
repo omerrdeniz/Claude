@@ -565,115 +565,156 @@ void main() {
     });
   });
 
-  group('sliding through a run', () {
-    // Four notes an eighth of a second apart: too fast to tap one at a time,
-    // which is the whole reason the slide exists.
+  group('following a run', () {
+    // Four notes an eighth of a second apart, rising: too fast to tap one at
+    // a time, and spread across the hand's zone so following them is real
+    // movement rather than holding still.
     Song fastRun() =>
         songOf([for (var i = 0; i < 4; i++) note(i * 0.25, 72 + i)]);
 
-    /// Enter the run by tapping its first note, and hand back the token the
-    /// finger slides with.
-    (PlaySession, int) entered() {
+    /// Where each note of the run sits across the screen.
+    List<double> placesOf(PlaySession session) =>
+        [for (final tap in session.chart.taps) tap.across];
+
+    /// Put a finger on the bead, the way a player does.
+    (PlaySession, int) joined({double atBeat = 0}) {
       final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
-      seek(session, 0);
-      final outcome = session.tap(right);
-      expect(outcome, isNotNull);
-      expect(outcome!.dragId, isNotNull, reason: 'the run was not offered');
-      return (session, outcome.dragId!);
+      seek(session, atBeat);
+      final bead = session.runBeads.single;
+      final id = session.beginDrag(bead.across);
+      expect(id, isNotNull, reason: 'there was no bead to take');
+      return (session, id!);
     }
 
-    test('an ordinary note offers nothing to slide through', () {
-      final session = sessionFor(
-        songOf([note(0, 60), note(4, 62)]),
-        difficulty: Difficulty.normal,
-      );
-      seek(session, 0);
-      expect(session.tap(right)!.dragId, isNull);
-    });
-
-    test('the last note of a run has nothing left to reach', () {
+    test('a run puts a bead on the line before its first note', () {
       final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
-      seek(session, 0.75);
-      expect(session.tap(right)!.dragId, isNull);
+      seek(session, -0.2);
+      expect(session.runBeads, hasLength(1),
+          reason: 'nothing to aim at before the run starts');
+      expect(session.runBeads.single.tracked, isFalse);
+      expect(session.runBeads.single.across,
+          closeTo(session.chart.taps.first.across, 1e-9));
     });
 
-    test('a finger that keeps moving plays the rest of the run', () {
-      final (session, drag) = entered();
-      expect(engine.struck.map((s) => s.$1), [72]);
-
-      var at = right;
-      for (final beat in [0.25, 0.5, 0.75]) {
-        seek(session, beat);
-        at += 0.05;
-        expect(session.drag(drag, at)?.verdict, Verdict.perfect,
-            reason: 'the note at $beat did not come to the finger');
-      }
-      expect(engine.struck.map((s) => s.$1), [72, 73, 74, 75]);
-      expect(session.scoreboard.notesPlayed, 4);
-    });
-
-    test('sliding back the other way works just as well', () {
-      final (session, drag) = entered();
-      var at = right;
-      for (final beat in [0.25, 0.5, 0.75]) {
-        seek(session, beat);
-        at -= 0.05; // leftwards, against the rising pitch
-        expect(session.drag(drag, at), isNotNull, reason: 'at $beat');
-      }
-      expect(engine.struck.map((s) => s.$1), [72, 73, 74, 75]);
-    });
-
-    test('a finger that stops moving gets nothing', () {
-      final (session, drag) = entered();
-      seek(session, 0.25);
-      expect(session.drag(drag, right), isNull, reason: 'it never moved');
-      expect(engine.struck.map((s) => s.$1), [72]);
-    });
-
-    test('the run never runs ahead of the music', () {
-      final (session, drag) = entered();
-      // Halfway to the second note, sliding hard. The song decides when a
-      // note sounds; the finger only decides whether it does.
-      seek(session, 0.12);
-      expect(session.drag(drag, right + 0.3), isNull);
-      expect(engine.struck.map((s) => s.$1), [72]);
-      // And the moment it comes due, the finger already moving catches it.
-      seek(session, 0.25);
-      expect(session.drag(drag, right + 0.31), isNotNull);
-    });
-
-    test('a stalled finger rejoins where the run is, not where it left off',
+    test('the bead travels with the pitches, between them as well as on them',
         () {
-      final (session, drag) = entered();
-      // The finger sits still until the run is three notes further on, then
-      // slides. The two notes whose windows have closed are gone for good;
-      // the one still within reach comes to the finger.
-      seek(session, 1.0);
-      expect(session.drag(drag, right + 0.2)?.notes.single.midi, 75);
-      expect(engine.struck.map((s) => s.$1), [72, 75]);
+      final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
+      final places = placesOf(session);
+      seek(session, 0.125); // halfway between the first two notes
+      expect(session.runBeads.single.across,
+          closeTo((places[0] + places[1]) / 2, 1e-6));
     });
 
-    test('a slide that arrives after the run is over does nothing', () {
-      final (session, drag) = entered();
-      seek(session, 2.0);
-      expect(session.drag(drag, right + 0.2), isNull);
-      expect(engine.struck.map((s) => s.$1), [72]);
-      expect(session.scoreboard.counts[Verdict.miss], 3,
-          reason: 'the rest of the run went by unplayed');
+    test('the bead arrives before the run does, to be got hold of', () {
+      // Half a second of lead, against a judging window of a fifth. There is
+      // a moment where the ring is on the line and nothing is playable yet:
+      // that is the moment to put a finger down.
+      final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
+      seek(session, -0.6); // 300 ms early: past the window, inside the lead
+      expect(session.runBeads, hasLength(1));
+      expect(session.tap(session.runBeads.single.across)?.scored ?? false,
+          isFalse, reason: 'nothing is playable yet');
+      expect(session.beginDrag(session.runBeads.single.across), isNotNull,
+          reason: 'but the run can be got hold of');
+    });
+
+    test('a finger far from the bead takes nothing', () {
+      final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
+      seek(session, 0);
+      final away = session.runBeads.single.across + PlaySession.dragReach + 0.02;
+      expect(session.beginDrag(away.clamp(0.0, 1.0)), isNull);
+    });
+
+    test('following the bead plays the run', () {
+      final (session, drag) = joined();
+      final places = placesOf(session);
+      for (var i = 0; i < places.length; i++) {
+        session.drag(drag, places[i]);
+        seek(session, i * 0.25 + 0.05);
+      }
+      expect(engine.struck.map((s) => s.$1), [72, 73, 74, 75]);
+      expect(session.scoreboard.counts[Verdict.miss], 0);
+    });
+
+    test('a finger that holds still on the bead keeps playing', () {
+      // The point of the rewrite. The first version charged a distance for
+      // every note, so the instant a finger paused — which it does at every
+      // change of direction — the run dropped a note.
+      final (session, drag) = joined();
+      final places = placesOf(session);
+      session.drag(drag, places[1]); // within reach of the first three
+      for (var i = 0; i < 3; i++) {
+        seek(session, i * 0.25 + 0.05);
+      }
+      expect(engine.struck.map((s) => s.$1), [72, 73, 74],
+          reason: 'a still finger in the right place still plays');
+    });
+
+    test('a finger that stays behind loses the far end of the run', () {
+      // And the balance: staying put is only worth the notes within reach.
+      final (session, drag) = joined();
+      session.drag(drag, placesOf(session).first);
+      for (var i = 0; i < 4; i++) {
+        seek(session, i * 0.25 + 0.05);
+      }
+      seek(session, 3);
+      expect(engine.struck.map((s) => s.$1), isNot(contains(75)),
+          reason: 'the run walked away from the finger');
+      expect(session.scoreboard.counts[Verdict.miss], greaterThan(0));
+    });
+
+    test('a run can be joined halfway through', () {
+      // Missing the opening note used to cost the whole passage, with no way
+      // back in.
+      final (session, drag) = joined(atBeat: 0.5);
+      session.drag(drag, placesOf(session)[3]);
+      seek(session, 0.8);
+      expect(engine.struck.map((s) => s.$1), [74, 75],
+          reason: 'the notes already gone are gone; the rest is playable');
+    });
+
+    test('a run never runs ahead of the music', () {
+      final (session, drag) = joined();
+      session.drag(drag, placesOf(session)[3]); // finger already at the end
+      seek(session, 0.05);
+      expect(engine.struck, isEmpty,
+          reason: 'the later notes are not due yet');
     });
 
     test('lifting the finger ends it', () {
-      final (session, drag) = entered();
+      final (session, drag) = joined();
+      session.drag(drag, placesOf(session)[1]);
       session.endDrag(drag);
-      seek(session, 0.25);
-      expect(session.drag(drag, right + 0.1), isNull);
-      expect(engine.struck.map((s) => s.$1), [72]);
+      seek(session, 0.3);
+      expect(engine.struck, isEmpty);
+      expect(session.runBeads.single.tracked, isFalse);
     });
 
-    test('a slide from a stopped session does nothing', () {
-      final (session, drag) = entered();
+    test('the bead says whether a finger is on it', () {
+      final (session, drag) = joined();
+      expect(session.runBeads.single.tracked, isTrue);
+      session.drag(drag, 0.0); // right off the edge
+      expect(session.runBeads.single.tracked, isFalse);
+    });
+
+    test('nothing is taken twice, by a second finger or by a tap', () {
+      final (session, drag) = joined();
+      expect(session.beginDrag(session.runBeads.single.across), isNull,
+          reason: 'one run, one finger');
+      session.drag(drag, placesOf(session).first);
+      seek(session, 0.05);
+      expect(engine.struck.map((s) => s.$1), [72]);
+      // A tap now finds the *next* note, never the one the run just played.
+      session.tap(placesOf(session).first);
+      expect(engine.struck.where((s) => s.$1 == 72), hasLength(1),
+          reason: 'the note the run played sounded twice');
+    });
+
+    test('a still session ignores a finger', () {
+      final (session, drag) = joined();
       session.pause();
-      expect(session.drag(drag, right + 0.1), isNull);
+      expect(session.beginDrag(0.6), isNull);
+      session.drag(drag, 0.7); // harmless
     });
   });
 }
