@@ -26,7 +26,8 @@ class _Dot {
   /// Long enough that the player is asked to keep a finger down.
   final bool isHold;
 
-  /// And is doing so right now.
+  /// And it is sounding right now — either under a finger, or ringing on
+  /// after one had to leave to play the next note.
   final bool isHeld;
 
   _Dot movedTo(double newAcross) => _Dot(
@@ -68,11 +69,11 @@ class StagePainter extends CustomPainter {
   /// Whether a long note is being held right now.
   final bool holding;
 
-  /// The notes a finger is actually on, as (beat, pitch).
+  /// The long notes actually sounding, as (beat, pitch).
   ///
-  /// Only these stop at the line. A long note nobody caught is not being
-  /// held, and pinning it there would draw a promise the player never made —
-  /// it carries on down and leaves, tail and all, like any other missed note.
+  /// Only these stop at the line. A long note nobody caught is not sounding,
+  /// and pinning it there would draw a promise the player never made — it
+  /// carries on down and leaves, tail and all, like any other missed note.
   final Set<(double, int)> heldNotes;
 
   /// Where each run on screen has got to, and whether a finger is on it.
@@ -215,9 +216,10 @@ class StagePainter extends CustomPainter {
         }
       }
 
-      // A note being held stops at the line and waits there; one nobody
-      // caught carries on down and leaves, tail and all. Only a finger that
-      // is actually down earns the pause.
+      // A note that is sounding stops at the line and waits there; one
+      // nobody caught carries on down and leaves, tail and all. Catching it
+      // is what earns the pause — not keeping a finger on it, which the
+      // music often makes impossible.
       final held = dots.any((dot) => dot.isHold && dot.isHeld);
       final departed = held ? tailProgress : progress;
 

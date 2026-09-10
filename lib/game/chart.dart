@@ -95,6 +95,15 @@ class Tap {
   /// Long enough that the finger is expected to stay down.
   bool get isHold => duration >= holdFrom;
 
+  /// Whether this hand is asked for something else before this touch ends.
+  ///
+  /// Set by [Chart.build]. A hand has one finger here, so where a held note
+  /// still has time to run and the next note is already due, the player has
+  /// no choice but to lift — and the note has to go on sounding anyway,
+  /// because that is what the music says. Bach's left hand does this under
+  /// every bar of the first prelude; Satie's does it in both hands.
+  bool sustains = false;
+
   /// How long this touch has to last to be held rather than struck, in this
   /// song's beats. Set by [Chart.build] from the tempo.
   ///
@@ -251,6 +260,7 @@ class Chart {
     for (final tap in taps) {
       tap.holdFrom = holdFrom;
     }
+    _markSustained(taps, difficulty.separatesHands);
 
     // Tell every touch how many fingers its hand needs at that moment.
     for (var i = 0; i < taps.length;) {
@@ -289,25 +299,16 @@ class Chart {
   /// notes are a flourish; three are a run.
   static const int runLength = 3;
 
-  /// Once in a run, the most its notes may be apart without ending it.
+  /// A run ends where its notes stop being close together — there is no
+  /// second, wider threshold that carries one over a breath.
   ///
-  /// A passage does not stop being a passage because one note in it is
-  /// twice the length of its neighbours. The canon's sixteenth-note
-  /// variations breathe every four notes — 273 ms where the rest are 136 —
-  /// and a single threshold chopped ten bars of continuous semiquavers into
-  /// thirty-one fragments, most of them three notes long. Those fragments
-  /// were unplayable as slides and the player rightly asked what had
-  /// happened to them.
-  ///
-  /// So there are two thresholds, not one: [runGapSeconds] to *begin* a run
-  /// and this to *keep* it. The same ten bars now come out as two runs, of
-  /// seventy-nine and a hundred and twelve notes, which is what they are.
-  ///
-  /// It has to stay under the gap that would start a run in a merely quick
-  /// piece: Für Elise's sixteenths are 208 ms apart, and a threshold that
-  /// began runs there would turn nine tenths of the piece into one slide.
-  /// As a carry rather than a start, 300 ms leaves it at an eighth.
-  static const double runCarrySeconds = 0.3;
+  /// There was, briefly. The canon's semiquaver variations breathe every
+  /// fourth note, 273 ms where the rest are 136, and carrying across that
+  /// turned ten bars into two runs of seventy-nine and a hundred and twelve
+  /// notes. It was the wrong reading: the player, who can see the notes,
+  /// said plainly that the gap is there and the thread should not be drawn
+  /// straight through it. A run is what arrives faster than a hand can
+  /// answer, and after 273 ms a hand has answered.
 
   /// Find the stretches too fast to tap, hand by hand.
   ///
@@ -341,12 +342,9 @@ class Chart {
             : double.infinity;
         final together = gap <= onsetTolerance * secondsPerBeat;
 
-        if (!together) {
-          if (gap <= runGapSeconds) {
-            running = true;
-            continue;
-          }
-          if (running && gap <= runCarrySeconds) continue;
+        if (!together && gap <= runGapSeconds) {
+          running = true;
+          continue;
         }
 
         if (running && i - start >= runLength) {
@@ -363,6 +361,29 @@ class Chart {
       }
     }
     return runs;
+  }
+
+  /// Say which touches have to keep sounding after the finger has gone.
+  ///
+  /// A touch is sustained if the same hand is asked for another one before
+  /// this touch's written end. There is one finger to a hand, so the player
+  /// cannot both hold this and answer that; the game must not take the note
+  /// away from them for doing the only thing they can do.
+  static void _markSustained(List<Tap> taps, bool separatesHands) {
+    final byHand = <Hand, List<Tap>>{};
+    for (final tap in taps) {
+      (byHand[separatesHands ? tap.hand : Hand.right] ??= []).add(tap);
+    }
+    for (final line in byHand.values) {
+      for (var i = 0; i < line.length; i++) {
+        for (var j = i + 1; j < line.length; j++) {
+          if (line[j].beat >= line[i].endBeat) break;
+          if (line[j].beat <= line[i].beat) continue; // struck together
+          line[i].sustains = true;
+          break;
+        }
+      }
+    }
   }
 
   /// How far apart two notes can be and still count as struck together, in

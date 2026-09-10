@@ -34,13 +34,24 @@ class TapOutcome {
 
 /// A note being held down.
 class _Hold {
-  _Hold({required this.beat, required this.midis, required this.endBeat});
+  _Hold({
+    required this.beat,
+    required this.midis,
+    required this.endBeat,
+    required this.sustained,
+  });
 
   /// Which moment in the song this is, so the screen can tell which drawn
   /// note the finger is on.
   final double beat;
   final List<int> midis;
   final double endBeat;
+
+  /// Whether this note goes on sounding once the finger leaves it.
+  ///
+  /// True where the same hand is asked for another note before this one
+  /// ends — see [Tap.sustains]. The finger has to leave; the note does not.
+  final bool sustained;
 }
 
 /// A finger down on the playfield, following whatever run its hand has.
@@ -273,6 +284,7 @@ class PlaySession {
     _beat = (elapsed - _origin).inMicroseconds / 1e6 * beatsPerSecond -
         leadInBeats;
 
+    _endFinishedHolds();
     _playAccompaniment();
     _playRuns();
     _playWaitingNotes();
@@ -393,6 +405,7 @@ class PlaySession {
         beat: tapTarget.beat,
         midis: tapTarget.notes.map((n) => n.midi).toList(),
         endBeat: tapTarget.endBeat,
+        sustained: tapTarget.sustains,
       );
     }
 
@@ -620,12 +633,15 @@ class PlaySession {
   /// Whether a long note is being held right now — for the screen to show.
   bool get isHolding => _holds.isNotEmpty;
 
-  /// The notes a finger is on at this moment, keyed the same way as
-  /// everything else here: which beat, which pitch.
+  /// The long notes sounding at this moment, keyed the same way as everything
+  /// else here: which beat, which pitch.
   ///
-  /// The screen needs this to know which long notes to stop at the line. One
-  /// that nobody caught is not being held, and should carry on down and leave
-  /// like any other missed note rather than sitting on the line pretending.
+  /// The screen needs this to know which ones to stop at the line. One that
+  /// nobody caught is not sounding, and should carry on down and leave like
+  /// any other missed note rather than sitting on the line pretending. One
+  /// the player caught stays until it is written to end — whether or not the
+  /// finger is still on it, because a hand with one finger has to leave in
+  /// order to play what comes next.
   Set<(double, int)> get heldNotes => {
         for (final hold in _holds.values)
           for (final midi in hold.midis) (hold.beat, midi),
@@ -639,8 +655,17 @@ class PlaySession {
   ///
   /// Returns true if the note was cut short.
   bool releaseHold(int holdId) {
-    final hold = _holds.remove(holdId);
+    final hold = _holds[holdId];
     if (hold == null) return false;
+
+    // A note the same hand has to leave in order to play the next one is not
+    // let go of; it rings on, pinned on the line, until it is written to end.
+    // Otherwise every one of Bach's bass notes would be cut off by the very
+    // touch the piece asks for next, and the player would be punished for
+    // having one finger to a hand.
+    if (hold.sustained) return false;
+
+    _holds.remove(holdId);
     if (_beat >= hold.endBeat - 0.05) return false; // held to the end
 
     for (final midi in hold.midis) {
@@ -650,6 +675,10 @@ class PlaySession {
     }
     return true;
   }
+
+  /// A note that rings on after the finger has gone is finished by the clock.
+  void _endFinishedHolds() =>
+      _holds.removeWhere((_, hold) => _beat >= hold.endBeat);
 
   /// The pending touch this one should count as.
   ///

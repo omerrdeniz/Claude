@@ -221,6 +221,66 @@ void main() {
       expect(session.heldNotes, isEmpty);
     });
 
+    // A hand has one finger. Where a held note still has time to run and the
+    // same hand is already asked for the next note, the player has no choice
+    // but to lift — and the music says the first note goes on sounding.
+    // Two thirds of the holds in Satie's first Gymnopédie are like this, and
+    // half of Bach's in the first prelude.
+    group('a note the same hand has to leave', () {
+      /// A long note with another in the same hand before it ends.
+      Song overlapping() => songOf([
+            note(0, 60, duration: 4),
+            note(1, 67, duration: 0.5),
+          ]);
+
+      test('is marked as sustained, where a lone one is not', () {
+        final chart = Chart.build(overlapping(), difficulty: Difficulty.easy);
+        expect(chart.taps.first.sustains, isTrue);
+        expect(chart.taps.last.sustains, isFalse);
+
+        final lone = Chart.build(heldNote(), difficulty: Difficulty.easy);
+        expect(lone.taps.single.sustains, isFalse);
+      });
+
+      test('goes on sounding when the finger leaves it', () {
+        final session = sessionFor(overlapping());
+        seek(session, 0);
+        final id = session.tap(right)!.holdId!;
+        expect(engine.struck.map((s) => s.$1), [60]);
+
+        // The finger lifts, because the next note needs it.
+        expect(session.releaseHold(id), isFalse, reason: 'nothing was cut');
+        expect(engine.released, isEmpty, reason: 'the note was silenced');
+
+        seek(session, 1);
+        expect(session.tap(right)?.notes.single.midi, 67);
+        expect(engine.released, isNot(contains(60)),
+            reason: 'the held note stopped when the next one was played');
+      });
+
+      test('stays pinned on the line until it is written to end', () {
+        final session = sessionFor(overlapping());
+        seek(session, 0);
+        session.releaseHold(session.tap(right)!.holdId!);
+
+        seek(session, 2);
+        expect(session.heldNotes, contains((0.0, 60)),
+            reason: 'it is still sounding, so it is still on the line');
+
+        seek(session, 4.1);
+        expect(session.heldNotes, isEmpty, reason: 'now it is over');
+      });
+
+      test('a note nothing follows is still cut short by letting go', () {
+        // The teaching stays where the music allows it.
+        final session = sessionFor(heldNote());
+        seek(session, 0);
+        final id = session.tap(right)!.holdId!;
+        expect(session.releaseHold(id), isTrue);
+        expect(engine.released, contains(60));
+      });
+    });
+
     test('a long note nobody catches is never reported as held', () {
       final session = sessionFor(heldNote());
       // Let it go by untouched.

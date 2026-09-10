@@ -292,9 +292,11 @@ void main() {
       expect(chart.taps.map((t) => t.runIndex), [0, 1, 2, 3, 4, 5]);
     });
 
-    test('a passage that breathes is still one passage', () {
-      // A beat is half a second here: 0.25 begins a run (125 ms), 0.5 is a
-      // breath a run carries over (250 ms), 0.7 ends it (350 ms).
+    test('a breath ends a run — there is no carrying over it', () {
+      // A beat is half a second here, so 0.25 apart begins a run (125 ms) and
+      // 0.5 apart does not (250 ms). Carrying a run across the wider gap was
+      // tried and taken out again: the player, who can see the notes, said
+      // the gap is real and the thread should not be drawn through it.
       final chart = Chart.build(
         songOf([
           for (var i = 0; i < 4; i++) note(i * 0.25, 60 + i),
@@ -302,40 +304,15 @@ void main() {
         ]),
         difficulty: Difficulty.normal,
       );
-      expect(runOf(chart), hasLength(8),
-          reason: 'one longer note inside a run does not end it');
-    });
-
-    test('a gap too wide is still a gap', () {
-      final chart = Chart.build(
-        songOf([
-          for (var i = 0; i < 4; i++) note(i * 0.25, 60 + i),
-          for (var i = 0; i < 4; i++) note(1.45 + i * 0.25, 64 + i),
-        ]),
-        difficulty: Difficulty.normal,
-      );
       expect(chart.runs, hasLength(2), reason: 'two runs, not one');
     });
 
     test('a merely quick passage begins nothing', () {
-      // Notes a quarter of a second apart are inside the carry but never
-      // begin a run: without that, a piece of steady sixteenths would come
-      // out as one slide from end to end.
       final chart = Chart.build(
         songOf([for (var i = 0; i < 12; i++) note(i * 0.5, 60 + i)]),
         difficulty: Difficulty.normal,
       );
       expect(chart.runs, isEmpty);
-    });
-
-    test("the canon's variations come out whole, not in fragments", () {
-      // Reported by the player: its runs had been chopped into thirty-one
-      // pieces, most of them three notes long, by the breath every fourth
-      // note. Ten bars of semiquavers are two passages, not thirty-one.
-      final chart = Chart.build(shipped('canon-in-d'));
-      expect(chart.runs, hasLength(lessThan(5)));
-      expect(chart.runs.values.map((r) => r.length).reduce((a, b) => a > b ? a : b),
-          greaterThan(50));
     });
 
     test('two are a flourish, not a run', () {
@@ -409,17 +386,11 @@ void main() {
         final secondsPerBeat = 60 / song.bpm;
         for (final run in Chart.build(song).runs.values) {
           expect(run.length, greaterThanOrEqualTo(Chart.runLength));
-          // Every gap inside a run is at most the carry, and at least one of
-          // them is fast enough to have begun it.
-          var fastest = double.infinity;
           for (var i = 1; i < run.length; i++) {
             final gap = (run[i].beat - run[i - 1].beat) * secondsPerBeat;
-            expect(gap, lessThanOrEqualTo(Chart.runCarrySeconds + 1e-9),
-                reason: '${song.title}: a run carried over a real gap');
-            if (gap < fastest) fastest = gap;
+            expect(gap, lessThanOrEqualTo(Chart.runGapSeconds + 1e-9),
+                reason: '${song.title}: a run reaching over a real gap');
           }
-          expect(fastest, lessThanOrEqualTo(Chart.runGapSeconds + 1e-9),
-              reason: '${song.title}: a run that never was fast');
           for (var i = 1; i < run.length; i++) {
             expect(run[i].beat, greaterThan(run[i - 1].beat));
             expect(run[i].hand, run[i - 1].hand);
@@ -464,6 +435,39 @@ void main() {
               reason: '${song.title}: a hold of '
                   '${(tap.duration * secondsPerBeat * 1000).round()} ms');
         }
+      }
+    });
+  });
+
+  group('notes a hand has to leave', () {
+    test('the other hand does not force a hand to let go', () {
+      final chart = Chart.build(
+        songOf([
+          note(0, 72, duration: 4),
+          note(1, 48, duration: 0.5, hand: Hand.left),
+        ]),
+        difficulty: Difficulty.normal,
+      );
+      expect(chart.taps.first.sustains, isFalse,
+          reason: 'the left hand has its own finger');
+    });
+
+    test('notes struck together do not', () {
+      final chart = Chart.build(
+        songOf([note(0, 72, duration: 4), note(0, 76, duration: 4)]),
+        difficulty: Difficulty.hard, // a touch per note, at the same moment
+      );
+      expect(chart.taps.every((t) => t.sustains), isFalse);
+    });
+
+    test('the pieces that prompted this are full of them', () {
+      // Reported by the player: Bach's left hand and both of Satie's.
+      for (final id in ['prelude-in-c', 'gnossienne-1']) {
+        final chart = Chart.build(shipped(id));
+        final holds = chart.taps.where((t) => t.isHold);
+        final sustained = holds.where((t) => t.sustains);
+        expect(sustained.length, greaterThan(holds.length ~/ 3),
+            reason: '$id: ${sustained.length} of ${holds.length}');
       }
     });
   });

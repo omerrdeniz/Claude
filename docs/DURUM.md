@@ -1,8 +1,8 @@
 # Durum ve devir notu
 
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
-sürdürebilmesi için yazıldı. Son güncelleme: kütüphane 28 parçaya çıktı,
-adlar orijinal diline döndü.
+sürdürebilmesi için yazıldı. Son güncelleme: elden bırakılmak zorunda kalınan
+tutmalı notalar artık kesilmiyor; telefon eski derlemeyi tutmuyor.
 
 ## Proje
 
@@ -185,7 +185,14 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   halka var (çalınmakta olan, yoksa gelmekte olan). Parmağını basılı tutan
   biri sekiz koşuyu da kesintisiz çalıyor.
 
-  **Beşinci tur — iki eşik, bir tane değil.** Oyuncu Kanon'daki üçlülerin
+  **Altıncı tur — birleştirme geri alındı.** Oyuncu: *"3'lüler ile diğerleri
+  arasında boşluk var, birleştirmesek daha iyi olurdu."* Haklı: 273 ms'lik
+  nefes gerçek bir boşluk ve ipi onun içinden geçirmek müziği yanlış
+  gösteriyor. Sürdürme eşiği (`runCarrySeconds`) kaldırıldı; tek eşik kaldı.
+  Kanon yine 31 koşu, 3'ten 11 notaya. Kısa koşular artık sorun değil, çünkü
+  parmak ele bağlı ve yakalanacak bir şey yok.
+
+  **Beşinci tur — iki eşik, bir tane değil (geri alındı, yukarıya bakın).** Oyuncu Kanon'daki üçlülerin
   neden kaybolduğunu sordu. Doğru cevap "geri getirelim" değildi: o üçlüler
   hiç ayrı bir şey değildi. Kanon'un on altılık varyasyonları dört notada bir
   nefes alıyor — komşuları 136 ms iken o aralık 273 ms — ve tek eşikli kural
@@ -208,6 +215,18 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   Kapsam (Normal): Kanon 2 koşu (79 ve 112 nota, %23), Für Elise 4 (5, 8, 52,
   62 — %14), Nokturn 5 (3, 3, 5, 14, 14 — %5), diğerleri yok.
 
+- **Elden bırakılmak zorunda kalınan nota kesilmez.** Bir elde bir tutmalı
+  nota sürerken aynı ele başka bir nota geliyorsa, oyuncunun tek parmağı var
+  ve bırakmaktan başka seçeneği yok. O yüzden böyle notalar (`Tap.sustains`)
+  parmak kalkınca susmuyor: yazılı sonuna kadar çalmaya devam ediyor ve
+  ekranda çizgide sabit kalıyor.
+
+  Oyuncu bildirdi ve ölçüm doğruladı: Prelüd'ün 134 tutmalı notasının **66'sı**,
+  Gnossienne No. 1'in 324'ünün **194'ü** böyle. Yani o parçalarda kural
+  neredeyse her zaman devredeydi ve oyuncu doğru oynadığı için cezalandırılıyordu.
+
+  Ardından hiçbir şey gelmeyen notada eski davranış duruyor: erken bırakırsan
+  nota kesilir. Öğretici olan kısım orada kalıyor, müziğin izin verdiği yerde.
 - **Basılı tutma eşiği saniye cinsinden.** Bir nota, sesi 0.7 saniyeden uzun
   sürüyorsa basılı tutmalı sayılıyor (`Tap.holdSeconds`); `Chart.build` bunu
   parçanın temposundan vuruşa çeviriyor.
@@ -802,9 +821,22 @@ Yanında commit hash'i de duruyor, asıl kimlik o. İkisi de şarkı listesinin
 söyleniyor** — bir düzeltmenin işe yaramadığını, hiç ulaşmadığından ayırmanın
 başka yolu yok.
 
-`--pwa-strategy=none` ve `web/index.html` içindeki service worker kaldırma
-betiği **şart**: yoksa telefonda eski derleme kalıyor ve saatlerce yanlış
-sürüm test ediliyor.
+**Telefon eski derlemeyi tutuyordu.** Oyuncu sürüm değişince ana ekrandaki
+uygulamaya gelip gelmediğini sordu — gelmiyor gibi görmüş, ve haklıymış.
+Service worker'ı kaldırmak en kötüsünü çözüyor ama sıradan HTTP önbelleği tek
+başına bir derlemeyi saatlerce servis etmeye yetiyor. Oyuncu açısından bu,
+"düzeltme işe yaramadı" ile ayırt edilemez.
+
+Üç katman:
+
+1. `--pwa-strategy=none` ve `web/index.html` içindeki service worker kaldırma
+   betiği.
+2. `deploy.sh` sayfaya derleme numarasını damgalıyor, `flutter_bootstrap.js`
+   ve `main.dart.js` adreslerine `?v=<sürüm>` ekliyor.
+3. `index.html` açılışta `version.json`'ı önbelleksiz çekip kendi damgasıyla
+   karşılaştırıyor; farklıysa sayfayı hiç önbelleğe girmemiş bir adresle
+   (`?v=<sürüm>`) yeniden yüklüyor. Sürüm başına bir kez, yoksa inatçı bir
+   kopya uygulamayı sonsuz döngüye sokar.
 
 ## Yol haritası
 
