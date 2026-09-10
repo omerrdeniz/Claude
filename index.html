@@ -43,6 +43,12 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
+  <!--
+    Which build this page is. Stamped in by tool/deploy.sh; the script at the
+    bottom uses it to notice when the phone is running an old one.
+  -->
+  <meta name="piano-flow-build" content="57">
+
   <title>Piano Flow</title>
   <link rel="manifest" href="manifest.json">
   <style>
@@ -94,6 +100,33 @@
       });
     }
 
+    // Notice when this phone is running an old build, and fetch the new one.
+    //
+    // Added to the home screen, the game is a page the phone keeps a copy of.
+    // Unregistering the old service worker stopped the worst of that, but an
+    // ordinary HTTP cache is enough on its own to go on serving a build for
+    // hours — long enough for the player to test a fix that never arrived and
+    // report it as not working, which happened.
+    //
+    // So: ask the server what the current build is, with caching turned off,
+    // and if it is not this one, load the page again under a URL that has
+    // never been cached. Once per version, so a stale copy that refuses to go
+    // cannot put the app in a reload loop.
+    (function () {
+      var stamp = document.querySelector('meta[name="piano-flow-build"]');
+      var mine = stamp ? stamp.content : '';
+      if (!mine || mine === 'BUILD' + '_STAMP') return; // a local build
+      fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (response) { return response.json(); })
+        .then(function (server) {
+          if (!server.version || server.version === mine) return;
+          if (sessionStorage.getItem('pf-seen') === server.version) return;
+          sessionStorage.setItem('pf-seen', server.version);
+          location.replace(location.pathname + '?v=' + server.version);
+        })
+        .catch(function () {});
+    })();
+
     // Safari honours `user-scalable=no` unevenly, so pinch-to-zoom is turned
     // away here as well. Without it a second finger — which this game asks
     // for by design, one hand each side — can zoom the board mid-song.
@@ -103,6 +136,6 @@
       }, { passive: false });
     });
   </script>
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js?v=57" async></script>
 </body>
 </html>
