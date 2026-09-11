@@ -108,11 +108,12 @@ void main() {
     await openSong(tester, firstSong);
 
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
-    expect(screen.difficulty, Difficulty.hard);
-    expect(screen.speed, 0.4);
-    expect(screen.tolerance, TimingTolerance.wide, reason: 'the default');
-    expect(screen.quantize, isTrue, reason: 'the default');
-    expect(screen.latencyOffsetMs, 0, reason: 'the default');
+    expect(screen.settings.difficulty, Difficulty.hard);
+    expect(screen.settings.speed, 0.4);
+    expect(screen.settings.tolerance, TimingTolerance.wide,
+        reason: 'the default');
+    expect(screen.settings.quantize, isTrue, reason: 'the default');
+    expect(screen.settings.latencyOffsetMs, 0, reason: 'the default');
   });
 
   testWidgets('the timing settings reach the playfield too', (tester) async {
@@ -137,9 +138,9 @@ void main() {
     await openSong(tester, 'Für Elise');
 
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
-    expect(screen.tolerance, TimingTolerance.tight);
-    expect(screen.quantize, isFalse);
-    expect(screen.fillMissed, isTrue, reason: 'switched on from off');
+    expect(screen.settings.tolerance, TimingTolerance.tight);
+    expect(screen.settings.quantize, isFalse);
+    expect(screen.settings.fillMissed, isTrue, reason: 'switched on from off');
   });
 
   testWidgets('the timing calibration reaches the game', (tester) async {
@@ -157,7 +158,7 @@ void main() {
 
     await openSong(tester, firstSong);
 
-    expect(tester.widget<PlayScreen>(find.byType(PlayScreen)).latencyOffsetMs,
-        30);
+    final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
+    expect(screen.settings.latencyOffsetMs, 30);
   });
 }

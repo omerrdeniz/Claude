@@ -2,34 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../../data/song_info.dart';
 import '../../data/song_library.dart';
-import '../../game/chart.dart';
-import '../../game/judgement.dart';
+import '../../game/play_settings.dart';
 import '../../theme/app_theme.dart';
 import '../play_screen.dart';
 
-/// One song in the list, carrying every setting through to the game.
+/// One song in the list, carrying the player's settings through to the game.
 ///
-/// Every one of these has been forgotten on the way to [PlayScreen] at least
-/// once, which is why `test/song_list_test.dart` checks each of them arrives.
+/// They travel as one [PlaySettings] rather than one parameter each: when they
+/// were separate, settings went missing on the way to [PlayScreen] twice.
 class SongTile extends StatelessWidget {
   const SongTile({
     super.key,
     required this.info,
-    required this.difficulty,
-    required this.speed,
-    required this.tolerance,
-    required this.quantize,
-    required this.fillMissed,
-    required this.latencyOffsetMs,
+    required this.settings,
   });
 
   final SongInfo info;
-  final Difficulty difficulty;
-  final double speed;
-  final TimingTolerance tolerance;
-  final bool quantize;
-  final bool fillMissed;
-  final double latencyOffsetMs;
+  final PlaySettings settings;
 
   /// Read the score, then play it.
   ///
@@ -42,15 +31,7 @@ class SongTile extends StatelessWidget {
     if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PlayScreen(
-          song: song,
-          difficulty: difficulty,
-          speed: speed,
-          tolerance: tolerance,
-          quantize: quantize,
-          fillMissed: fillMissed,
-          latencyOffsetMs: latencyOffsetMs,
-        ),
+        builder: (_) => PlayScreen(song: song, settings: settings),
       ),
     );
   }
@@ -71,12 +52,12 @@ class SongTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final length = info.duration.inSeconds ~/ speed;
+    final length = info.duration.inSeconds ~/ settings.speed;
     final minutes = length ~/ 60;
     final seconds = length % 60;
     // Slowing a piece down really does make it a gentler one, so the word
     // follows the speed the player has set.
-    final pace = paceOf(info.tapsPerSecond * speed);
+    final pace = paceOf(info.tapsPerSecond * settings.speed);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
