@@ -634,20 +634,103 @@ void main() {
       expect(session.flick(outcome.crushId!, right + 0.001), isFalse);
     });
 
-    test('and neither is one that comes too late', () {
-      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+    test('on the hardest level a late one does not count', () {
+      final session = sessionFor(ornamented(), difficulty: Difficulty.hard);
       final outcome = playAt(session, 2.0);
-      final late = 2.0 +
-          (PlaySession.flickSeconds + 0.1) * session.beatsPerSecond;
+      final late =
+          2.0 + (PlaySession.flickSeconds + 0.1) * session.beatsPerSecond;
       wall(session, (late + session.leadInBeats) / session.beatsPerSecond);
       expect(session.flick(outcome!.crushId!, right + PlaySession.flickReach),
           isFalse);
+    });
+
+    test('but below it, doing the gesture is the gesture', () {
+      // The middle level asks for the shape of the movement, not for its
+      // timing as well: a hand that flicks plainly and correctly is never
+      // told no for being a moment late at something already sounded.
+      for (final level in [Difficulty.easy, Difficulty.normal]) {
+        final session = sessionFor(ornamented(), difficulty: level);
+        final outcome = playAt(session, 2.0);
+        final late =
+            2.0 + (PlaySession.flickSeconds + 2) * session.beatsPerSecond;
+        wall(session, (late + session.leadInBeats) / session.beatsPerSecond);
+        expect(session.flick(outcome!.crushId!, right + PlaySession.flickReach),
+            isTrue,
+            reason: 'on ${level.label}');
+      }
     });
 
     test('a note without an ornament offers no flick', () {
       final session = sessionFor(songOf([note(2.0, 62, duration: 1.0)]),
           difficulty: Difficulty.normal);
       expect(playAt(session, 2.0)!.crushId, isNull);
+    });
+  });
+
+  group('a hand that presses before its note', () {
+    // The left hand a beat behind the right, as Satie writes it: the melody
+    // on one, the bass on two.
+    Song apart() => songOf([
+          note(2, 72, hand: Hand.right, duration: 1),
+          note(3, 48, hand: Hand.left, duration: 1),
+        ]);
+
+    test('books it, and hears it on its own beat', () {
+      final session = sessionFor(apart(), difficulty: Difficulty.normal);
+      wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
+      session.tap(right);
+      final outcome = session.tap(left); // both hands at once, as a beginner would
+      expect(outcome, isNotNull,
+          reason: 'a real touch must never be answered with silence');
+      expect(outcome!.scored, isTrue);
+      expect(engine.struck.map((s) => s.$1), [72],
+          reason: 'the bass has not sounded yet — its beat has not come');
+
+      wall(session, (3.1 + session.leadInBeats) / session.beatsPerSecond);
+      expect(engine.struck.map((s) => s.$1), [72, 48],
+          reason: 'and now it has');
+    });
+
+    test('it keeps the streak but is not a perfect', () {
+      final session = sessionFor(apart(), difficulty: Difficulty.normal);
+      wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
+      session.tap(right);
+      expect(session.tap(left)!.verdict, PlaySession.bookedVerdict);
+      expect(session.scoreboard.combo, 2);
+    });
+
+    test('the note is not left to be played twice', () {
+      final session = sessionFor(apart(), difficulty: Difficulty.normal);
+      wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
+      session.tap(left);
+      wall(session, (3 + session.leadInBeats) / session.beatsPerSecond);
+      expect(session.tap(left)?.scored ?? false, isFalse,
+          reason: 'it was already taken');
+    });
+
+    test('the hardest level books nothing', () {
+      final session = sessionFor(apart(), difficulty: Difficulty.hard);
+      wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
+      expect(session.tap(left)?.scored ?? false, isFalse);
+      expect(engine.struck, isEmpty);
+    });
+
+    test('and neither does a player who asked to hear their own timing', () {
+      final session =
+          sessionFor(apart(), difficulty: Difficulty.normal, quantize: false);
+      wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
+      expect(session.tap(left)?.scored ?? false, isFalse);
+    });
+
+    test('nothing is booked from further off than the next thing', () {
+      final far = songOf([
+        note(2, 72, hand: Hand.right, duration: 1),
+        note(6, 48, hand: Hand.left, duration: 1),
+      ]);
+      final session = sessionFor(far, difficulty: Difficulty.normal);
+      wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
+      expect(session.tap(left)?.scored ?? false, isFalse,
+          reason: 'four beats away is not the hand reaching, it is a stray');
     });
   });
 

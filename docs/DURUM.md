@@ -100,6 +100,25 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   tam puan alır; fiske yalnız üstüne ekler. Puan doğruluğa (`accuracy`)
   girmez — doğruluk zamanlama sorusudur, bu değil.
 
+  **Fiskenin süresi zorluğa bağlı.** Oyuncu: *"zamanlamaya duyarlı olması orta
+  zorluk için gereksiz... orta modda oyuncu kaydırmayı yapıyorsa doğru şekilde
+  çalmalı."* Haklı: süsleme zaten çalmış durumda, fiske yalnız hareketin
+  şekliyle ilgili. Kolay ve Normal'de parmak bastığı sürece süre yok; yalnız
+  Zor'da 0.3 saniyelik pencere. Zamanlama oyunun geri kalanının konusu, bunun
+  değil.
+
+  **Gösterim ikinci turda değişti.** İlk hâli her çarpmalı notanın yanına
+  küçük bir baş koyuyordu. Oyuncu: *"ekrandaki gösterimi çok kötü olmuş,
+  ikili üçlülerde çok daha karışık duruyor."* Doğru — Gnossienne'in yüz
+  çarpmasının **18'i akor** (14 ikili, 4 üçlü) ve uydu nokta komşu notanın
+  üstüne düşüyordu. Üstelik yanlış taraftaydı: süsleme asıl notadan *önce*
+  duyulur, yani çizgiye daha yakındır, aşağıda olmalıydı.
+
+  Şimdi **dokunuş başına tek bir yatay ok**, notaların altında
+  (`StagePainter._paintFlick`). Akor kaç nota olursa olsun bir tane, çünkü
+  talimat ele veriliyor. Yatay olması bilerek: notalar daire, tutmalar dikey
+  çubuk, koşular ip ve boncuk — yan yatmış bir çizgi öğrenilmeden okunuyor.
+
   **Yön gerçek, mesafe değil.** Süslemelerin %70'i aşağı, %30'u yukarı eğiliyor
   — yani yön okunacak bir bilgi. Ama çoğu 1-2 yarım ses uzakta, ki perdeden yer
   üreten bu ekranda 7 piksel eder. Onun için hem mekanik hem çizim yalnızca
@@ -117,6 +136,39 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   ilk gördüğünü tutuyor. Yani Kolay'da oyuncu süsü çalıyor, ezgiyi oyun
   çalıyordu. `_divideVoices` artık süslemeyi kendi başına bir an saymıyor:
   bağlı olduğu notayla birlikte kalıyor ya da birlikte gidiyor.
+- **Erken basan el, elinin sıradaki notasını ısmarlar.** Oyuncu sordu:
+  Gnossienne'de sol el melodiyle aynı anda çalmıyor, *"parçayı bilmeyen bir
+  oyuncu aradaki ince farkı sezemeyip ilk dokunuşla aynı anda sol eli de
+  basabilir."*
+
+  Ölçüldü: 246 sol dokunuşun **23'ü** sağ elden **600 ms sonra** geliyor.
+  Yargı penceresi 210 ms, "yakın kaçırma" erişimi 550 ms. Yani o basış
+  hiçbir şeye denk gelmiyordu — **ne ses, ne "kaçtı", hiçbir şey.** Oyunun
+  defalarca kaçınmaya çalıştığı ölü kumanda hissi.
+
+  Artık dokunuş notayı **ısmarlıyor** ve nota **kendi vuruşunda** çalıyor;
+  asla erken değil. El "bası çal" diyor, zamanı oyun veriyor.
+
+  Üç şartı var, üçü de gerekli çıktı:
+  - **`quantize` açık olmalı.** Ayar zaten "erken basışlar kendi vuruşunda
+    seslendirilir" demek; bu yalnız erişimini genişletiyor. Kapalıysa oyuncu
+    kendi zamanlamasını duymak istemiştir.
+  - **Zor'da yok.** Orada "ne zaman" sorunun kendisi.
+  - **Öbür elin notası o anda orada olmalı.** Bu şart olmadan iki mevcut
+    test düştü ve ikisi de haklıydı: boşluğa yapılan erken dokunuş hiçbir şey
+    kazandırmamalı, ve koşudan önce boncuğu tutmak için yapılan dokunuş nota
+    çalmamalı. Şart, "oyuncu müzikle birlikte bastı" ile "parmak kendi başına
+    gitti" arasındaki farkı tam olarak ayırıyor.
+
+  Ismarlanan nota `Verdict.good` sayılıyor: seriyi kırmıyor (hiç duymadığı
+  bir boşluğu sezemedi diye kimse elli serisini kaybetmemeli) ama mükemmel de
+  değil — zamanlama oyunundu, oyuncunun değil.
+
+  Erişim 0.8 saniye (`PlaySession.bookAheadSeconds`): Satie'nin bıraktığı
+  600 ms'den uzun, bir sonrakinin sonrasına yetişmeyecek kadar kısa.
+
+  Kolay'da eller ayrılmadığı için ısmarlama çalışmıyor; orada aynı boşluk
+  zaten seyreltmeyle `autoNotes`'a gidiyor.
 - **Eller ayrılır.** Ekranın sol yarısı sol el, sağ yarısı sağ el. Zorluğun
   asıl anlamı bu:
   - Kolay: tek alan, akor tek parmakla, seyreltme var.
@@ -935,7 +987,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 420 test geçiyor
+flutter test        # 428 test geçiyor
 ```
 
 ## Cihazsız doğrulama

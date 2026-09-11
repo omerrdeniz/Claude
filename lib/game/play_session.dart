@@ -422,6 +422,9 @@ class PlaySession {
 
     final index = _nearestPending(across, hand);
     if (index == null) {
+      final booked = _bookAhead(hand);
+      if (booked != null) return _book(chart.taps[booked]);
+
       final near = _nearMiss(across, hand);
       if (near == null) return null;
       return TapOutcome(
@@ -463,7 +466,7 @@ class PlaySession {
       _crushes[crushId] = _Crush(
         from: across,
         lean: tapTarget.graceLean,
-        until: _beat + flickSeconds * beatsPerSecond,
+        until: _flickUntil,
       );
     }
 
@@ -540,12 +543,21 @@ class PlaySession {
   /// still is not a flick, small enough to be one movement of a thumb.
   static const double flickReach = 0.04;
 
-  /// How long after the touch a flick still counts, in seconds.
+  /// How long after the touch a flick still counts, in seconds — and only on
+  /// the hardest level. Below it the finger has as long as it stays down.
   ///
-  /// The ornament has already sounded — this is not the note being earned,
-  /// only the flourish. Generous, because a hand that flicks late has still
-  /// made the gesture the music asks for.
+  /// The player asked for this and was right: on the middle level, doing the
+  /// gesture *is* the gesture. A window there would mean a hand that flicked
+  /// plainly and correctly was told no, for being a tenth of a second late at
+  /// something that has already sounded. Timing is what the rest of the game
+  /// is about; this is about the shape of the movement. Only the hardest
+  /// level asks for both at once.
   static const double flickSeconds = 0.3;
+
+  /// When this touch's flick stops counting.
+  double get _flickUntil => chart.difficulty == Difficulty.hard
+      ? _beat + flickSeconds * beatsPerSecond
+      : double.infinity;
 
   /// What a flick is worth, before the combo multiplier.
   ///
@@ -856,6 +868,93 @@ class PlaySession {
       }
     }
     return best;
+  }
+
+  /// The next thing this hand has coming, for a touch that found nothing in
+  /// its window.
+  ///
+  /// Gnossienne No. 1 is why. Its left hand does not play with the melody: at
+  /// twenty-three places it comes a full six hundred milliseconds later, and
+  /// somebody who does not know the piece cannot hear that coming. They press
+  /// both hands together, the left one lands outside every window there is,
+  /// and the game answers it with **nothing at all** — no sound, not even a
+  /// miss. That is the dead control this game keeps having to design its way
+  /// out of.
+  ///
+  /// So the touch books the note instead, and the note sounds **on its own
+  /// beat**, never early. The hand said "play the bass"; the game says when.
+  ///
+  /// Deliberately tied to [quantize], which already means *early presses are
+  /// held to their written moment* — this only widens its reach for a hand
+  /// with nothing in front of it. With quantize off the player has asked to
+  /// hear their own timing, and gets it. The hardest level does not book at
+  /// all: there, when is the whole question.
+  ///
+  /// **Only where the music is already doing something.** The other hand has
+  /// to have a note here, and that is what separates the beginner playing
+  /// both hands on the beat from a finger that went off on its own. An early
+  /// touch into silence still costs nothing and still says so; the moment
+  /// before a run, where the bead is out but nothing is playable, still
+  /// plays nothing. Without that condition this booked the first note of
+  /// every run before it began, and told a stray finger it had scored.
+  int? _bookAhead(Hand hand) {
+    if (!quantize || chart.difficulty == Difficulty.hard) return null;
+    if (!_otherHandIsHere(hand)) return null;
+    final reach = bookAheadSeconds * beatsPerSecond;
+    for (var i = 0; i < chart.taps.length; i++) {
+      final tap = chart.taps[i];
+      final ahead = tap.beat - _judgedBeat;
+      if (ahead > reach) break; // taps are in time order
+      if (ahead <= 0 || !_isPending(tap)) continue;
+      if (chart.separatesHands && tap.hand != hand) continue;
+      return i;
+    }
+    return null;
+  }
+
+  /// Whether the other hand has a note at this moment — the sign that the
+  /// player pressed with the music rather than into it.
+  bool _otherHandIsHere(Hand hand) {
+    if (!chart.separatesHands) return false;
+    final windowBeats = judge.windowMs / 1000 * beatsPerSecond;
+    for (final tap in chart.taps) {
+      final distance = tap.beat - _judgedBeat;
+      if (distance > windowBeats) break; // taps are in time order
+      if (distance.abs() <= windowBeats && tap.hand != hand) return true;
+    }
+    return false;
+  }
+
+  /// How far ahead a touch may book, in seconds.
+  ///
+  /// Longer than the six hundred milliseconds Satie leaves between the hands,
+  /// and short enough that it reaches the *next* thing rather than the one
+  /// after it.
+  static const double bookAheadSeconds = 0.8;
+
+  /// What a booked note is worth.
+  ///
+  /// It counts and it keeps the streak: the player did play the note, and
+  /// nobody should lose a run of fifty for not feeling a gap they have never
+  /// heard. It is not a perfect, either — the timing was the game's, not
+  /// theirs, and the difference is the whole reason to learn the piece.
+  static const Verdict bookedVerdict = Verdict.good;
+
+  /// Take a note the hand asked for before its moment came.
+  TapOutcome _book(Tap target) {
+    _resolve(target);
+    scoreboard.register(bookedVerdict);
+    // Nought, and truthfully: the note is about to be sounded exactly on its
+    // beat, so there is no error in what will be heard.
+    _sound(target, 0);
+    return TapOutcome(
+      verdict: bookedVerdict,
+      hand: target.hand,
+      errorMs: 0,
+      notes: target.notes,
+      places: target.noteAcross,
+      voices: target.voices,
+    );
   }
 
   /// How far off a tap was from the nearest note it could plausibly have been
