@@ -266,6 +266,37 @@ kapıya çıkıyor: telifli bir beste, Mutopia'da da KernScores'ta da yok, ve
 zaten hafızadan yazılabilecek bir parça değil — on binlik nota yoğunluğu
 notasıyla birlikte gelir ya da hiç gelmez.
 
+### Nota kaynağı ararken: bakılacak yerlerin sırası
+
+Passacaglia'da sırayla KernScores ve Mutopia'ya bakıp "makine okunur nüsha
+yok" dendi. Oyuncu ısrar etti, **IMSLP'de vardı** — ve IMSLP kütüphanenin en
+büyük kaynağı olarak duruyordu. Sıra şu olmalı:
+
+1. **Mutopia** — LilyPond kaynağı, `url:` ile doğrudan derlenir.
+2. **KernScores** — `**kern`, `midiUrl:` ile MIDI olarak iner.
+3. **IMSLP** — en geniş katalog. Dosyalar bir yönlendirme sayfasının
+   arkasında; doğrudan adres dosya adının md5'inden türüyor:
+   `…/usimg/<h[0]>/<h[0:2]>/IMSLP<no>-<ad>` (h = md5(ad)). Sayfada
+   sentezlenmiş MIDI varsa `midiUrl:` ile alınır.
+4. **Elle yazmak** — `arrangement:` ile `.notes`. Ancak hiçbiri yoksa.
+
+Ve bir ayrım daha: **aynı eserin iki katmanı olabilir.** Handel'in HWV
+432/6'sı ile Halvorsen'in 1893 düzenlemesi aynı numarayı taşıyor ama farklı
+parçalar; tanınan hal Halvorsen'inki. Oyuncu "Passacaglia" derken hangisini
+kastettiği sorulmadan eklendi, yanlış çıktı. Şimdi üçü de kütüphanede:
+Handel'in kendisi, Halvorsen'inki ve elle yazılmış kolay hal.
+
+### Dizgi olarak gelen müzik
+
+Halvorsen'inki sonunda bir **Online Sequencer dizgisinden** geldi
+(oyuncu gösterdi). Sitenin verisi protobuf: nota başına perde, başlangıç,
+süre, gürlük. Perde numarası MIDI'nin iki üstünde; zaman birimi bir
+onaltılık. Çevirici `tool/onlinesequencer_to_midi.py`, `Score.localMidi`
+alanı da bunun için — nüsha olarak değil dizgi olarak gelen müzik.
+
+Dizginin künyesi yok, kimin yaptığı yazmıyor. Oyuncuya söylendi, riski
+bilerek eklenmesini istedi. Künye alanında nereden geldiği yazıyor.
+
 Yasal yol **MIDI içe aktarma** (yol haritası adım 8): dosya oyuncunun
 cihazında kalır, repoya da yayına da girmez. Okuyucu ve dönüştürücü hazır,
 eksik olan sadece dosya seçme ekranı. Oyuncuya iki kez önerildi, ilkinde
