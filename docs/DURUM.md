@@ -823,18 +823,32 @@ Do majörde, ezgi beyaz tuşlarda kalsın diye.
 
 ## Ortam kurulumu
 
-Konteynerde Flutter **kurulu gelmiyor**, her yeni oturumda kurmak gerekir:
+Konteynerde Flutter **kurulu gelmiyor** — imajda Node, Ruby, Java, Gradle ve
+Playwright var, Flutter ve Dart yok — ve kap her oturumda sıfırdan geliyor.
+Artık bunu **oturum açılışında bir kanca yapıyor**:
+
+- `.claude/hooks/session-start.sh` — klon (3.35.1), `safe.directory`, ilk
+  çalıştırmayla Dart SDK'nın açılması, `flutter pub get`, ve PATH'in
+  `$CLAUDE_ENV_FILE` üzerinden oturumun geri kalanına bırakılması.
+- `.claude/settings.json` — kancayı `SessionStart`'a bağlıyor, 900 sn zaman
+  aşımıyla (klon 832 MB, SDK açılımıyla birlikte birkaç dakika).
+
+Kanca **senkron**: kurduğu şey oturumun ilk komutunun ihtiyaç duyduğu şey.
+Yalnız uzak ortamda çalışıyor (`$CLAUDE_CODE_REMOTE`); yerel bir çalışma
+kopyasının kendi Flutter'ı var. Elle kurmak gerekirse betiğin yaptığı budur:
 
 ```bash
 git clone --depth 1 -b 3.35.1 https://github.com/flutter/flutter.git /opt/flutter
 export PATH="$PATH:/opt/flutter/bin"
 git config --global --add safe.directory /opt/flutter
-flutter config --no-analytics
 flutter pub get
 ```
 
 Flutter 3.35.1 / Dart 3.9.0 ile geliştirildi. root olarak çalıştığı için uyarı
 verir, sorun değil.
+
+**Kanca varsayılan dala girene kadar** yalnız onu taşıyan dalın oturumlarında
+çalışır; kanca ayarları oturum açılırken okunuyor.
 
 ```bash
 flutter analyze     # temiz olmalı
