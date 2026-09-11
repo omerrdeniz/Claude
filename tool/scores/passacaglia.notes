@@ -1,0 +1,170 @@
+# Passacaglia (kolay) — G. F. Handel'in zemin bası üstüne, çalınabilir
+# çeşitlemeler.
+#
+# Handel'in kendi Passacaille'i de kütüphanede, tam haliyle: 2520 nota,
+# saniyede 8 dokunuş. O parça hiç piyano çalmamış birinin çalabileceği bir
+# şey değil, ve bu oyun onun için kuruluyor. Bu yüzden aynı zemin bas
+# üstüne, aynı iniş çizgisiyle, yetişilebilir bir hali yazıldı: 4.2
+# dokunuş/saniye. İkisi listede yan yana duruyor — biri hedef, öbürü giriş.
+#
+# Değişmeyen kısım Handel'in, çeşitlemeler Piano Flow'un.
+#
+# Zemin bas, dört ölçüde bir dönen:
+#     Gm | F | Eb | D
+#
+# Üst çizgi her ölçünün ilk vuruşunda iner: D5 - C5 - Bb4 - A4.
+
+bpm: 92
+beats-per-bar: 3
+
+[right]
+# Tema
+G4+Bb4+D5:2 D5:1
+F4+A4+C5:2 C5:1
+Eb4+G4+Bb4:2 Bb4:1
+D4+F#4+A4:2 A4:1
+
+# 1. çeşitleme — dörtlükler
+D5:1 Bb4:1 G4:1
+C5:1 A4:1 F4:1
+Bb4:1 G4:1 Eb4:1
+A4:1 F#4:1 D4:1
+
+# 2. çeşitleme — sekizlikler
+D5:0.5 G4:0.5 Bb4:0.5 D5:0.5 Bb4:0.5 G4:0.5
+C5:0.5 F4:0.5 A4:0.5 C5:0.5 A4:0.5 F4:0.5
+Bb4:0.5 Eb4:0.5 G4:0.5 Bb4:0.5 G4:0.5 Eb4:0.5
+A4:0.5 D4:0.5 F#4:0.5 A4:0.5 F#4:0.5 D4:0.5
+
+# 3. çeşitleme — bir oktav üstte
+D6:0.5 G5:0.5 Bb5:0.5 D6:0.5 Bb5:0.5 G5:0.5
+C6:0.5 F5:0.5 A5:0.5 C6:0.5 A5:0.5 F5:0.5
+Bb5:0.5 Eb5:0.5 G5:0.5 Bb5:0.5 G5:0.5 Eb5:0.5
+A5:0.5 D5:0.5 F#5:0.5 A5:0.5 F#5:0.5 D5:0.5
+
+# 4. çeşitleme — sol el yürür
+D5:3
+C5:3
+Bb4:3
+A4:3
+
+# 5. çeşitleme — iki el birden
+D5:0.5 G4:0.5 Bb4:0.5 D5:0.5 Bb4:0.5 G4:0.5
+C5:0.5 F4:0.5 A4:0.5 C5:0.5 A4:0.5 F4:0.5
+Bb4:0.5 Eb4:0.5 G4:0.5 Bb4:0.5 G4:0.5 Eb4:0.5
+A4:0.5 D4:0.5 F#4:0.5 A4:0.5 F#4:0.5 D4:0.5
+
+# 6. çeşitleme — onaltılıklar
+D5:0.25 G4:0.25 Bb4:0.25 D5:0.25 Bb4:0.25 G4:0.25 D5:0.25 G4:0.25 Bb4:0.25 D5:0.25 Bb4:0.25 G4:0.25
+C5:0.25 F4:0.25 A4:0.25 C5:0.25 A4:0.25 F4:0.25 C5:0.25 F4:0.25 A4:0.25 C5:0.25 A4:0.25 F4:0.25
+Bb4:0.25 Eb4:0.25 G4:0.25 Bb4:0.25 G4:0.25 Eb4:0.25 Bb4:0.25 Eb4:0.25 G4:0.25 Bb4:0.25 G4:0.25 Eb4:0.25
+A4:0.25 D4:0.25 F#4:0.25 A4:0.25 F#4:0.25 D4:0.25 A4:0.25 D4:0.25 F#4:0.25 A4:0.25 F#4:0.25 D4:0.25
+
+# 7. çeşitleme — onaltılıklar, üstte
+D6:0.25 G5:0.25 Bb5:0.25 D6:0.25 Bb5:0.25 G5:0.25 D6:0.25 G5:0.25 Bb5:0.25 D6:0.25 Bb5:0.25 G5:0.25
+C6:0.25 F5:0.25 A5:0.25 C6:0.25 A5:0.25 F5:0.25 C6:0.25 F5:0.25 A5:0.25 C6:0.25 A5:0.25 F5:0.25
+Bb5:0.25 Eb5:0.25 G5:0.25 Bb5:0.25 G5:0.25 Eb5:0.25 Bb5:0.25 Eb5:0.25 G5:0.25 Bb5:0.25 G5:0.25 Eb5:0.25
+A5:0.25 D5:0.25 F#5:0.25 A5:0.25 F#5:0.25 D5:0.25 A5:0.25 D5:0.25 F#5:0.25 A5:0.25 F#5:0.25 D5:0.25
+
+# 8. çeşitleme — oktavlar
+D5+D6:3
+C5+C6:3
+Bb4+Bb5:3
+A4+A5:3
+
+# 9. çeşitleme — sekizlikler
+D5:0.5 G4:0.5 Bb4:0.5 D5:0.5 Bb4:0.5 G4:0.5
+C5:0.5 F4:0.5 A4:0.5 C5:0.5 A4:0.5 F4:0.5
+Bb4:0.5 Eb4:0.5 G4:0.5 Bb4:0.5 G4:0.5 Eb4:0.5
+A4:0.5 D4:0.5 F#4:0.5 A4:0.5 F#4:0.5 D4:0.5
+
+# 10. çeşitleme — dörtlükler
+D5:1 Bb4:1 G4:1
+C5:1 A4:1 F4:1
+Bb4:1 G4:1 Eb4:1
+A4:1 F#4:1 D4:1
+
+# Tema, kapanış
+G4+Bb4+D5:2 D5:1
+F4+A4+C5:2 C5:1
+Eb4+G4+Bb4:2 Bb4:1
+D4+F#4+A4:3
+
+# Son akor
+G3+Bb3+D4+G4:3
+
+[left]
+# Tema
+G2:3
+F2:3
+Eb2:3
+D2:3
+
+# 1. çeşitleme — dörtlükler
+G2:1 D3:1 G3:1
+F2:1 C3:1 F3:1
+Eb2:1 Bb2:1 Eb3:1
+D2:1 A2:1 D3:1
+
+# 2. çeşitleme — sekizlikler
+G2:1 D3:1 G3:1
+F2:1 C3:1 F3:1
+Eb2:1 Bb2:1 Eb3:1
+D2:1 A2:1 D3:1
+
+# 3. çeşitleme — bir oktav üstte
+G2:1 D3:1 G3:1
+F2:1 C3:1 F3:1
+Eb2:1 Bb2:1 Eb3:1
+D2:1 A2:1 D3:1
+
+# 4. çeşitleme — sol el yürür
+G2:0.5 D3:0.5 G3:0.5 D3:0.5 G3:0.5 D3:0.5
+F2:0.5 C3:0.5 F3:0.5 C3:0.5 F3:0.5 C3:0.5
+Eb2:0.5 Bb2:0.5 Eb3:0.5 Bb2:0.5 Eb3:0.5 Bb2:0.5
+D2:0.5 A2:0.5 D3:0.5 A2:0.5 D3:0.5 A2:0.5
+
+# 5. çeşitleme — iki el birden
+G2:0.5 D3:0.5 G3:0.5 D3:0.5 G3:0.5 D3:0.5
+F2:0.5 C3:0.5 F3:0.5 C3:0.5 F3:0.5 C3:0.5
+Eb2:0.5 Bb2:0.5 Eb3:0.5 Bb2:0.5 Eb3:0.5 Bb2:0.5
+D2:0.5 A2:0.5 D3:0.5 A2:0.5 D3:0.5 A2:0.5
+
+# 6. çeşitleme — onaltılıklar
+G2:1 D3:1 G3:1
+F2:1 C3:1 F3:1
+Eb2:1 Bb2:1 Eb3:1
+D2:1 A2:1 D3:1
+
+# 7. çeşitleme — onaltılıklar, üstte
+G2:1 D3:1 G3:1
+F2:1 C3:1 F3:1
+Eb2:1 Bb2:1 Eb3:1
+D2:1 A2:1 D3:1
+
+# 8. çeşitleme — oktavlar
+G2:0.5 D3:0.5 G3:0.5 D3:0.5 G3:0.5 D3:0.5
+F2:0.5 C3:0.5 F3:0.5 C3:0.5 F3:0.5 C3:0.5
+Eb2:0.5 Bb2:0.5 Eb3:0.5 Bb2:0.5 Eb3:0.5 Bb2:0.5
+D2:0.5 A2:0.5 D3:0.5 A2:0.5 D3:0.5 A2:0.5
+
+# 9. çeşitleme — sekizlikler
+G2:1 D3:1 G3:1
+F2:1 C3:1 F3:1
+Eb2:1 Bb2:1 Eb3:1
+D2:1 A2:1 D3:1
+
+# 10. çeşitleme — dörtlükler
+G2:1 D3:1 G3:1
+F2:1 C3:1 F3:1
+Eb2:1 Bb2:1 Eb3:1
+D2:1 A2:1 D3:1
+
+# Tema, kapanış
+G2:3
+F2:3
+Eb2:3
+D2:3
+
+# Son akor
+G2:3

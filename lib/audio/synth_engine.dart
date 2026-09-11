@@ -1,0 +1,459 @@
+import 'dart:math' as math;
+import 'dart:typed_data';
+
+import 'sample_bank.dart';
+
+/// A small polyphonic piano synthesiser, in pure Dart.
+///
+/// It has no Flutter or platform dependency on purpose: the whole thing is a
+/// function from note events to PCM samples, which means it can be unit tested
+/// on the Dart VM without an audio device.
+///
+/// Sound design, briefly. A struck piano string is a stack of partials that
+/// each decay at their own rate — the bright ones die first, which is why a
+/// piano note grows darker as it rings. That single behaviour carries most of
+/// the realism, so each partial here gets its own envelope. Two details on top:
+/// partials sit slightly sharp of the pure harmonic series (inharmonicity, real
+/// strings are stiff), and a short filtered noise burst stands in for the
+/// hammer strike.
+///
+/// Everything is precomputed into per-sample multipliers, so the inner loop is
+/// a handful of multiply-adds per partial and no transcendental calls.
+class SynthEngine {
+  SynthEngine({this.sampleRate = 44100, this.maxVoices = 24})
+      : assert(sampleRate > 0),
+        assert(maxVoices > 0) {
+    for (var i = 0; i < _tableSize; i++) {
+      _sine[i] = math.sin(2 * math.pi * i / _tableSize);
+    }
+    _voices = List.generate(maxVoices, (_) => _Voice(sampleRate));
+  }
+
+  final int sampleRate;
+  final int maxVoices;
+
+  static const int _tableSize = 2048;
+
+  /// Where the cubic saturator x - x³/3 flattens out, at x = 1.
+  static const double _saturationCeiling = 2.0 / 3.0;
+
+  /// Restores the level the saturator takes off, less ~0.3 dB of headroom so
+  /// even a saturated passage stays off full scale.
+  static const double _makeupGain = 32767.0 / _saturationCeiling * 0.97;
+  static final Float32List _sine = Float32List(_tableSize);
+
+  late final List<_Voice> _voices;
+  Float32List _mix = Float32List(0);
+
+  /// Overall output level, before the soft clipper.
+  double masterGain = 0.55;
+
+  /// Recordings to play instead of synthesising, once they have loaded.
+  ///
+  /// Null until then, and on any platform where the asset cannot be read, in
+  /// which case the synthesiser below carries on. That fallback is why the
+  /// game makes a sound at all on the first frame of a web session, while two
+  /// and a half megabytes of piano are still arriving.
+  SampleBank? samples;
+
+  /// Whether the recorded piano is in use.
+  bool get isSampled => samples != null && !samples!.isEmpty;
+
+  /// Brings the recordings up to the level the game was mixed at.
+  ///
+  /// They sit about eight decibels under the synthesiser for the same note,
+  /// which is not a mistake to correct note by note — it is a real piano's own
+  /// range, and flattening it would put the shrill treble straight back. So
+  /// the whole instrument is lifted by one number instead.
+  static const double sampledBoost = 2.4;
+
+  int get activeVoiceCount => _voices.where((v) => v.active).length;
+
+  /// Start a note. [velocity] is 0..1 and controls both loudness and
+  /// brightness, the way striking a key harder does.
+  void noteOn(int midi, {double velocity = 0.8}) {
+    final v = velocity.clamp(0.02, 1.0).toDouble();
+    // Re-striking a sounding key restarts it, as a real damper-and-hammer does.
+    final existing = _voices.where((x) => x.active && x.midi == midi);
+    final voice = existing.isNotEmpty ? existing.first : _allocate();
+    final bank = samples;
+    if (bank != null && !bank.isEmpty) {
+      voice.startSampled(midi, v, bank);
+    } else {
+      voice.start(midi, v, _sine);
+    }
+  }
+
+  /// Release a note: the damper falls and the string is silenced quickly.
+  void noteOff(int midi) {
+    for (final v in _voices) {
+      if (v.active && v.midi == midi && !v.releasing) v.release();
+    }
+  }
+
+  void allNotesOff() {
+    for (final v in _voices) {
+      if (v.active) v.release();
+    }
+  }
+
+  /// Cut every voice immediately, without a release tail.
+  void panic() {
+    for (final v in _voices) {
+      v.kill();
+    }
+  }
+
+  /// Render the next [out].length mono samples as signed 16-bit PCM.
+  void render(Int16List out) {
+    final frames = out.length;
+    if (_mix.length < frames) _mix = Float32List(frames);
+    final mix = _mix;
+    for (var i = 0; i < frames; i++) {
+      mix[i] = 0;
+    }
+
+    for (final v in _voices) {
+      if (v.active) v.addTo(mix, frames);
+    }
+
+    for (var i = 0; i < frames; i++) {
+      // Soft clip: a cubic saturator, so a dense chord compresses instead of
+      // tearing. Cheaper than tanh and indistinguishable here.
+      //
+      // The curve flattens out at _saturationCeiling, so that is what a loud
+      // input has to be pinned to — clamping to 1.0 instead would let the
+      // makeup gain below drive it straight into the rail, which is the
+      // hard clipping this saturator exists to avoid.
+      var x = mix[i] * masterGain * (isSampled ? sampledBoost : 1.0);
+      if (x > 1.0) {
+        x = _saturationCeiling;
+      } else if (x < -1.0) {
+        x = -_saturationCeiling;
+      } else {
+        x = x - (x * x * x) / 3.0;
+      }
+      out[i] = (x * _makeupGain).round().clamp(-32768, 32767);
+    }
+  }
+
+  /// How much of its written loudness a note at [midi] actually gets.
+  ///
+  /// Two things pile up in the top octaves. The ear is at its most sensitive
+  /// between roughly two and four kilohertz, which is where those notes put
+  /// their fundamental; and a real piano radiates far less power up there than
+  /// it does in the middle, where the strings are long and the soundboard is
+  /// working. Give the treble the same amplitude as the middle and it does not
+  /// read as bright, it reads as painful — which is what Chopin's nocturne
+  /// sounded like, a tenth of its melody sitting above B flat 6.
+  ///
+  /// So the top is held back by an octave-for-octave halving above C6, down to
+  /// a floor. Below that nothing changes: the other three pieces live there
+  /// and already sounded right.
+  static double trebleGain(int midi) {
+    if (midi <= _trebleFrom) return 1.0;
+    final octaves = (midi - _trebleFrom) / 12.0;
+    final gain = math.pow(0.5, octaves).toDouble();
+    return gain < _trebleFloor ? _trebleFloor : gain;
+  }
+
+  /// C6 — above here the ear starts doing the work for us.
+  static const int _trebleFrom = 84;
+
+  /// About −10 dB, reached around C7. Past this the note stops sounding like
+  /// a struck string at all.
+  static const double _trebleFloor = 0.32;
+
+  /// Pick a free voice, otherwise steal the quietest sounding one.
+  _Voice _allocate() {
+    _Voice? quietest;
+    for (final v in _voices) {
+      if (!v.active) return v;
+      if (quietest == null || v.loudness < quietest.loudness) quietest = v;
+    }
+    return quietest!;
+  }
+}
+
+/// One sounding note.
+class _Voice {
+  _Voice(this.sampleRate);
+
+  final int sampleRate;
+
+  static const int _partialCount = 7;
+  static const double _inharmonicity = 0.0004;
+
+  final Float64List _phase = Float64List(_partialCount);
+  final Float64List _increment = Float64List(_partialCount);
+  final Float64List _amp = Float64List(_partialCount);
+  final Float64List _decay = Float64List(_partialCount);
+
+  late Float32List _table;
+
+  int midi = -1;
+  bool active = false;
+  bool releasing = false;
+
+  // Attack ramp, so a note starts at zero instead of clicking.
+  double _attack = 0;
+  double _attackStep = 0;
+
+  // Playing a recording rather than synthesising. Null means the partials
+  // above are what sounds.
+  Int16List? _sample;
+  double _position = 0;
+  double _step = 0;
+  double _sampleAmp = 0;
+  double _sampleDecay = 1.0;
+
+  // One-pole low-pass over the recording, opened by how hard the note was
+  // struck. The bank has a single velocity layer, so without this a quiet
+  // note is only a smaller loud note; a real piano gets darker as well.
+  double _lowPass = 0;
+  double _lowPassCoef = 1.0;
+
+  // Hammer transient.
+  double _noiseAmp = 0;
+  double _noiseDecay = 0;
+  double _noiseLp = 0;
+  int _rng = 1;
+
+  /// Rough current level, used to choose which voice to steal.
+  double get loudness {
+    if (_sample != null) return _sampleAmp;
+    var sum = 0.0;
+    for (var i = 0; i < _partialCount; i++) {
+      sum += _amp[i];
+    }
+    return sum;
+  }
+
+  /// Begin [note] from the nearest recording in [bank].
+  void startSampled(int note, double velocity, SampleBank bank) {
+    midi = note;
+    active = true;
+    releasing = false;
+
+    final index = bank.nearestTo(note);
+    _sample = bank.samples[index];
+    _position = 0;
+    // Resample for the interval, and for the bank's rate against ours.
+    _step = math.pow(2, (note - bank.midis[index]) / 12.0).toDouble() *
+        bank.sampleRate /
+        sampleRate;
+
+    // No treble taper here: the recordings carry the instrument's own, which
+    // is both steeper and better measured than anything applied on top.
+    _sampleAmp = velocity;
+    _sampleDecay = 1.0;
+
+    // From nearly shut at a whisper to wide open at a hard strike.
+    _lowPass = 0;
+    _lowPassCoef = 0.10 + 0.90 * math.pow(velocity, 0.6).toDouble();
+
+    _attack = 0;
+    _attackStep = 1.0 / (0.001 * sampleRate);
+    _noiseAmp = 0;
+  }
+
+  void start(int note, double velocity, Float32List table) {
+    _sample = null;
+    _table = table;
+    midi = note;
+    active = true;
+    releasing = false;
+
+    final freq = 440.0 * math.pow(2, (note - 69) / 12.0);
+
+    // Low strings ring for many seconds, the top octave barely at all.
+    final baseDecay = 6.0 * math.pow(2.0, (60 - note) / 30.0).toDouble();
+
+    // Harder strikes excite the upper partials far more than the fundamental;
+    // this is what makes velocity read as brightness rather than just volume.
+    final brightness = math.pow(velocity, 1.6).toDouble();
+
+    // And the top of the keyboard is held back.
+    final treble = SynthEngine.trebleGain(note);
+
+    for (var i = 0; i < _partialCount; i++) {
+      final n = i + 1;
+      // Stiff strings: partials sit progressively sharp of the harmonic series.
+      final ratio = n * math.sqrt(1 + _inharmonicity * n * n);
+      final partialFreq = freq * ratio;
+
+      if (partialFreq >= sampleRate / 2) {
+        // Above Nyquist this would alias back down as an audible whistle.
+        _amp[i] = 0;
+        _increment[i] = 0;
+        _decay[i] = 0;
+        continue;
+      }
+
+      _phase[i] = 0;
+      _increment[i] = partialFreq * SynthEngine._tableSize / sampleRate;
+
+      final gain = 1.0 / math.pow(n, 1.35);
+      _amp[i] = gain * velocity * treble * (i == 0 ? 1.0 : brightness);
+
+      // Higher partials decay faster — the note darkens as it rings.
+      final tau = baseDecay / (1.0 + 0.55 * i * i.toDouble()) / 6.9;
+      _decay[i] = math.exp(-1.0 / (tau * sampleRate));
+    }
+
+    _attack = 0;
+    _attackStep = 1.0 / (0.003 * sampleRate);
+
+    _noiseAmp = 0.28 * velocity * velocity;
+    _noiseDecay = math.exp(-1.0 / (0.006 * sampleRate));
+    _noiseLp = 0;
+    _rng = (note * 2654435761 + 1) & 0x7fffffff;
+    if (_rng == 0) _rng = 1;
+  }
+
+  void release() {
+    releasing = true;
+    if (_sample != null) {
+      _sampleDecay = math.exp(-1.0 / (_pedalTau(midi) * sampleRate));
+      return;
+    }
+    // A damper mutes the string in a couple of tenths of a second; bass
+    // strings, being heavier, take a little longer. Slower than this and
+    // consecutive notes would smear into each other.
+    final tau = midi < 48 ? 0.15 : 0.08;
+    final coef = math.exp(-1.0 / (tau * sampleRate));
+    for (var i = 0; i < _partialCount; i++) {
+      if (_decay[i] > coef) _decay[i] = coef;
+    }
+    _noiseAmp = 0;
+  }
+
+  /// How long a released note takes to fade, in seconds.
+  ///
+  /// A damper alone stops a string in about a tenth of a second, and that is
+  /// what this used to do. But this music is written for a pedal: Chopin's
+  /// nocturne and Bach's prelude both hold a harmony across a bar while the
+  /// hand has long since moved on. Damping every note the instant its written
+  /// length ran out left a dip between every pair of notes — measured at
+  /// thirteen decibels in the nocturne — and the player heard it as the piece
+  /// being chopped up.
+  ///
+  /// So a released note is let down gently instead, which is what a pedalled
+  /// piano does.
+  ///
+  /// Kept moderate on purpose. Rendering a whole piece with no releases at
+  /// all barely moved the envelope — the dip between notes turned out to be
+  /// the piano's own attack against its own sustain, not anything being cut
+  /// short — so there is no measurement saying a longer tail is better, only
+  /// the argument that this music is written for a pedal. Anything bolder
+  /// would be guessing with someone else's ears.
+  static double _pedalTau(int midi) => midi < 48 ? 0.55 : 0.35;
+
+  void kill() {
+    active = false;
+    releasing = false;
+    midi = -1;
+    _sample = null;
+    _sampleAmp = 0;
+    for (var i = 0; i < _partialCount; i++) {
+      _amp[i] = 0;
+    }
+    _noiseAmp = 0;
+  }
+
+  void addTo(Float32List mix, int frames) {
+    final recording = _sample;
+    if (recording != null) {
+      _addRecordingTo(mix, frames, recording);
+      return;
+    }
+
+    const table = SynthEngine._tableSize;
+    final sine = _table;
+
+    for (var f = 0; f < frames; f++) {
+      var sample = 0.0;
+
+      for (var i = 0; i < _partialCount; i++) {
+        final amp = _amp[i];
+        if (amp <= 1e-6) continue;
+
+        var p = _phase[i] + _increment[i];
+        if (p >= table) p -= table;
+        _phase[i] = p;
+
+        final idx = p.toInt();
+        final frac = p - idx;
+        final a = sine[idx];
+        final b = sine[idx + 1 == table ? 0 : idx + 1];
+        sample += (a + (b - a) * frac) * amp;
+
+        _amp[i] = amp * _decay[i];
+      }
+
+      if (_noiseAmp > 1e-6) {
+        // xorshift keeps the transient deterministic, which makes it testable.
+        _rng ^= _rng << 13;
+        _rng ^= _rng >> 17;
+        _rng ^= _rng << 5;
+        _rng &= 0x7fffffff;
+        final white = (_rng / 0x3fffffff) - 1.0;
+        // One-pole lowpass: an unfiltered burst reads as a click, not a hammer.
+        _noiseLp += 0.35 * (white - _noiseLp);
+        sample += _noiseLp * _noiseAmp;
+        _noiseAmp *= _noiseDecay;
+      }
+
+      if (_attack < 1.0) {
+        sample *= _attack;
+        _attack += _attackStep;
+      }
+
+      mix[f] += sample;
+    }
+
+    if (loudness < 5e-5 && _noiseAmp < 1e-6) kill();
+  }
+
+  /// Mix in a recorded note, resampled to the engine's rate and pitch.
+  void _addRecordingTo(Float32List mix, int frames, Int16List data) {
+    const scale = 1.0 / 32768.0;
+    final last = data.length - 2;
+
+    for (var f = 0; f < frames; f++) {
+      final position = _position;
+      if (position >= last) {
+        // The recording has run out; nothing is left to sound.
+        kill();
+        return;
+      }
+
+      final index = position.toInt();
+      final fraction = position - index;
+      final a = data[index] * scale;
+      final b = data[index + 1] * scale;
+      var sample = a + (b - a) * fraction;
+
+      // Softer strikes are darker, not merely smaller.
+      _lowPass += (sample - _lowPass) * _lowPassCoef;
+      sample = _lowPass;
+
+      if (_attack < 1.0) {
+        _attack += _attackStep;
+        if (_attack > 1.0) _attack = 1.0;
+        sample *= _attack;
+      }
+
+      mix[f] += sample * _sampleAmp;
+
+      _position = position + _step;
+      if (_sampleDecay != 1.0) {
+        _sampleAmp *= _sampleDecay;
+        if (_sampleAmp < 1e-5) {
+          kill();
+          return;
+        }
+      }
+    }
+  }
+}

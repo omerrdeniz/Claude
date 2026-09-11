@@ -1,0 +1,18 @@
+salamander.bin — the recorded piano this game plays.
+
+Source recordings: Salamander Grand Piano, a sampled Yamaha C5 by
+Alexander Holm.
+  https://archive.org/details/SalamanderGrandPianoV3
+  https://github.com/sfzinstruments/SalamanderGrandPiano
+
+Licence: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+  https://creativecommons.org/licenses/by/3.0/
+
+Credit is required and is given in the game, on the song list screen.
+
+What was changed, by tool/fetch_samples.dart: one note every minor third was
+taken from the copy Tone.js publishes, decoded, mixed to mono, resampled to
+22050 Hz, cut to length by register with a faded tail, and packed into a
+single binary file. One gain was applied to all of the notes together — never
+one per note, because the instrument's own balance across the keyboard is the
+reason for using recordings at all.
