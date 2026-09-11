@@ -216,6 +216,27 @@ const List<SongInfo> catalog = [
     highMidi: 100,
   ),
   SongInfo(
+    id: 'passacaglia-halvorsen',
+    title: 'Passacaglia (Halvorsen)',
+    composer: 'Handel / Halvorsen',
+    source: 'Kamu malı: Handel (HWV 432/6, 1720), Johan '
+        'Halvorsen\'in 1893 düzenlemesi (Halvorsen † 1935). '
+        'Nota verisi bir Online Sequencer dizgisinden '
+        'çevrildi (onlinesequencer.net/2617124) — dizginin '
+        'kendisi künyesiz.',
+    bpm: 75,
+    beatsPerBar: 4,
+    beatsPerQuarter: 1,
+    rightVelocity: 0.75,
+    leftVelocity: 0.5,
+    startBeat: 0,
+    noteCount: 1028,
+    tapCount: 940,
+    durationMs: 118300,
+    lowMidi: 34,
+    highMidi: 93,
+  ),
+  SongInfo(
     id: 'passacaglia',
     title: 'Passacaglia',
     composer: 'George Frideric Handel',
@@ -234,26 +255,5 @@ const List<SongInfo> catalog = [
     durationMs: 248208,
     lowMidi: 31,
     highMidi: 82,
-  ),
-  SongInfo(
-    id: 'passacaglia-halvorsen',
-    title: 'Passacaglia (Halvorsen)',
-    composer: 'Handel / Halvorsen',
-    source: 'Kamu malı: Handel (HWV 432/6, 1720), Johan '
-        'Halvorsen\'in 1893 düzenlemesi (Halvorsen † 1935). '
-        'Nota verisi bir Online Sequencer dizgisinden '
-        'çevrildi (onlinesequencer.net/2617124) — dizginin '
-        'kendisi künyesiz.',
-    bpm: 150,
-    beatsPerBar: 4,
-    beatsPerQuarter: 1,
-    rightVelocity: 0.75,
-    leftVelocity: 0.5,
-    startBeat: 0,
-    noteCount: 1028,
-    tapCount: 940,
-    durationMs: 59150,
-    lowMidi: 34,
-    highMidi: 93,
   ),
 ];

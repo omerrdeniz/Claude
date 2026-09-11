@@ -21,7 +21,7 @@ def fields(b, i=0):
 
 PITCH_OFFSET = -2       # the grid row that sounds as MIDI note n is n-2
 UNITS_PER_QUARTER = 8   # a grid unit is a sixteenth
-BPM = 150               # so a unit lasts 0.05 s, which is what the site plays
+BPM = 75               # half of what the site plays it at
 TPB = 480
 SPLIT = 60              # middle C: below it is the left hand
 
