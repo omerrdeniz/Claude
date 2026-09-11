@@ -261,10 +261,15 @@ Aynısı **Mariage d'Amour** için de geçerli (Paul de Senneville, 1978, telif
 Coronet-Delphine Music). Yaygın olarak Chopin'e atfedilir — "Spring Waltz"
 diye dolaşır — ama Chopin değil ve kamu malı değil.
 
+Üçüncü istek **Rush E** (Andrew Wrangell / Sheet Music Boss, 2018). Aynı
+kapıya çıkıyor: telifli bir beste, Mutopia'da da KernScores'ta da yok, ve
+zaten hafızadan yazılabilecek bir parça değil — on binlik nota yoğunluğu
+notasıyla birlikte gelir ya da hiç gelmez.
+
 Yasal yol **MIDI içe aktarma** (yol haritası adım 8): dosya oyuncunun
 cihazında kalır, repoya da yayına da girmez. Okuyucu ve dönüştürücü hazır,
-eksik olan sadece dosya seçme ekranı. Oyuncuya önerildi, "şimdilik gerek yok"
-dedi.
+eksik olan sadece dosya seçme ekranı. Oyuncuya iki kez önerildi, ilkinde
+"şimdilik gerek yok" dedi; Rush E ile birlikte üçüncü kez gündemde.
 
 Bunun yerine kütüphaneyi **klasik dışına** açtık: Joplin'in ragtime'ı ve
 Satie. İkisi de kamu malı, ikisi de mevcut repertuvara hiç benzemiyor.
@@ -558,6 +563,23 @@ Kalıcı olarak kalan iki şey: **dokunuş/saniye ölçüsü** (`SongInfo.tapCou
 liste onunla sıralanıyor ve her satırda Sakin/Akıcı/Hızlı/Çok hızlı yazıyor)
 ve o parti sırasında araca eklenen bütün nüsha temizliği — `\layout` ve
 `\paper` blokları, yorumlar, eski Scheme çağrıları, otomatik `\unfoldRepeats`.
+
+### Sonra 19'a çıkıp 9'a döndü
+
+Aynı şey bir kez daha oldu: KernScores'tan on parça girdi (Ay Işığı,
+Pathétique Adagio, K545, Rondo alla Turca, iki Chopin prelüdü, iki Chopin
+valsi, Promenade, Schubert impromptusü), oyuncu yine beğenmedi, yine
+kaldırıldı. Kütüphane **dokuz** parçada: Mutopia baskıları, kendi
+düzenlemelerimiz ve Chopin'in A minör valsi.
+
+Buradan çıkan ders, kaydedilmezse dördüncü kez tekrarlanacak olan şu:
+**parça toplu eklenmiyor.** "Yaygın klasik" bir seçim ölçütü değil; oyuncu
+parçaları tek tek beğeniyor. Bir sonraki aday önce tek başına eklenip
+sorulmalı.
+
+`song_ground_test` bu partiyle birlikte bir şey daha öğretti: kaldırılan
+parçaya isimle bağlı testler sessizce değil, `Bad state: No element` ile
+patlıyor. Anahtar tablosu kalanlara indirildi, konusuz kalan test silindi.
 
 ### Şarkı eklemek
 
