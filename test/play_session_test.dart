@@ -599,154 +599,58 @@ void main() {
       expect(session.scoreboard.score, greaterThan(0));
     });
 
-    test('a flick the way it leans is worth something', () {
+    test('staying on it is worth something', () {
       final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
       final outcome = playAt(session, 2.0);
       final before = session.scoreboard.score;
-      expect(outcome!.crushLean, 1, reason: '60 to 62 goes up, so rightwards');
-      expect(session.flick(outcome.crushId!, right + PlaySession.flickReach),
-          isTrue);
+      expect(outcome!.crushId, isNotNull);
+      // Still there when the holding time has passed.
+      final held = 2.0 + PlaySession.crushHoldSeconds * session.beatsPerSecond;
+      wall(session, (held + 0.01 + session.leadInBeats) / session.beatsPerSecond);
       expect(session.scoreboard.score, greaterThan(before));
     });
 
-    test('the other way is not', () {
+    test('and letting go too soon is not', () {
+      // "En azından tek dokunuş olmasın": a finger that touches and leaves
+      // has tapped, not crushed.
       final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
       final outcome = playAt(session, 2.0);
       final before = session.scoreboard.score;
-      expect(session.flick(outcome!.crushId!, right - PlaySession.flickReach),
-          isFalse);
+      session.endCrush(outcome!.crushId!);
+      final held = 2.0 + PlaySession.crushHoldSeconds * session.beatsPerSecond;
+      wall(session, (held + 0.5 + session.leadInBeats) / session.beatsPerSecond);
       expect(session.scoreboard.score, before);
     });
 
-    test('and going the other way spends the chance', () {
-      // Otherwise a hand that wandered off the wrong way was still paid when
-      // it came back, which is not the gesture.
+    test('but the notes sound either way', () {
+      // The oldest rule in the game: the touch plays the music. A flourish
+      // may be missed; a note may not.
       final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
       final outcome = playAt(session, 2.0);
-      expect(session.flick(outcome!.crushId!, right - PlaySession.flickReach),
-          isFalse);
-      expect(session.flick(outcome.crushId!, right + PlaySession.flickReach),
-          isFalse,
-          reason: 'coming back does not undo having gone');
+      session.endCrush(outcome!.crushId!);
+      wall(session, (2.4 + session.leadInBeats) / session.beatsPerSecond);
+      expect(engine.struck.map((s) => s.$1), [60, 62]);
     });
 
-    test('the chance lasts until the hand is wanted again', () {
-      final session = sessionFor(
-          songOf([
-            note(1.9, 60, duration: 0.1),
-            note(2.0, 62, duration: 1.0),
-            note(4.0, 64, duration: 1.0),
-          ]),
-          difficulty: Difficulty.normal);
-      final outcome = playAt(session, 2.0);
-      wall(session, (3.5 + session.leadInBeats) / session.beatsPerSecond);
-      expect(session.flick(outcome!.crushId!, right + PlaySession.flickReach),
-          isTrue, reason: 'no hurry while the hand has nothing else to do');
-
-      final other = sessionFor(
-          songOf([
-            note(1.9, 60, duration: 0.1),
-            note(2.0, 62, duration: 1.0),
-            note(4.0, 64, duration: 1.0),
-          ]),
-          difficulty: Difficulty.normal);
-      final late = playAt(other, 2.0);
-      wall(other, (4.5 + other.leadInBeats) / other.beatsPerSecond);
-      expect(other.flick(late!.crushId!, right + PlaySession.flickReach),
-          isFalse, reason: 'but the next note has come and gone');
+    test('it is never asked for longer than the hand is free', () {
+      // Handel's passacaglia calls the hand away a quarter of a second after
+      // the ornament; asking for three tenths there would be asking for
+      // something the music forbids.
+      final crowded = songOf([
+        note(1.9, 60, duration: 0.1),
+        note(2.0, 62, duration: 1.0),
+        note(2.2, 64, duration: 1.0),
+      ]);
+      final session = sessionFor(crowded, difficulty: Difficulty.normal);
+      expect(playAt(session, 2.0)!.crushId, isNotNull);
+      final before = session.scoreboard.score;
+      // The next note of this hand is 0.2 beats away — sooner than the hold.
+      wall(session, (2.21 + session.leadInBeats) / session.beatsPerSecond);
+      expect(session.scoreboard.score, greaterThan(before),
+          reason: 'held for as long as the music left the hand free');
     });
 
-    test('an ornament leaning down asks for the other direction', () {
-      final session = sessionFor(ornamented(grace: 64, main: 62),
-          difficulty: Difficulty.normal);
-      final outcome = playAt(session, 2.0);
-      expect(outcome!.crushLean, -1);
-      expect(session.flick(outcome.crushId!, right - PlaySession.flickReach),
-          isTrue);
-    });
-
-    test('holding still is not a flick', () {
-      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
-      final outcome = playAt(session, 2.0);
-      expect(session.flick(outcome!.crushId!, right), isFalse);
-      expect(session.flick(outcome.crushId!, right + 0.001), isFalse);
-    });
-
-    test('on the hardest level a late one does not count', () {
-      final session = sessionFor(ornamented(), difficulty: Difficulty.hard);
-      final outcome = playAt(session, 2.0);
-      final late =
-          2.0 + (PlaySession.flickSeconds + 0.1) * session.beatsPerSecond;
-      wall(session, (late + session.leadInBeats) / session.beatsPerSecond);
-      expect(session.flick(outcome!.crushId!, right + PlaySession.flickReach),
-          isFalse);
-    });
-
-    test('but below it, doing the gesture is the gesture', () {
-      // The middle level asks for the shape of the movement, not for its
-      // timing as well: a hand that flicks plainly and correctly is never
-      // told no for being a moment late at something already sounded.
-      for (final level in [Difficulty.easy, Difficulty.normal]) {
-        final session = sessionFor(ornamented(), difficulty: level);
-        final outcome = playAt(session, 2.0);
-        final late =
-            2.0 + (PlaySession.flickSeconds + 2) * session.beatsPerSecond;
-        wall(session, (late + session.leadInBeats) / session.beatsPerSecond);
-        expect(session.flick(outcome!.crushId!, right + PlaySession.flickReach),
-            isTrue,
-            reason: 'on ${level.label}');
-      }
-    });
-
-    test('tapping a hair early does not squeeze it into its note', () {
-      // Reported: "nadiren de olsa kaydırsam bile tam ses çıkmıyor, iki ses
-      // çok arka arkaya çalıyor". Tapping less early than the crush itself
-      // used to sound the ornament at once and hold its note back to its
-      // written beat — so the gap between them shrank to whatever was left,
-      // one frame in the worst case. Ninety-eight of the Gnossienne's hundred
-      // came out that way at thirty milliseconds early.
-      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
-      final crushMs =
-          (2.0 - 1.9) / session.beatsPerSecond * 1000; // as written
-      final early = 2.0 - 0.03 * session.beatsPerSecond; // 30 ms early
-      wall(session, (early + session.leadInBeats) / session.beatsPerSecond);
-      session.tap(right);
-      expect(engine.struck.map((s) => s.$1), [60],
-          reason: 'the ornament sounds on the touch');
-
-      double? at;
-      for (var b = early; b < early + 2 && at == null; b += 0.005) {
-        wall(session, (b + session.leadInBeats) / session.beatsPerSecond);
-        if (engine.struck.length > 1) at = b;
-      }
-      final gapMs = (at! - early) / session.beatsPerSecond * 1000;
-      expect(gapMs, greaterThan(crushMs * 0.8),
-          reason: 'the gap an ornament leans across is the game\'s to give, '
-              'not something the hand can squeeze out');
-    });
-
-    test('and it does not damp a longer note of its own pitch', () {
-      // The other half of the same report: "birinci sesten sonra ikinci ses
-      // gelmiyor". Releases are kept per pitch, so a sixty-millisecond
-      // ornament sharing a pitch with something still ringing took its
-      // release with it and damped it.
-      final session = sessionFor(
-          songOf([
-            note(1, 60, duration: 8, hand: Hand.left),
-            note(1.9, 60, duration: 0.1),
-            note(2.0, 64, duration: 1),
-          ]),
-          difficulty: Difficulty.normal);
-      wall(session, (1 + session.leadInBeats) / session.beatsPerSecond);
-      session.tap(left);
-      wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
-      session.tap(right);
-      wall(session, (3 + session.leadInBeats) / session.beatsPerSecond);
-      expect(engine.released, isNot(contains(60)),
-          reason: 'the long note is still written to be sounding');
-    });
-
-    test('a note without an ornament offers no flick', () {
+    test('a note without an ornament offers no crush', () {
       final session = sessionFor(songOf([note(2.0, 62, duration: 1.0)]),
           difficulty: Difficulty.normal);
       expect(playAt(session, 2.0)!.crushId, isNull);

@@ -15,7 +15,6 @@ class TapOutcome {
     this.scored = true,
     this.holdId,
     this.crushId,
-    this.crushLean = 0,
   });
 
   final Verdict verdict;
@@ -25,12 +24,9 @@ class TapOutcome {
   /// Hand it back to [PlaySession.releaseHold] when the finger lifts.
   final int? holdId;
 
-  /// Set when this touch carried an ornament, which the finger may still
-  /// flick. Hand it to [PlaySession.flick] while the finger moves.
+  /// Set when this touch carried an ornament. Hand it back to
+  /// [PlaySession.endCrush] when the finger lifts.
   final int? crushId;
-
-  /// Which way that flick has to go: 1 for right, -1 for left.
-  final int crushLean;
 
   /// How early (negative) or late (positive) the tap was.
   final double errorMs;
@@ -50,18 +46,14 @@ class TapOutcome {
   final bool scored;
 }
 
-/// An ornament just sounded, waiting to see whether the hand flicked.
+/// An ornament just sounded, waiting to see whether the hand stays on it.
 class _Crush {
-  _Crush({required this.from, required this.lean, required this.until});
+  _Crush({required this.tap, required this.earnAt});
 
-  /// Where across the screen the finger landed.
-  final double from;
+  final Tap tap;
 
-  /// Which way it has to move: 1 right, -1 left.
-  final int lean;
-
-  /// The beat after which nobody is flicking any more.
-  final double until;
+  /// The beat at which keeping the finger down has earned it.
+  final double earnAt;
 }
 
 /// A note being held down.
@@ -336,6 +328,7 @@ class PlaySession {
     _playAccompaniment();
     _playRuns();
     _playWaitingNotes();
+    _earnCrushes();
     _fillMissedNotes();
     _expireMissedTaps();
     _releaseFinishedNotes();
@@ -476,9 +469,8 @@ class PlaySession {
     if (tapTarget.hasGrace) {
       crushId = _nextCrushId++;
       _crushes[crushId] = _Crush(
-        from: across,
-        lean: tapTarget.graceLean,
-        until: _flickUntil(tapTarget),
+        tap: tapTarget,
+        earnAt: _beat + _crushEarnBeats(tapTarget),
       );
     }
 
@@ -491,7 +483,6 @@ class PlaySession {
       voices: tapTarget.voices,
       holdId: holdId,
       crushId: crushId,
-      crushLean: tapTarget.graceLean,
     );
   }
 
@@ -555,83 +546,57 @@ class PlaySession {
   /// reads as two notes played sloppily rather than one played with a flick.
   static const double _graceWeight = 0.8;
 
-  /// Ornaments sounded and not yet flicked.
+  /// Ornaments sounded, with a finger still on them.
   final Map<int, _Crush> _crushes = {};
   int _nextCrushId = 1;
 
-  /// How far the finger has to move to have flicked, as a fraction of the
-  /// screen's width.
-  ///
-  /// Smaller than [dragReach], which asks a finger to stay *with* something
-  /// moving; this only asks which way the hand went. Big enough that holding
-  /// still is not a flick, small enough to be one movement of a thumb.
-  static const double flickReach = 0.04;
+  /// Called when a finger has stayed on an ornament long enough to earn it.
+  void Function(Tap tap)? onCrush;
 
-  /// How long after the touch a flick still counts, in seconds — and only on
-  /// the hardest level. Below it the finger has as long as it stays down.
+  /// How long the finger has to stay down to have played the ornament, in
+  /// seconds.
   ///
-  /// The player asked for this and was right: on the middle level, doing the
-  /// gesture *is* the gesture. A window there would mean a hand that flicked
-  /// plainly and correctly was told no, for being a tenth of a second late at
-  /// something that has already sounded. Timing is what the rest of the game
-  /// is about; this is about the shape of the movement. Only the hardest
-  /// level asks for both at once.
-  static const double flickSeconds = 0.3;
-
-  /// When this touch's flick stops counting.
+  /// An acciaccatura is one movement of the hand that *lands* — the weight
+  /// goes into the note it leans on and stays there. A finger that touches
+  /// and leaves has tapped, not crushed, and the player said so: "en azından
+  /// tek dokunuş olmasın".
   ///
-  /// The hardest level gives it a stopwatch. Below that the chance lasts
-  /// until the hand is wanted again, which is the musical answer rather than
-  /// a number: there is no hurry, but a movement made long after the moment
-  /// has passed is not this ornament's.
-  double _flickUntil(Tap target) {
-    if (chart.difficulty == Difficulty.hard) {
-      return _beat + flickSeconds * beatsPerSecond;
-    }
-    for (final tap in chart.taps) {
-      if (tap.beat <= target.beat) continue;
-      if (chart.separatesHands && tap.hand != target.hand) continue;
-      return tap.beat;
-    }
-    return double.infinity;
-  }
+  /// A flick was tried first and taken out. It asked the wrong thing of the
+  /// player: the ornament sounds sixty milliseconds after the touch, so the
+  /// game can never wait to see whether a slide is coming, and the gesture
+  /// was left rewarding a movement that changed nothing anyone could hear.
+  /// Staying put is a thing the game *can* watch for, honestly, after the
+  /// fact.
+  static const double crushHoldSeconds = 0.3;
 
-  /// What a flick is worth, before the combo multiplier.
+  /// What holding it is worth, before the combo multiplier.
   ///
   /// Deliberately not part of [Scoreboard.accuracy]: accuracy is about
-  /// timing, and this is not a timing question. A flourish adds to the score
-  /// without moving the grade — nobody is marked down for playing it plain.
-  static const int flickPoints = 50;
+  /// timing, and this is not a timing question.
+  static const int crushPoints = 50;
 
-  /// The finger that took an ornament has moved to [across].
-  ///
-  /// Returns true the moment it has gone far enough the right way, once.
-  bool flick(int crushId, double across) {
-    final crush = _crushes[crushId];
-    if (crush == null) return false;
-    if (_beat > crush.until) {
-      _crushes.remove(crushId);
-      return false;
-    }
-    final moved = (across - crush.from) * crush.lean;
-
-    // Going the other way spends the chance. Without this the hand could
-    // wander off the wrong way and still be paid when it happened to come
-    // back — which is not the gesture, and the player saw it: "diğer yöne
-    // kaydırsam da çarpma efekti yine de çalışıyor".
-    if (moved <= -flickReach) {
-      _crushes.remove(crushId);
-      return false;
-    }
-    if (moved < flickReach) return false;
-
-    _crushes.remove(crushId);
-    scoreboard.score += flickPoints * scoreboard.multiplier;
-    return true;
+  /// How long this touch's finger has to stay, in beats — never longer than
+  /// the hand's own next note, because the music may call it away first.
+  /// Handel's passacaglia leaves a quarter of a second between the two; the
+  /// Gnossienne leaves a full one.
+  double _crushEarnBeats(Tap target) {
+    final wanted = crushHoldSeconds * beatsPerSecond;
+    final available = target.drawnEndBeat - target.beat;
+    return available > 0 && available < wanted ? available : wanted;
   }
 
-  /// The finger that took an ornament has left without flicking.
+  /// The finger that took an ornament has left. Too early, and it was a tap.
   void endCrush(int crushId) => _crushes.remove(crushId);
+
+  /// Pay out the ornaments whose fingers have stayed.
+  void _earnCrushes() {
+    _crushes.removeWhere((_, crush) {
+      if (_beat < crush.earnAt) return false;
+      scoreboard.score += crushPoints * scoreboard.multiplier;
+      onCrush?.call(crush.tap);
+      return true;
+    });
+  }
 
   /// Fingers following a run.
   final Map<int, _Drag> _drags = {};

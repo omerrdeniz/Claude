@@ -95,6 +95,14 @@ class _PlayScreenState extends State<PlayScreen>
     // Runs play from inside the clock's own setState, so this only records —
     // wrapping it in another would be a setState inside a setState.
     _session.onDragNote = _record;
+    // An ornament earned by staying on it: answered where it happened, so the
+    // screen says so and not only the score.
+    _session.onCrush = (tap) => setState(() => _sparks.add(Spark(
+          places: tap.noteAcross,
+          hand: tap.hand,
+          voices: tap.voices,
+          quality: 1,
+        )));
     _audio.start();
     // Not awaited: the synthesiser covers the first moments, and a song that
     // waits on a download to begin is worse than one that improves as it
@@ -149,22 +157,6 @@ class _PlayScreenState extends State<PlayScreen>
   /// where the run now thinks the finger is.
   void _onDrag(int pointer, Offset position, Size size) {
     final across = (position.dx / size.width).clamp(0.0, 1.0);
-
-    // An ornament the finger has just taken: flicking the way it leans is the
-    // hand doing what the writing asks. It earns a flourish, never the note —
-    // the note has already sounded, and playing it plain is not an error.
-    final crushId = _crushByPointer[pointer];
-    if (crushId != null && _session.flick(crushId, across)) {
-      _crushByPointer.remove(pointer);
-      // Light where the hand went, so the flick is answered by the screen and
-      // not only by the score.
-      setState(() => _sparks.add(Spark(
-            places: [across],
-            hand: Chart.handAt(across),
-            voices: 1,
-            quality: 1,
-          )));
-    }
 
     final dragId = _dragByPointer[pointer];
     if (dragId == null) return;

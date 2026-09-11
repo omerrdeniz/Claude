@@ -67,9 +67,9 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   378 ms; sekizlikleri 450 ms olan bir parçada o kadar geç gelen nota deliği
   doldurmaz, yanlış nota gibi duyulur. Doldurma notayı **çözmez**: geç kalan
   el hâlâ bulur, hâlâ puan alır ve kendi dokunuşu notayı yine çalar.
-- **Çarpma süslemesi (acciaccatura) tek dokunuş, ve bir fiske.** Oyuncunun
-  isteği: *"bu tarz piyano tekniklerine farklı mekanikler eklemek, hem
-  oynanışı çeşitlendirmiş oluruz."* İlk teknik bu.
+- **Çarpma süslemesi (acciaccatura) tek dokunuş, ve bir basılı tutma.**
+  Oyuncunun isteği: *"bu tarz piyano tekniklerine farklı mekanikler eklemek,
+  hem oynanışı çeşitlendirmiş oluruz."* İlk teknik bu.
 
   **Önce bir hata vardı.** Gnossienne No. 1'in yüz süslemesi ayrı birer
   dokunuş olarak duruyordu: aynı elde **63 ms** arayla iki basış. İnsan eli
@@ -94,73 +94,68 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   çalar, **aradaki 63 ms'yi oyun verir** — el değil. Süsleme biraz daha hafif
   vurulur (`_graceWeight` = 0.8); acciaccatura'nın ağırlığı asıl notadadır.
 
-  **Fiske:** dokunduktan sonra parmağı süslemenin eğildiği yöne ~%4 ekran
-  genişliği kaydırmak bir *süs* kazandırır (`PlaySession.flick`, 50 puan,
-  0.3 sn pencere). **Toplama değil ekleme:** düz basmak da iki notayı çalar ve
-  tam puan alır; fiske yalnız üstüne ekler. Puan doğruluğa (`accuracy`)
-  girmez — doğruluk zamanlama sorusudur, bu değil.
+  **Basılı tutma:** notayı tutmak süslemeyi kazandırır
+  (`PlaySession.crushHoldSeconds` = 0.3 sn, 50 puan). Parmak erken kalkarsa
+  kazanılmaz. Süre asla **elin bir sonraki notasından** uzun istenmez:
+  Handel'de el çeyrek saniye sonra çağrılıyor, orada üç onda bir istemek
+  müziğin yasakladığı şeyi istemek olurdu. Gnossienne'de el en az 0.53
+  saniye (ortanca 0.60) boşta, yani rahatça tutuluyor.
 
-  **Fiskenin süresi zorluğa bağlı.** Oyuncu: *"zamanlamaya duyarlı olması orta
-  zorluk için gereksiz... orta modda oyuncu kaydırmayı yapıyorsa doğru şekilde
-  çalmalı."* Haklı: süsleme zaten çalmış durumda, fiske yalnız hareketin
-  şekliyle ilgili. Kolay ve Normal'de parmak bastığı sürece süre yok; yalnız
-  Zor'da 0.3 saniyelik pencere. Zamanlama oyunun geri kalanının konusu, bunun
-  değil.
+  **Toplama değil ekleme:** tutmasan da iki nota çalar ve tam puan alırsın;
+  tutmak yalnız üstüne ekler. Puan doğruluğa (`accuracy`) girmez — doğruluk
+  zamanlama sorusudur, bu değil.
 
-  **Gösterim ikinci turda değişti.** İlk hâli her çarpmalı notanın yanına
-  küçük bir baş koyuyordu. Oyuncu: *"ekrandaki gösterimi çok kötü olmuş,
-  ikili üçlülerde çok daha karışık duruyor."* Doğru — Gnossienne'in yüz
-  çarpmasının **18'i akor** (14 ikili, 4 üçlü) ve uydu nokta komşu notanın
-  üstüne düşüyordu. Üstelik yanlış taraftaydı: süsleme asıl notadan *önce*
-  duyulur, yani çizgiye daha yakındır, aşağıda olmalıydı.
+  **Fiske denendi ve kaldırıldı — tekrar önermeyin.** Mekanik önce bir
+  kaydırmaydı: süslemenin eğildiği yöne parmağı atmak. İki tur düzeltme aldı
+  (zorluğa bağlı pencere; ters yönün şansı harcaması), sonra oyuncu asıl
+  sorunu söyledi: *"kaydırmayıp tek dokunuş yapsam, basılı tutsam veya diğer
+  yöne kaydırsam da çarpma efekti yine de çalışıyor."*
 
-  Şimdi **dokunuş başına tek bir yatay ok**, notaların altında
-  (`StagePainter._paintFlick`). Akor kaç nota olursa olsun bir tane, çünkü
-  talimat ele veriliyor. Yatay olması bilerek: notalar daire, tutmalar dikey
-  çubuk, koşular ip ve boncuk — yan yatmış bir çizgi öğrenilmeden okunuyor.
+  Haklıydı ve sebebi yapısal: **süsleme, dokunuştan 63 ms sonra çalmak
+  zorunda.** Bir kaydırmayı tanımak bundan uzun sürer, yani oyun "acaba
+  kaydıracak mı?" diye bekleyemez — beklerse çarpmalı her nota geç çalar.
+  Dolayısıyla fiske duyulabilir hiçbir şeyi değiştiremiyordu; ekranda bir ok
+  ve puandan ibaret kalıyordu.
 
-  **Üçüncü tur — iki ses hatası.** Oyuncu: *"nadiren de olsa kaydırsam bile
+  Basılı tutma bunu çözüyor, çünkü **sonradan dürüstçe bakılabilecek bir
+  şey**: parmak hâlâ orada mı, değil mi. Müzikal olarak da doğru — bir
+  acciaccatura, ağırlığı yaslandığı notaya bırakıp orada kalan tek bir
+  harekettir.
+
+  **Yön bir bilgi, ama artık kullanılmıyor.** Süslemelerin %70'i aşağı, %30'u
+  yukarı eğiliyor (`Tap.graceLean` duruyor). Fiske döneminde okunacak bir
+  bilgiydi. Çizimde kullanmayın: çoğu süsleme 1-2 yarım ses uzakta, ki
+  perdeden yer üreten bu ekranda 7 piksel eder — görülmez, hedeflenmez.
+
+  **Gösterim üç tur sürdü.** (1) Her çarpmalı notanın yanına küçük bir baş:
+  yüz çarpmanın **18'i akor** ve baş komşu notanın üstüne düşüyordu — oyuncu
+  "ikili üçlülerde çok daha karışık" dedi. (2) Dokunuş başına tek yatay ok:
+  okunuyordu ama fiske kalkınca gösterecek yön kalmadı. (3) Şimdiki:
+  **notaların altında ortalanmış küçük bir nota** (`_paintGrace`). Dokunuş
+  başına bir tane, çünkü talimat ele verilir; altında, çünkü süsleme önce
+  duyulur ve önce olan çizgiye daha yakındır.
+
+  **İki ses hatası (düzeltildi).** Oyuncu: *"nadiren de olsa kaydırsam bile
   tam ses çıkmıyor; ya iki ses çok arka arkaya çalıyor, ya da birinci sesten
-  sonra ikinci ses gelmiyor."* İki ayrı sebep çıktı, ikisi de ölçülerek
-  bulundu (Gnossienne'i kare kare çaldıran bir tarama, yedi kayma × üç
-  gecikme):
+  sonra ikinci ses gelmiyor."* Gnossienne'i kare kare çaldıran bir tarama
+  (yedi kayma × üç gecikme) iki ayrı sebep gösterdi:
 
   1. **Ezilme boşluğu sıkışıyordu.** Erken basışta süsleme hemen çalıyor ama
      asıl nota kendi vuruşuna geri tutuluyordu; aradaki mesafe geriye kalan
      süreye düşüyordu. **30 ms erken basınca yüzün 98'i tek kareye (16.7 ms)
-     çöküyordu** — bu bir süsleme değil, tökezleme. Artık çift, gerekirse bir
-     ezilme kadar geç kalıyor ama asla birbirine yaklaşmıyor: geç gelen bir
-     yaslanma hâlâ müzik gibi duyuyor, aynı anda gelen iki nota duymuyor.
+     çöküyordu.** Artık çift, gerekirse bir ezilme kadar geç kalıyor ama asla
+     birbirine yaklaşmıyor: geç gelen bir yaslanma hâlâ müzik gibi duyuluyor,
+     aynı anda gelen iki nota duyulmuyor.
   2. **Kısa süsleme kendi perdesindeki uzun notayı susturuyordu.** Bırakmalar
-     perde başına tutuluyor (piyanoda perde başına bir tel var), yani 63 ms'lik
-     bir süsleme, altında çınlayan iki saniyelik notanın bırakmasını alıp onu
-     63 ms sonra susturuyordu. Artık bir perdenin bırakması **öne
+     perde başına tutuluyor (piyanoda perde başına bir tel var), yani 63
+     ms'lik bir süsleme, altında çınlayan iki saniyelik notanın bırakmasını
+     alıp onu 63 ms sonra susturuyordu. Artık bir perdenin bırakması **öne
      çekilemiyor**, yalnız ertelenebiliyor: bu repertuvar pedal için yazılmış,
      iki talep çakışırsa müziğin kastettiği uzun olanıdır.
 
   Tarama düzeltmeden sonra 21 kombinasyonun hepsinde sıfır veriyor.
-  `test/play_session_test.dart` ikisini de kilitliyor.
 
-  **Ters yön fiskeyi harcar.** Oyuncu: *"diğer yöne kaydırsam da çarpma
-  efekti yine de çalışıyor."* Orta ve kolayda süre sınırı olmadığı için, ters
-  yöne gidip sonra dönen parmak yine ödül alıyordu. Artık bir fiske kadar
-  ters yöne gitmek şansı bitiriyor. Süre sınırı yerine de müzikal bir sınır
-  kondu: fiske, **elin bir sonraki notasına kadar** geçerli. Acele yok, ama
-  anı geçmiş bir hareket o süslemenin hareketi değil.
-
-  **Yön gerçek, mesafe değil.** Süslemelerin %70'i aşağı, %30'u yukarı eğiliyor
-  — yani yön okunacak bir bilgi. Ama çoğu 1-2 yarım ses uzakta, ki perdeden yer
-  üreten bu ekranda 7 piksel eder. Onun için hem mekanik hem çizim yalnızca
-  **yönü** kullanıyor: ekranda süsleme gerçek perdesine değil, notanın yanında
-  sabit bir adıma konuyor. İlk hâli gerçek perdesine koymuştu ve süsleme
-  notanın altında kayboluyordu.
-
-  **Koşu mekaniğinin hatasını tekrarlamaz.** Orada hareket *miktarı* sürekli
-  ölçülüyordu ve parmak yön değiştirmek için durduğunda nota düşüyordu. Fiske
-  tek bir anda olup biten tek bir hareket; ölçtüğü şey "ne tarafa", "ne kadar
-  sürekli" değil.
-
-  **Yol üstünde bulunan ikinci hata:** Kolay moddaki seyreltme süslemeyi tutup
+  **Yol üstünde bulunan üçüncü hata:** Kolay moddaki seyreltme süslemeyi tutup
   **asıl melodi notasını atıyordu** — çünkü süsleme önce geliyor ve seyreltme
   ilk gördüğünü tutuyor. Yani Kolay'da oyuncu süsü çalıyor, ezgiyi oyun
   çalıyordu. `_divideVoices` artık süslemeyi kendi başına bir an saymıyor:
@@ -522,6 +517,10 @@ Oynanış:
 
 Teknik:
 
+- **Süslemeyi fiskeyle (kaydırmayla) oynatmak.** Ayrıntısı yukarıda: süsleme
+  dokunuştan 63 ms sonra çalmak zorunda, kaydırmayı tanımak bundan uzun
+  sürüyor, dolayısıyla fiske duyulabilir hiçbir şeyi değiştiremiyor. Yerine
+  basılı tutma kondu.
 - **AudioWorklet'e geçmek.** ScriptProcessorNode kullanımdan kalkmış olsa da
   geçiş burada işe yaramıyor. Worklet kendi iş parçacığında çalışır ama
   sentezleyici Dart'ta ve ana iş parçacığında kalır; örneklerin karşıya
@@ -1016,7 +1015,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 431 test geçiyor
+flutter test        # 425 test geçiyor
 ```
 
 ## Cihazsız doğrulama

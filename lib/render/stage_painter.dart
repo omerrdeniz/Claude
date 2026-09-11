@@ -392,13 +392,11 @@ class StagePainter extends CustomPainter {
         _paintChordBand(canvas, g, dots, headOf(dots.first), colour, fade);
       }
 
-      // One arrow for the whole touch, before the notes so they sit on top
-      // of it. A chord is several notes and one hand: the instruction is to
-      // the hand.
-      final leaning = group.where((m) => m.graceLean != 0);
-      if (leaning.isNotEmpty) {
-        _paintFlick(canvas, g, dots, headOf(dots.first),
-            leaning.first.graceLean, radius, colour, fade);
+      // One mark for the whole touch, before the notes so they sit on top of
+      // it. A chord is several notes and one hand: the instruction is to the
+      // hand.
+      if (group.any((m) => m.hasGrace)) {
+        _paintGrace(canvas, g, dots, headOf(dots.first), radius, colour, fade);
       }
 
       for (final dot in dots) {
@@ -654,62 +652,51 @@ class StagePainter extends CustomPainter {
     );
   }
 
-  /// The mark on a touch that carries an ornament: a short rail under it with
-  /// an arrow on the end, pointing the way the hand goes.
+  /// The mark on a touch that carries an ornament: the small note itself,
+  /// drawn under the one it leans into.
   ///
-  /// **One per touch, not one per note.** The first drawing put a small head
+  /// **One per touch, not one per note.** An earlier drawing put a head
   /// beside each ornamented note, and on the eighteen chords that carry one
   /// in the Gnossienne it landed on top of the neighbouring note — the player
-  /// called it exactly that. An ornament is not a note to aim at; it is an
-  /// instruction to the hand, and a hand gets one instruction however many
-  /// notes it is holding.
+  /// called it exactly that. An ornament belongs to the hand, and a hand gets
+  /// one mark however many notes it is holding.
   ///
-  /// **Under the notes, not across them.** Drawn over the top it was hidden
-  /// behind them, with only a barb showing past the edge. Under is also when:
-  /// the ornament sounds *before* the note it leans on, and sooner is nearer
-  /// the line, which is downwards.
+  /// **Under, because that is when.** The ornament sounds *before* the note
+  /// it leans on, and sooner is nearer the line, which is downwards.
   ///
-  /// **Horizontal, which nothing else here is.** Notes are circles, holds are
-  /// upright bars, runs are a rope and a bead. A line lying on its side is
-  /// read as itself at a glance, without being learnt.
-  void _paintFlick(Canvas canvas, StageGeometry g, List<_Dot> dots,
-      double progress, int lean, double radius, Color colour, double fade) {
+  /// It carries no direction any more. It used to be an arrow, back when the
+  /// gesture was a flick; now the ornament is earned by staying on the note,
+  /// and there is nothing to point at. What the mark has to say is only
+  /// *this one has a little note in it* — so it is drawn as one.
+  void _paintGrace(Canvas canvas, StageGeometry g, List<_Dot> dots,
+      double progress, double radius, Color colour, double fade) {
     var low = dots.first.across, high = dots.first.across;
     for (final dot in dots) {
       if (dot.across < low) low = dot.across;
       if (dot.across > high) high = dot.across;
     }
     final centre = g.positionAtPosition((low + high) / 2, progress);
-    final y = centre.dy + radius * _flickDrop;
-    final half = radius * _flickSpan / 2;
-    final tip = Offset(centre.dx + lean * half, y);
+    final at = Offset(centre.dx, centre.dy + radius * _graceDrop);
+    final small = radius * _graceRadius;
 
-    final ink = Paint()
-      ..strokeWidth = radius * 0.26
-      ..strokeCap = StrokeCap.round
-      ..color = Colors.white.withValues(alpha: 0.8 * fade);
-    final glow = Paint()
-      ..strokeWidth = radius * 0.6
-      ..strokeCap = StrokeCap.round
-      ..color = colour.withValues(alpha: 0.45 * fade);
-
-    final tail = Offset(centre.dx - lean * half, y);
-    canvas.drawLine(tail, tip, glow);
-    canvas.drawLine(tail, tip, ink);
-
-    // Two strokes rather than a filled triangle: at this size a triangle
-    // reads as a blob and a stroke reads as a direction.
-    final barb = radius * 0.44;
-    for (final dy in [-barb, barb]) {
-      canvas.drawLine(tip, Offset(tip.dx - lean * barb, y + dy), ink);
-    }
+    canvas.drawCircle(
+        at, small, Paint()..color = colour.withValues(alpha: 0.9 * fade));
+    canvas.drawCircle(
+      at,
+      small,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.1
+        ..color = Colors.white.withValues(alpha: 0.75 * fade),
+    );
   }
 
-  /// How far under the notes the rail sits, in note radii.
-  static const double _flickDrop = 1.45;
+  /// How far under the notes the little one sits, in note radii.
+  static const double _graceDrop = 1.5;
 
-  /// And how long it is.
-  static const double _flickSpan = 2.4;
+  /// And how big it is drawn. Small enough to read as the little note it is
+  /// written as, big enough to see at arm's length.
+  static const double _graceRadius = 0.42;
 
   void _paintNote(Canvas canvas, StageGeometry g, double across,
       double progress, double radius, int voices, double fade) {
