@@ -230,13 +230,24 @@ const List<Score> catalog = [
     id: 'passacaglia',
     title: 'Passacaglia',
     composer: 'George Frideric Handel',
-    arrangement: 'passacaglia.notes',
+    midiUrl: 'https://vmirror.imslp.org/files/imglnks/usimg/b/b5/'
+        'IMSLP365892-PMLP29691-Handel_432_Suite_7_Passacaille.mid',
     // A ground bass is meant to be under everything, not on top of it.
     leftVelocity: 0.45,
-    credit: 'Kamu malı (HWV 432/6, 1720); Johan Halvorsen\'in 1893 '
-        'düzenlemesiyle tanınır, o da kamu malı (Halvorsen † 1935). '
-        'Makine okunur bir nüsha bulunamadı: zemin bas Handel\'in, '
-        'çeşitlemeler Piano Flow\'un.',
+    credit: 'Kamu malı (HWV 432/6, 1720). IMSLP baskısı (Pierre Gouin, '
+        'Éditions Outremontaises), CC BY-SA 4.0, tam eser. Johan '
+        'Halvorsen\'in 1893 düzenlemesiyle tanınır.',
+  ),
+  Score(
+    id: 'passacaglia-easy',
+    title: 'Passacaglia (kolay)',
+    composer: 'George Frideric Handel',
+    arrangement: 'passacaglia.notes',
+    // Same reason as the full one: a ground bass sits under, not on top.
+    leftVelocity: 0.45,
+    credit: 'Kamu malı (HWV 432/6, 1720). Zemin bas ve inen üst çizgi '
+        'Handel\'in; çeşitlemeler Piano Flow\'un, yetişilebilir olsun diye. '
+        'Tam eser ayrıca kütüphanede.',
   ),
   Score(
     id: 'house-of-the-rising-sun',
