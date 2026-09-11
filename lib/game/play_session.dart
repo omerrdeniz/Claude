@@ -400,7 +400,19 @@ class PlaySession {
   /// lengths decide how long each note rings.
   final Map<int, double> _releaseAt = {};
 
-  void _scheduleRelease(int midi, double atBeat) => _releaseAt[midi] = atBeat;
+  /// Let a pitch go at [atBeat] — or later, if it is already owed more time.
+  ///
+  /// Releases are kept per pitch, because a piano has one string per pitch.
+  /// That means a short note can take the release of a long one still
+  /// sounding underneath it, and a sixty-millisecond ornament sharing a pitch
+  /// with a note written to ring for two seconds damped it after sixty
+  /// milliseconds — the other half of "birinci sesten sonra ikinci ses
+  /// gelmiyor". This repertoire is written for the pedal: where two claims on
+  /// a string disagree, the longer one is the one the music meant.
+  void _scheduleRelease(int midi, double atBeat) {
+    final owed = _releaseAt[midi];
+    if (owed == null || atBeat > owed) _releaseAt[midi] = atBeat;
+  }
 
   void _releaseFinishedNotes() {
     _releaseAt.removeWhere((midi, releaseBeat) {
@@ -496,7 +508,19 @@ class PlaySession {
     // anybody can make, so one touch sounds both — as one movement of the
     // hand does at a piano.
     final crush = target.hasGrace ? target.beat - target.grace.first.beat : 0.0;
-    final mainBeat = early ? target.beat : _beat + crush;
+
+    // And it is never squeezed. A touch a little early used to sound the
+    // ornament at once while its note was still held back to its written
+    // beat, leaving whatever was left of the gap between them — a single
+    // frame at thirty milliseconds early, which is not an ornament but a
+    // stumble. The player heard it: "iki ses çok arka arkaya çalıyor".
+    //
+    // So the pair may land up to one crush late, and never closer together
+    // than a crush. Of the two ways to be wrong, a lean that arrives a
+    // sixteenth of a second late still sounds like the music; one that
+    // arrives as two notes at once does not.
+    final wanted = early ? target.beat : _beat + crush;
+    final mainBeat = wanted > _beat + crush ? wanted : _beat + crush;
 
     void sound(Note note, double at, double end, double weight) {
       final velocity = (note.velocity * firmness * weight).clamp(0.05, 1.0);

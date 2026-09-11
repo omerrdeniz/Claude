@@ -119,6 +119,28 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   talimat ele veriliyor. Yatay olması bilerek: notalar daire, tutmalar dikey
   çubuk, koşular ip ve boncuk — yan yatmış bir çizgi öğrenilmeden okunuyor.
 
+  **Üçüncü tur — iki ses hatası.** Oyuncu: *"nadiren de olsa kaydırsam bile
+  tam ses çıkmıyor; ya iki ses çok arka arkaya çalıyor, ya da birinci sesten
+  sonra ikinci ses gelmiyor."* İki ayrı sebep çıktı, ikisi de ölçülerek
+  bulundu (Gnossienne'i kare kare çaldıran bir tarama, yedi kayma × üç
+  gecikme):
+
+  1. **Ezilme boşluğu sıkışıyordu.** Erken basışta süsleme hemen çalıyor ama
+     asıl nota kendi vuruşuna geri tutuluyordu; aradaki mesafe geriye kalan
+     süreye düşüyordu. **30 ms erken basınca yüzün 98'i tek kareye (16.7 ms)
+     çöküyordu** — bu bir süsleme değil, tökezleme. Artık çift, gerekirse bir
+     ezilme kadar geç kalıyor ama asla birbirine yaklaşmıyor: geç gelen bir
+     yaslanma hâlâ müzik gibi duyuyor, aynı anda gelen iki nota duymuyor.
+  2. **Kısa süsleme kendi perdesindeki uzun notayı susturuyordu.** Bırakmalar
+     perde başına tutuluyor (piyanoda perde başına bir tel var), yani 63 ms'lik
+     bir süsleme, altında çınlayan iki saniyelik notanın bırakmasını alıp onu
+     63 ms sonra susturuyordu. Artık bir perdenin bırakması **öne
+     çekilemiyor**, yalnız ertelenebiliyor: bu repertuvar pedal için yazılmış,
+     iki talep çakışırsa müziğin kastettiği uzun olanıdır.
+
+  Tarama düzeltmeden sonra 21 kombinasyonun hepsinde sıfır veriyor.
+  `test/play_session_test.dart` ikisini de kilitliyor.
+
   **Yön gerçek, mesafe değil.** Süslemelerin %70'i aşağı, %30'u yukarı eğiliyor
   — yani yön okunacak bir bilgi. Ama çoğu 1-2 yarım ses uzakta, ki perdeden yer
   üreten bu ekranda 7 piksel eder. Onun için hem mekanik hem çizim yalnızca
@@ -987,7 +1009,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 428 test geçiyor
+flutter test        # 429 test geçiyor
 ```
 
 ## Cihazsız doğrulama

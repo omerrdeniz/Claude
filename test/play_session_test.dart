@@ -660,6 +660,54 @@ void main() {
       }
     });
 
+    test('tapping a hair early does not squeeze it into its note', () {
+      // Reported: "nadiren de olsa kaydırsam bile tam ses çıkmıyor, iki ses
+      // çok arka arkaya çalıyor". Tapping less early than the crush itself
+      // used to sound the ornament at once and hold its note back to its
+      // written beat — so the gap between them shrank to whatever was left,
+      // one frame in the worst case. Ninety-eight of the Gnossienne's hundred
+      // came out that way at thirty milliseconds early.
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      final crushMs =
+          (2.0 - 1.9) / session.beatsPerSecond * 1000; // as written
+      final early = 2.0 - 0.03 * session.beatsPerSecond; // 30 ms early
+      wall(session, (early + session.leadInBeats) / session.beatsPerSecond);
+      session.tap(right);
+      expect(engine.struck.map((s) => s.$1), [60],
+          reason: 'the ornament sounds on the touch');
+
+      double? at;
+      for (var b = early; b < early + 2 && at == null; b += 0.005) {
+        wall(session, (b + session.leadInBeats) / session.beatsPerSecond);
+        if (engine.struck.length > 1) at = b;
+      }
+      final gapMs = (at! - early) / session.beatsPerSecond * 1000;
+      expect(gapMs, greaterThan(crushMs * 0.8),
+          reason: 'the gap an ornament leans across is the game\'s to give, '
+              'not something the hand can squeeze out');
+    });
+
+    test('and it does not damp a longer note of its own pitch', () {
+      // The other half of the same report: "birinci sesten sonra ikinci ses
+      // gelmiyor". Releases are kept per pitch, so a sixty-millisecond
+      // ornament sharing a pitch with something still ringing took its
+      // release with it and damped it.
+      final session = sessionFor(
+          songOf([
+            note(1, 60, duration: 8, hand: Hand.left),
+            note(1.9, 60, duration: 0.1),
+            note(2.0, 64, duration: 1),
+          ]),
+          difficulty: Difficulty.normal);
+      wall(session, (1 + session.leadInBeats) / session.beatsPerSecond);
+      session.tap(left);
+      wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
+      session.tap(right);
+      wall(session, (3 + session.leadInBeats) / session.beatsPerSecond);
+      expect(engine.released, isNot(contains(60)),
+          reason: 'the long note is still written to be sounding');
+    });
+
     test('a note without an ornament offers no flick', () {
       final session = sessionFor(songOf([note(2.0, 62, duration: 1.0)]),
           difficulty: Difficulty.normal);
