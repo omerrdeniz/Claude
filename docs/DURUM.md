@@ -83,6 +83,36 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   uzunluğu kadar sürer — ses odur — ama uç uca çizilince çubuklar üstteki
   notanın arkasına giriyor ve bir el dolusu tutma tek bir merdiven gibi
   okunuyordu. Bu yalnızca resimdeki bir boşluk; sesle ilgisi yok.
+
+  **Kuyruğu kısa kalan nota hiç tutmalı çizilmez.** Oyuncu bildirdi: *"bazı
+  basılı tutmalı notalar görsel olarak çok kısa olmuş ve basılı tutmalı gibi
+  göstermek anlamsız olmuş"* — Gnossienne No. 1'de. Sebebi yukarıdaki iki
+  kuralın çarpımı: nota 1.9 saniye çınlıyor olabilir ama çubuğu elin bir
+  sonraki işine kadar çiziliyor (`drawnEndBeat`), ve oradan bir de 1.6
+  yarıçaplık açıklık düşüyor. Geriye notanın kendisinden kısa bir güdük
+  kalıyordu: "burada bekle" diyen, beklenemeyecek kadar kısa bir şey.
+
+  Eşik yeni bir sayı değil, çizimin zaten sorduğu soru: çubuk **kendi
+  kalınlığının iki katından** kısaysa o dokunuş sıradan nota olarak çiziliyor
+  — ne çubuk, ne çizgide durma (`StageGeometry.holdReadsAsBar`, çizerdeki
+  `_Dot.isHold`). Eskiden asgari çubuk boyu kalınlığın yarısıydı, yani
+  boyundan geniş bir çubuk.
+
+  **Ses ve yargı hiç değişmiyor:** `Tap.isHold` ve `Tap.sustains` oldukları
+  gibi duruyor. Değişiklik güvenli, çünkü kuyruğu kısa olan nota **tam
+  olarak** sustain'i olan notadır (el zaten alınıyor) ve o notanın sesi parmak
+  kalkınca zaten kesilmiyordu. `test/stage_geometry_test.dart` bunu tüm
+  kütüphane üzerinde kilitliyor.
+
+  Kapsam: 1568 tutmanın 149'u (%9.5), üç parçada — Prelüd 66 (134'ün yarısı),
+  Passacaglia 69, Gnossienne 14. Diğer on parçada tek nota değişmiyor;
+  Kanon'un yürüyen bası kasten tutmalı ve öyle kalıyor.
+
+  **Karar piksel cinsinden, ve bu bilerek.** İniş süresi hıza bakmaksızın
+  1.9 saniye (`approachSeconds`), yani kuyruğun ekrandaki boyu doğrudan
+  gerçek saniyeye bağlı: telefonda eşik 0.32 saniyeye denk geliyor. Şarkıyı
+  %40 hıza aldığınızda aynı nota 0.8 saniyelik kuyruk çiziyor ve yine tutmalı
+  görünüyor — çalışma hızında yapının görünmesi doğru olan.
 - **Nota boyutu sabit.** Eskiden yaklaşırken büyüyüp çizgiyi geçince
   küçülüyordu; oyuncu sabit olmasını istedi. Uzaklık artık yalnız solgunlukla
   anlatılıyor — "ne zaman" demeye çalışan bir resimde bir şeyin daha
@@ -852,7 +882,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 280 test geçiyor
+flutter test        # 406 test geçiyor
 ```
 
 ## Cihazsız doğrulama

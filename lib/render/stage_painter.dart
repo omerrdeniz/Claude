@@ -342,16 +342,25 @@ class StagePainter extends CustomPainter {
       for (final member in group) {
         for (var i = 0; i < member.notes.length; i++) {
           final note = member.notes[i];
+          // The tail stops at the next thing this hand is asked for, not
+          // at the note's written end — see [Tap.drawnEndBeat]. The sound
+          // still runs its full length.
+          final endBeat = member.drawnEndBeat < member.beat + note.duration
+              ? member.drawnEndBeat
+              : member.beat + note.duration;
           dots.add(_Dot(
             across: member.noteAcross[i],
             midi: note.midi,
-            // The tail stops at the next thing this hand is asked for, not
-            // at the note's written end — see [Tap.drawnEndBeat]. The sound
-            // still runs its full length.
-            endBeat: member.drawnEndBeat < member.beat + note.duration
-                ? member.drawnEndBeat
-                : member.beat + note.duration,
-            isHold: member.isHold,
+            endBeat: endBeat,
+            // Held in the picture only where there is a tail to show for it.
+            // Whether the finger is meant to stay is [Tap.isHold] and belongs
+            // to the sound; whether saying so is worth a bar depends on how
+            // long that bar comes out on this screen, which only the painter
+            // knows. See [StageGeometry.holdReadsAsBar].
+            isHold: member.isHold &&
+                StageGeometry.holdReadsAsBar(
+                    (endBeat - member.beat) / windowInBeats * g.hitLineY,
+                    g.noteRadius),
             isHeld: heldNotes.contains((member.beat, note.midi)),
             isPlayed: playedNotes.contains((member.beat, note.midi)),
           ));

@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/game/stage_geometry.dart';
 
+import 'support/library.dart';
+
 void main() {
   const size = Size(390, 844);
   const g = StageGeometry(size: size);
@@ -233,6 +235,80 @@ void main() {
       expect(top(500, 500), isNull, reason: 'the tail has caught the head');
       expect(top(500, 501), isNull, reason: 'and gone past it');
       expect(top(500, 490), isNull, reason: 'a stub, not a bar');
+    });
+  });
+
+  group('a tail too short to be worth calling a hold', () {
+    const radius = 20.0;
+    bool reads(double length) => StageGeometry.holdReadsAsBar(length, radius);
+
+    test('a long tail is a hold', () {
+      expect(reads(400), isTrue);
+    });
+
+    test('a short one is just a note', () {
+      expect(reads(radius), isFalse,
+          reason: 'a tail no longer than the note is wide says nothing');
+      expect(reads(0), isFalse);
+    });
+
+    test('the cut is exactly where the bar stops being drawn', () {
+      // One rule, asked two ways: if this says a hold, the bar has something
+      // to draw, and if it says no, there was never a bar to lose. Drifting
+      // apart would leave notes that stop at the line with nothing behind
+      // them, which is the very thing being fixed.
+      for (var length = 0.0; length < 300; length += 0.5) {
+        expect(reads(length), StageGeometry.holdBarTop(length, 0, radius) != null,
+            reason: 'disagreed about a tail $length long');
+      }
+    });
+
+    // A phone, the song at its written speed, and the 1.9 seconds a note
+    // takes to come down the screen — PlaySession.approachSeconds.
+    double tailPixels(Tap tap, double bpm) =>
+        (tap.drawnEndBeat - tap.beat) / (1.9 * bpm / 60) * g.hitLineY;
+
+    List<Tap> quiet(String id) {
+      final song = shipped(id);
+      final chart = Chart.build(song);
+      return chart.taps
+          .where((t) =>
+              t.isHold &&
+              !StageGeometry.holdReadsAsBar(
+                  tailPixels(t, song.bpm), g.noteRadius))
+          .toList();
+    }
+
+    test('nothing loses its bar unless the hand was being taken away', () {
+      // The whole reason this is safe. A tail is short only because the hand
+      // is wanted again before the note ends, and such a note goes on
+      // sounding after the finger leaves it anyway (Tap.sustains). So the
+      // picture stops promising a stay the player cannot make, and not one
+      // note sounds differently for it.
+      for (final info in [for (final s in shippedSongs) s]) {
+        for (final tap in quiet(info.id)) {
+          expect(tap.sustains, isTrue,
+              reason: '${info.id}: a note at beat ${tap.beat} would lose its '
+                  'bar without the hand being called away');
+        }
+      }
+    });
+
+    test('it catches the ones the player found, and spares the rest', () {
+      // Satie's first Gnossienne is where this was reported.
+      expect(quiet('gnossienne-1'), isNotEmpty);
+      // The canon's walking bass is the opposite case: a quarter note at 55
+      // that rings for 1.09 seconds with nothing crowding it. It was made a
+      // hold on purpose and stays one.
+      expect(quiet('canon-in-d'), isEmpty);
+    });
+
+    test('the bar it lets through is longer than it is thick', () {
+      final least = (StageGeometry.holdBarClearance + StageGeometry.holdBarLeast) *
+          radius;
+      final bar = least - StageGeometry.holdBarClearance * radius;
+      expect(bar, greaterThan(radius * StageGeometry.holdBarWidth * 2),
+          reason: 'a bar, not a lump under the note');
     });
   });
 }

@@ -120,15 +120,41 @@ class StageGeometry {
     if (tailY >= headY) return null;
     final clearance = radius * holdBarClearance;
     final top = tailY + clearance > headY ? headY : tailY + clearance;
-    // Shorter than the bar is wide would be a stub, not a bar.
-    return headY - top < radius * holdBarWidth ? null : top;
+    return headY - top < radius * holdBarLeast ? null : top;
   }
+
+  /// Whether a tail reaching [length] pixels behind its head is worth drawing
+  /// as a hold at all.
+  ///
+  /// Asked of the tail at its longest — before the head reaches the line,
+  /// where the gap between head and tail is the whole of it. Under this a
+  /// touch is drawn as an ordinary note: it flows past the line and leaves,
+  /// with no bar and no pause.
+  ///
+  /// Sounding long and *being drawn* long are not the same thing, and this is
+  /// the second. A note's bar is drawn only as far as the next thing its hand
+  /// is asked for (see [Tap.drawnEndBeat]), so a note that rings for two
+  /// seconds under a hand that is wanted again in a quarter of one has a tail
+  /// a quarter of a second long — and drawn as a hold it was a lump under the
+  /// note saying "stay", for a stay too short to make. The player found these
+  /// in Satie's first Gnossienne. The sound is untouched: it still rings its
+  /// written length, and a hand forced off it still keeps it (see
+  /// [Tap.sustains]).
+  static bool holdReadsAsBar(double length, double radius) =>
+      length >= (holdBarClearance + holdBarLeast) * radius;
 
   /// How much room the bar leaves for the next note, in note radii.
   static const double holdBarClearance = 1.6;
 
   /// Half the bar's thickness, in note radii.
   static const double holdBarWidth = 0.72;
+
+  /// The shortest bar worth drawing, in note radii.
+  ///
+  /// Twice the bar's own thickness. It used to be half of it — a bar wider
+  /// than it was long, which is a lump behind the note rather than a line
+  /// leading away from it, and reads as neither a hold nor a tap.
+  static const double holdBarLeast = holdBarWidth * 4;
 
   /// Where a note's head is drawn, given how far along it is.
   ///
