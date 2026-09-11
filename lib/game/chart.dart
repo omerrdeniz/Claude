@@ -88,6 +88,35 @@ class Tap {
   /// fingers it takes, not what the music is.
   int voices = 1;
 
+  /// Notes crushed into this touch: an ornament sounding an instant before
+  /// the notes it decorates, from the same finger.
+  ///
+  /// An acciaccatura is written as a note but is not one to play: it lands
+  /// some sixty milliseconds before the note it leans into, which no hand can
+  /// answer as a second touch. So it rides the touch it belongs to, and the
+  /// game gives the gap between them — see [PlaySession].
+  List<Note> grace = const [];
+
+  bool get hasGrace => grace.isNotEmpty;
+
+  /// Where the ornament sits across the screen, as [across] does.
+  double graceAcross = 0;
+
+  /// Which way the ornament leans: 1 where the touch is above the ornament
+  /// and the hand moves right, -1 where it is below and the hand moves left.
+  /// 0 where there is no ornament.
+  ///
+  /// This is the whole of what the flick asks for. The *distance* between an
+  /// ornament and its note cannot be asked for: most of them are a semitone
+  /// or two, which on a screen where place comes from pitch is a few pixels —
+  /// too small to aim at and too small to see. Direction is real, size is not.
+  int get graceLean {
+    if (grace.isEmpty) return 0;
+    final mine = notes.map((n) => n.midi).reduce((a, b) => a + b) / notes.length;
+    final its = grace.map((n) => n.midi).reduce((a, b) => a + b) / grace.length;
+    return mine == its ? 0 : (mine > its ? 1 : -1);
+  }
+
   /// The longest note in the touch.
   double get duration =>
       notes.map((n) => n.duration).reduce((a, b) => a > b ? a : b);
@@ -134,6 +163,24 @@ class Tap {
   /// touches were holds; now two hundred and ninety-three are, which is what
   /// the piece actually is.
   static const double holdSeconds = 0.7;
+
+  /// An ornament's own length, and how long before its note it may land, in
+  /// seconds. Longer than this and it is a note in its own right.
+  ///
+  /// Satie's first Gnossienne settles the number on its own: all hundred of
+  /// its ornaments are 63 ms long and land 63 ms before the note they lean
+  /// into, every one of them. Twice that leaves room for another edition to
+  /// write them a little wider without letting an ordinary short note in.
+  static const double graceSeconds = 0.12;
+
+  /// How long the note being decorated has to last, in seconds.
+  ///
+  /// Without this a wall of fast notes reads as ornament after ornament:
+  /// in a run everything is short, and what makes an ornament an ornament is
+  /// that it leans into something that stays. It is what tells the two apart
+  /// in Handel's passacaglia, where the loose rule found 119 and the true
+  /// count is 26.
+  static const double graceMainSeconds = 0.25;
 
   double get endBeat => beat + duration;
 
@@ -265,6 +312,8 @@ class Chart {
         ? a.beat.compareTo(b.beat)
         : a.across.compareTo(b.across));
 
+    _crushOrnaments(taps, song);
+
     // How long a note has to last, in this song's beats, to be held.
     final holdFrom = Tap.holdSeconds * song.bpm / 60;
     for (final tap in taps) {
@@ -373,6 +422,46 @@ class Chart {
     return runs;
   }
 
+  /// Fold each ornament into the touch it decorates.
+  ///
+  /// An acciaccatura — the small note with a stroke through its stem — is
+  /// played by crushing it into the note it leans on: one movement of the
+  /// hand, not two touches. Left as a touch of its own it asks for a second
+  /// finger sixty milliseconds after the first, which nobody can give, so
+  /// every one of them was missed. Satie's first Gnossienne has a hundred.
+  ///
+  /// What it looks like in the notes: a short note, landing a breath before a
+  /// long one in the same hand. Both breaths are measured in seconds, because
+  /// a hand does not know what a beat is.
+  static void _crushOrnaments(List<Tap> taps, Song song) {
+    final grace = Tap.graceSeconds * song.bpm / 60;
+    final mainLeast = Tap.graceMainSeconds * song.bpm / 60;
+
+    // By the hand that plays it, whatever the level does with the hands. An
+    // ornament belongs to one hand by definition — it is the same finger
+    // rolling into the next note. Grouping by zone instead, as the easy level
+    // would, crushed one hand's note into the other's.
+    final byHand = <Hand, List<Tap>>{};
+    for (final tap in taps) {
+      (byHand[tap.hand] ??= []).add(tap);
+    }
+
+    final crushed = <Tap>{};
+    for (final line in byHand.values) {
+      for (var i = 0; i < line.length - 1; i++) {
+        final ornament = line[i], main = line[i + 1];
+        final gap = main.beat - ornament.beat;
+        if (gap <= 0 || gap > grace) continue;
+        if (ornament.duration > grace) continue;
+        if (main.duration < mainLeast) continue;
+        main.grace = ornament.notes;
+        main.graceAcross = ornament.across;
+        crushed.add(ornament);
+      }
+    }
+    taps.removeWhere(crushed.contains);
+  }
+
   /// Say which touches have to keep sounding after the finger has gone.
   ///
   /// A touch is sustained if the same hand is asked for another one before
@@ -431,15 +520,50 @@ class Chart {
     final passed = <Note>[];
     var lastKept = double.negativeInfinity;
 
-    for (final moment in _byOnset(all, onsetTolerance)) {
+    final moments = _byOnset(all, onsetTolerance);
+    final leans = [
+      for (var i = 0; i < moments.length; i++)
+        _leansInto(moments[i], i + 1 < moments.length ? moments[i + 1] : null,
+            song.bpm)
+    ];
+
+    for (var i = 0; i < moments.length; i++) {
+      // An ornament is not a moment of its own: it stands or falls with the
+      // note it leans into. Deciding them apart is how Satie's Gnossienne
+      // came out with its hundred small notes kept and the melody they lean
+      // on played by the game — the thinning met the ornament first, kept it
+      // because it was first, and dropped the note a tenth of a beat later.
+      if (leans[i]) continue;
+      final moment = moments[i];
+      final ornament = i > 0 && leans[i - 1] ? moments[i - 1] : const <Note>[];
+
       if (moment.first.beat >= lastKept + minGap - 0.001) {
         lastKept = moment.first.beat;
+        kept.addAll(ornament);
         kept.addAll(moment);
       } else {
+        passed.addAll(ornament);
         passed.addAll(moment);
       }
     }
     return (kept, passed);
+  }
+
+  /// Whether [moment] is an ornament crushed into [next].
+  ///
+  /// The same rule [_crushOrnaments] uses, asked of notes rather than
+  /// touches: short itself, landing a breath before something that stays.
+  static bool _leansInto(List<Note> moment, List<Note>? next, double bpm) {
+    if (next == null) return false;
+    final grace = Tap.graceSeconds * bpm / 60;
+    final mainLeast = Tap.graceMainSeconds * bpm / 60;
+    double longest(List<Note> ns) =>
+        ns.map((n) => n.duration).reduce((a, b) => a > b ? a : b);
+    final gap = next.first.beat - moment.first.beat;
+    return gap > 0 &&
+        gap <= grace &&
+        longest(moment) <= grace &&
+        longest(next) >= mainLeast;
   }
 
   /// Group notes that are struck together.

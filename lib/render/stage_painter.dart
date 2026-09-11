@@ -20,11 +20,17 @@ class _Dot {
     required this.isHold,
     required this.isHeld,
     required this.isPlayed,
+    this.graceLean = 0,
   });
 
   final double across;
   final int midi;
   final double endBeat;
+
+  /// Which way the ornament crushed into this note leans, or 0 for none.
+  /// Carried by the first note of the touch only: an ornament leans into a
+  /// touch, not into each of its notes.
+  final int graceLean;
 
   /// Long enough that the player is asked to keep a finger down.
   final bool isHold;
@@ -43,6 +49,7 @@ class _Dot {
         isHold: isHold,
         isHeld: isHeld,
         isPlayed: isPlayed,
+        graceLean: graceLean,
       );
 }
 
@@ -363,6 +370,7 @@ class StagePainter extends CustomPainter {
                     g.noteRadius),
             isHeld: heldNotes.contains((member.beat, note.midi)),
             isPlayed: playedNotes.contains((member.beat, note.midi)),
+            graceLean: i == 0 ? member.graceLean : 0,
           ));
         }
       }
@@ -398,6 +406,9 @@ class StagePainter extends CustomPainter {
         // there is what happened to it. Only what nobody caught goes on
         // falling, which is how the screen says which is which.
         if (dot.isPlayed && head > 1) continue;
+        if (dot.graceLean != 0) {
+          _paintGrace(canvas, g, dot, head, radius, colour, fade);
+        }
         if (dot.isHold) {
           _paintHoldBar(
             canvas,
@@ -644,6 +655,58 @@ class StagePainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: 0.28 * fade),
     );
   }
+
+  /// The ornament crushed into a note: a small head to one side of it, with
+  /// a line running into the note it leans on.
+  ///
+  /// Placed a fixed step to the side rather than where its own pitch and
+  /// moment put it, and that is the point. Most ornaments are a semitone or
+  /// two from their note and sixty milliseconds ahead of it, which on this
+  /// screen is seven pixels across and nineteen down — under the note itself,
+  /// where nobody could see it. What the player needs from the picture is not
+  /// where the small note is but **which way the hand goes**, so the drawing
+  /// says only that, plainly.
+  ///
+  /// Nothing here asks the player to reach the small head. A flick that way
+  /// is the whole gesture, and both notes sound whether or not it comes.
+  void _paintGrace(Canvas canvas, StageGeometry g, _Dot dot, double progress,
+      double radius, Color colour, double fade) {
+    final head = g.positionAtPosition(dot.across, progress);
+    final small = radius * _graceRadius;
+    final from = head.translate(
+        -dot.graceLean * radius * _graceStep, -radius * _graceRise);
+
+    canvas.drawLine(
+      from,
+      head,
+      Paint()
+        ..strokeWidth = small * 0.55
+        ..strokeCap = StrokeCap.round
+        ..color = colour.withValues(alpha: 0.5 * fade),
+    );
+    canvas.drawCircle(
+        from, small, Paint()..color = colour.withValues(alpha: 0.9 * fade));
+    canvas.drawCircle(
+      from,
+      small,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..color = Colors.white.withValues(alpha: 0.55 * fade),
+    );
+  }
+
+  /// How far to the side the ornament's head sits, in note radii: clear of
+  /// the note, close enough to belong to it.
+  static const double _graceStep = 1.9;
+
+  /// And how far above it, so the line leans rather than lying flat — the
+  /// ornament does come first.
+  static const double _graceRise = 0.75;
+
+  /// How big an ornament's head is drawn, in note radii. Small enough to read
+  /// as the little note it is written as, big enough to see at arm's length.
+  static const double _graceRadius = 0.42;
 
   void _paintNote(Canvas canvas, StageGeometry g, double across,
       double progress, double radius, int voices, double fade) {

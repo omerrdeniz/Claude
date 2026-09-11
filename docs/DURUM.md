@@ -67,6 +67,56 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   378 ms; sekizlikleri 450 ms olan bir parçada o kadar geç gelen nota deliği
   doldurmaz, yanlış nota gibi duyulur. Doldurma notayı **çözmez**: geç kalan
   el hâlâ bulur, hâlâ puan alır ve kendi dokunuşu notayı yine çalar.
+- **Çarpma süslemesi (acciaccatura) tek dokunuş, ve bir fiske.** Oyuncunun
+  isteği: *"bu tarz piyano tekniklerine farklı mekanikler eklemek, hem
+  oynanışı çeşitlendirmiş oluruz."* İlk teknik bu.
+
+  **Önce bir hata vardı.** Gnossienne No. 1'in yüz süslemesi ayrı birer
+  dokunuş olarak duruyordu: aynı elde **63 ms** arayla iki basış. İnsan eli
+  bunu yapamaz, yani o yüz nota sistematik olarak kaçıyordu ve oyuncu sebebini
+  bilmiyordu. (Nüshada süsleme komutuyla değil gerçek süreli kısa notalar
+  olarak yazıldıkları için `ScoreImport`'un süsleme ayıklayıcısı da onları
+  görmüyordu.)
+
+  **Tanıma kuralı** (`Chart._crushOrnaments`, `Tap.graceSeconds` = 0.12 sn,
+  `Tap.graceMainSeconds` = 0.25 sn): kendisi kısa olan, aynı elde **duran** bir
+  notadan bir nefes önce düşen nota bir süslemedir. İki eşik de saniye
+  cinsinden. Gnossienne kuralı kendisi veriyor — yüz süslemesinin **hepsi**
+  63 ms uzunluğunda ve 63 ms önce. İkinci şart olmazsa hızlı figürler süsleme
+  sanılıyor: Handel'in Passacaglia'sında gevşek kural 119 buluyordu, doğrusu
+  26.
+
+  Kütüphanede 140 tane var: Gnossienne 100, Passacaglia 26, Nokturn 9,
+  Für Elise 3, Chopin valsi 2. Hızlı parçalarda (Kanon, Entertainer, Prelüd)
+  tek bir yanlış tanıma yok.
+
+  **Ses:** süsleme asıl notaya bağlanır (`Tap.grace`), tek dokunuş ikisini de
+  çalar, **aradaki 63 ms'yi oyun verir** — el değil. Süsleme biraz daha hafif
+  vurulur (`_graceWeight` = 0.8); acciaccatura'nın ağırlığı asıl notadadır.
+
+  **Fiske:** dokunduktan sonra parmağı süslemenin eğildiği yöne ~%4 ekran
+  genişliği kaydırmak bir *süs* kazandırır (`PlaySession.flick`, 50 puan,
+  0.3 sn pencere). **Toplama değil ekleme:** düz basmak da iki notayı çalar ve
+  tam puan alır; fiske yalnız üstüne ekler. Puan doğruluğa (`accuracy`)
+  girmez — doğruluk zamanlama sorusudur, bu değil.
+
+  **Yön gerçek, mesafe değil.** Süslemelerin %70'i aşağı, %30'u yukarı eğiliyor
+  — yani yön okunacak bir bilgi. Ama çoğu 1-2 yarım ses uzakta, ki perdeden yer
+  üreten bu ekranda 7 piksel eder. Onun için hem mekanik hem çizim yalnızca
+  **yönü** kullanıyor: ekranda süsleme gerçek perdesine değil, notanın yanında
+  sabit bir adıma konuyor. İlk hâli gerçek perdesine koymuştu ve süsleme
+  notanın altında kayboluyordu.
+
+  **Koşu mekaniğinin hatasını tekrarlamaz.** Orada hareket *miktarı* sürekli
+  ölçülüyordu ve parmak yön değiştirmek için durduğunda nota düşüyordu. Fiske
+  tek bir anda olup biten tek bir hareket; ölçtüğü şey "ne tarafa", "ne kadar
+  sürekli" değil.
+
+  **Yol üstünde bulunan ikinci hata:** Kolay moddaki seyreltme süslemeyi tutup
+  **asıl melodi notasını atıyordu** — çünkü süsleme önce geliyor ve seyreltme
+  ilk gördüğünü tutuyor. Yani Kolay'da oyuncu süsü çalıyor, ezgiyi oyun
+  çalıyordu. `_divideVoices` artık süslemeyi kendi başına bir an saymıyor:
+  bağlı olduğu notayla birlikte kalıyor ya da birlikte gidiyor.
 - **Eller ayrılır.** Ekranın sol yarısı sol el, sağ yarısı sağ el. Zorluğun
   asıl anlamı bu:
   - Kolay: tek alan, akor tek parmakla, seyreltme var.
@@ -885,7 +935,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 406 test geçiyor
+flutter test        # 420 test geçiyor
 ```
 
 ## Cihazsız doğrulama
@@ -1036,6 +1086,11 @@ Oyun bir oyun; öğretme aracı değil. Sıra buna göre:
    noktalarını olay hâline getirir.
 
 Kapanmamış eski işler:
+
+0. **Passacaglia'da 31 ms'lik dokunuş çiftleri var.** Çarpma taraması sırasında
+   çıktı: Handel'in parçasında aynı elde 31 ms arayla iki ayrı dokunuş isteyen
+   yerler var. Süsleme değiller — arkalarından gelen nota kısa, yani hızlı
+   figür. Basılamazlar. Ayrı bir iş, dokunulmadı.
 
 5. **Kolay moddaki seyreltme vuruş cinsinden** (`Chart._divideVoices`,
    `minGap = 0.5` vuruş). Vuruş/saniye hatasının üçüncü ve sonuncusu:

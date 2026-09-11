@@ -58,6 +58,9 @@ class _PlayScreenState extends State<PlayScreen>
   /// Which run each finger currently on the screen is sliding through.
   final Map<int, int> _dragByPointer = {};
 
+  /// Which ornament each finger on the screen may still flick.
+  final Map<int, int> _crushByPointer = {};
+
   /// The light left on the line by recent hits.
   final SparkField _sparks = SparkField();
 
@@ -138,15 +141,34 @@ class _PlayScreenState extends State<PlayScreen>
     if (outcome == null) return;
 
     if (outcome.holdId != null) _heldByPointer[pointer] = outcome.holdId!;
+    if (outcome.crushId != null) _crushByPointer[pointer] = outcome.crushId!;
     setState(() => _record(outcome));
   }
 
   /// A finger already on the screen moved. If it is following a run, that is
   /// where the run now thinks the finger is.
   void _onDrag(int pointer, Offset position, Size size) {
+    final across = (position.dx / size.width).clamp(0.0, 1.0);
+
+    // An ornament the finger has just taken: flicking the way it leans is the
+    // hand doing what the writing asks. It earns a flourish, never the note —
+    // the note has already sounded, and playing it plain is not an error.
+    final crushId = _crushByPointer[pointer];
+    if (crushId != null && _session.flick(crushId, across)) {
+      _crushByPointer.remove(pointer);
+      // Light where the hand went, so the flick is answered by the screen and
+      // not only by the score.
+      setState(() => _sparks.add(Spark(
+            places: [across],
+            hand: Chart.handAt(across),
+            voices: 1,
+            quality: 1,
+          )));
+    }
+
     final dragId = _dragByPointer[pointer];
     if (dragId == null) return;
-    _session.drag(dragId, (position.dx / size.width).clamp(0.0, 1.0));
+    _session.drag(dragId, across);
   }
 
   /// A finger came off the screen. If it was holding a long note, that note
@@ -154,6 +176,9 @@ class _PlayScreenState extends State<PlayScreen>
   void _onTapUp(int pointer) {
     final dragId = _dragByPointer.remove(pointer);
     if (dragId != null) _session.endDrag(dragId);
+
+    final crushId = _crushByPointer.remove(pointer);
+    if (crushId != null) _session.endCrush(crushId);
 
     final holdId = _heldByPointer.remove(pointer);
     if (holdId == null) return;

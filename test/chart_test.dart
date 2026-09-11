@@ -63,10 +63,69 @@ void main() {
       for (final difficulty in Difficulty.values) {
         for (final song in shippedSongs) {
           final chart = Chart.build(song, difficulty: difficulty);
-          final tapped = chart.taps.expand((t) => t.notes).length;
+          // An ornament is played by the player too — it just rides the touch
+          // it decorates rather than being one of its own. Counting it with
+          // the touch is what keeps this sum honest.
+          final tapped =
+              chart.taps.expand((t) => [...t.notes, ...t.grace]).length;
           expect(tapped + chart.autoNotes.length, song.notes.length,
               reason: '${song.title} on ${difficulty.label}');
         }
+      }
+    });
+  });
+
+  group('an ornament rides the note it leans on', () {
+    Chart gnossienne() => Chart.build(shipped('gnossienne-1'));
+
+    test('it is not a touch of its own', () {
+      final chart = gnossienne();
+      // Sixty milliseconds apart is not two touches; it is one movement of
+      // the hand. Nothing in the chart may ask for a second finger that soon.
+      final ms = 60000 / chart.song.bpm;
+      for (final hand in Hand.values) {
+        final line = chart.taps.where((t) => t.hand == hand).toList()
+          ..sort((a, b) => a.beat.compareTo(b.beat));
+        for (var i = 1; i < line.length; i++) {
+          final gap = (line[i].beat - line[i - 1].beat) * ms;
+          expect(gap, greaterThan(Tap.graceSeconds * 1000),
+              reason: 'two touches ${gap.toStringAsFixed(0)} ms apart at '
+                  'beat ${line[i].beat}');
+        }
+      }
+    });
+
+    test('and the piece keeps all of them', () {
+      final withGrace = gnossienne().taps.where((t) => t.hasGrace);
+      expect(withGrace, hasLength(100),
+          reason: "Satie's first Gnossienne is written with a hundred");
+    });
+
+    test('it leans from its own pitch', () {
+      for (final tap in gnossienne().taps.where((t) => t.hasGrace)) {
+        final main = tap.notes.first.midi;
+        final grace = tap.grace.first.midi;
+        expect(tap.graceLean, main > grace ? 1 : -1,
+            reason: 'the hand goes towards the note it lands on');
+      }
+    });
+
+    test('a run of short notes is not a string of ornaments', () {
+      // What tells them apart is that an ornament leans into something that
+      // stays. In a run everything is short, so nothing there is one.
+      for (final song in shippedSongs) {
+        for (final tap in Chart.build(song).taps.where((t) => t.hasGrace)) {
+          expect(tap.duration * 60 / song.bpm,
+              greaterThanOrEqualTo(Tap.graceMainSeconds),
+              reason: '${song.title} at beat ${tap.beat}');
+        }
+      }
+    });
+
+    test('the pieces without them are left alone', () {
+      for (final id in ['canon-in-d', 'entertainer', 'prelude-in-c']) {
+        expect(Chart.build(shipped(id)).taps.where((t) => t.hasGrace), isEmpty,
+            reason: '$id has no acciaccatura in its edition');
       }
     });
   });

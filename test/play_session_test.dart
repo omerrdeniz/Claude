@@ -557,6 +557,100 @@ void main() {
     });
   });
 
+  group('an ornament is crushed into the note it leans on', () {
+    // One beat is half a second here. The small note is written a tenth of a
+    // beat — fifty milliseconds — before a note that stays.
+    Song ornamented({int grace = 60, int main = 62}) => songOf([
+          note(1.9, grace, duration: 0.1),
+          note(2.0, main, duration: 1.0),
+        ]);
+
+    /// Wind the clock to [beat] and touch the right-hand side.
+    TapOutcome? playAt(PlaySession session, double beat) {
+      wall(session, (beat + session.leadInBeats) / session.beatsPerSecond);
+      return session.tap(right);
+    }
+
+    test('one touch sounds both, the small one first', () {
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      playAt(session, 2.0);
+      wall(session, (2.4 + session.leadInBeats) / session.beatsPerSecond);
+      expect(engine.struck.map((s) => s.$1), [60, 62],
+          reason: 'the ornament leads into the note, from one finger');
+    });
+
+    test('and the small one is struck lighter', () {
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      playAt(session, 2.0);
+      wall(session, (2.4 + session.leadInBeats) / session.beatsPerSecond);
+      final struck = {for (final s in engine.struck) s.$1: s.$2};
+      expect(struck[60]!, lessThan(struck[62]!),
+          reason: 'the weight of an acciaccatura belongs to the main note');
+    });
+
+    test('playing it plain still sounds both and still scores', () {
+      // The whole of the rule this game is built on: the touch plays the
+      // music. A flourish may be missed; a note may not.
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      final outcome = playAt(session, 2.0);
+      wall(session, (2.4 + session.leadInBeats) / session.beatsPerSecond);
+      expect(outcome!.scored, isTrue);
+      expect(engine.struck.map((s) => s.$1), containsAll([60, 62]));
+      expect(session.scoreboard.score, greaterThan(0));
+    });
+
+    test('a flick the way it leans is worth something', () {
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      final outcome = playAt(session, 2.0);
+      final before = session.scoreboard.score;
+      expect(outcome!.crushLean, 1, reason: '60 to 62 goes up, so rightwards');
+      expect(session.flick(outcome.crushId!, right + PlaySession.flickReach),
+          isTrue);
+      expect(session.scoreboard.score, greaterThan(before));
+    });
+
+    test('the other way is not', () {
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      final outcome = playAt(session, 2.0);
+      final before = session.scoreboard.score;
+      expect(session.flick(outcome!.crushId!, right - PlaySession.flickReach),
+          isFalse);
+      expect(session.scoreboard.score, before);
+    });
+
+    test('an ornament leaning down asks for the other direction', () {
+      final session = sessionFor(ornamented(grace: 64, main: 62),
+          difficulty: Difficulty.normal);
+      final outcome = playAt(session, 2.0);
+      expect(outcome!.crushLean, -1);
+      expect(session.flick(outcome.crushId!, right - PlaySession.flickReach),
+          isTrue);
+    });
+
+    test('holding still is not a flick', () {
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      final outcome = playAt(session, 2.0);
+      expect(session.flick(outcome!.crushId!, right), isFalse);
+      expect(session.flick(outcome.crushId!, right + 0.001), isFalse);
+    });
+
+    test('and neither is one that comes too late', () {
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      final outcome = playAt(session, 2.0);
+      final late = 2.0 +
+          (PlaySession.flickSeconds + 0.1) * session.beatsPerSecond;
+      wall(session, (late + session.leadInBeats) / session.beatsPerSecond);
+      expect(session.flick(outcome!.crushId!, right + PlaySession.flickReach),
+          isFalse);
+    });
+
+    test('a note without an ornament offers no flick', () {
+      final session = sessionFor(songOf([note(2.0, 62, duration: 1.0)]),
+          difficulty: Difficulty.normal);
+      expect(playAt(session, 2.0)!.crushId, isNull);
+    });
+  });
+
   test('calibration shifts what counts as on time', () {
     final recorder = RecordingEngine();
     final session = PlaySession(

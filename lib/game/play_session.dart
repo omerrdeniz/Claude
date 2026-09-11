@@ -14,6 +14,8 @@ class TapOutcome {
     this.voices = 1,
     this.scored = true,
     this.holdId,
+    this.crushId,
+    this.crushLean = 0,
   });
 
   final Verdict verdict;
@@ -22,6 +24,13 @@ class TapOutcome {
   /// Set when this touch began a note the finger is expected to keep down.
   /// Hand it back to [PlaySession.releaseHold] when the finger lifts.
   final int? holdId;
+
+  /// Set when this touch carried an ornament, which the finger may still
+  /// flick. Hand it to [PlaySession.flick] while the finger moves.
+  final int? crushId;
+
+  /// Which way that flick has to go: 1 for right, -1 for left.
+  final int crushLean;
 
   /// How early (negative) or late (positive) the tap was.
   final double errorMs;
@@ -39,6 +48,20 @@ class TapOutcome {
   /// nothing; it exists so the player is told *why* nothing sounded instead of
   /// being met with silence.
   final bool scored;
+}
+
+/// An ornament just sounded, waiting to see whether the hand flicked.
+class _Crush {
+  _Crush({required this.from, required this.lean, required this.until});
+
+  /// Where across the screen the finger landed.
+  final double from;
+
+  /// Which way it has to move: 1 right, -1 left.
+  final int lean;
+
+  /// The beat after which nobody is flicking any more.
+  final double until;
 }
 
 /// A note being held down.
@@ -230,7 +253,7 @@ class PlaySession {
       tap.notes.any((note) => !_resolved.contains(_keyOf(note)));
 
   void _resolve(Tap tap) {
-    for (final note in tap.notes) {
+    for (final note in [...tap.notes, ...tap.grace]) {
       _resolved.add(_keyOf(note));
     }
   }
@@ -434,6 +457,16 @@ class PlaySession {
       );
     }
 
+    int? crushId;
+    if (tapTarget.hasGrace) {
+      crushId = _nextCrushId++;
+      _crushes[crushId] = _Crush(
+        from: across,
+        lean: tapTarget.graceLean,
+        until: _beat + flickSeconds * beatsPerSecond,
+      );
+    }
+
     return TapOutcome(
       verdict: verdict,
       hand: tapTarget.hand,
@@ -442,6 +475,8 @@ class PlaySession {
       places: tapTarget.noteAcross,
       voices: tapTarget.voices,
       holdId: holdId,
+      crushId: crushId,
+      crushLean: tapTarget.graceLean,
     );
   }
 
@@ -453,23 +488,92 @@ class PlaySession {
     final firmness = 0.85 + judge.quality(errorMs) * 0.3;
     final early = quantize && _beat < target.beat;
 
-    for (final note in target.notes) {
-      final velocity = (note.velocity * firmness).clamp(0.05, 1.0);
-      if (early) {
-        // Hold it back to its written moment, so the piece comes out in time
-        // however jumpy the hand was.
+    // The gap an ornament leans across. It is the game's to give, not the
+    // hand's: sixty milliseconds is less than the time between two touches
+    // anybody can make, so one touch sounds both — as one movement of the
+    // hand does at a piano.
+    final crush = target.hasGrace ? target.beat - target.grace.first.beat : 0.0;
+    final mainBeat = early ? target.beat : _beat + crush;
+
+    void sound(Note note, double at, double end, double weight) {
+      final velocity = (note.velocity * firmness * weight).clamp(0.05, 1.0);
+      if (at > _beat) {
+        // Hold it back to its moment, so the piece comes out in time however
+        // jumpy the hand was.
         _waiting.add((
-          beat: target.beat,
+          beat: at,
           midi: note.midi,
           velocity: velocity,
-          duration: note.duration,
+          duration: end - at,
         ));
       } else {
         audio.noteOn(note.midi, velocity: velocity);
-        _scheduleRelease(note.midi, target.beat + note.duration);
+        _scheduleRelease(note.midi, end);
       }
     }
+
+    for (final note in target.grace) {
+      final at = mainBeat - crush;
+      sound(note, at, at + note.duration, _graceWeight);
+    }
+    for (final note in target.notes) {
+      sound(note, mainBeat, target.beat + note.duration, 1);
+    }
   }
+
+  /// How much lighter an ornament is struck than the note it leans into.
+  ///
+  /// The weight of an acciaccatura belongs to the main note; the small one is
+  /// a scrape on the way in, not a note of its own. Played at equal force it
+  /// reads as two notes played sloppily rather than one played with a flick.
+  static const double _graceWeight = 0.8;
+
+  /// Ornaments sounded and not yet flicked.
+  final Map<int, _Crush> _crushes = {};
+  int _nextCrushId = 1;
+
+  /// How far the finger has to move to have flicked, as a fraction of the
+  /// screen's width.
+  ///
+  /// Smaller than [dragReach], which asks a finger to stay *with* something
+  /// moving; this only asks which way the hand went. Big enough that holding
+  /// still is not a flick, small enough to be one movement of a thumb.
+  static const double flickReach = 0.04;
+
+  /// How long after the touch a flick still counts, in seconds.
+  ///
+  /// The ornament has already sounded — this is not the note being earned,
+  /// only the flourish. Generous, because a hand that flicks late has still
+  /// made the gesture the music asks for.
+  static const double flickSeconds = 0.3;
+
+  /// What a flick is worth, before the combo multiplier.
+  ///
+  /// Deliberately not part of [Scoreboard.accuracy]: accuracy is about
+  /// timing, and this is not a timing question. A flourish adds to the score
+  /// without moving the grade — nobody is marked down for playing it plain.
+  static const int flickPoints = 50;
+
+  /// The finger that took an ornament has moved to [across].
+  ///
+  /// Returns true the moment it has gone far enough the right way, once.
+  bool flick(int crushId, double across) {
+    final crush = _crushes[crushId];
+    if (crush == null) return false;
+    if (_beat > crush.until) {
+      _crushes.remove(crushId);
+      return false;
+    }
+    final moved = (across - crush.from) * crush.lean;
+    if (moved < flickReach) return false;
+
+    _crushes.remove(crushId);
+    scoreboard.score += flickPoints * scoreboard.multiplier;
+    return true;
+  }
+
+  /// The finger that took an ornament has left without flicking.
+  void endCrush(int crushId) => _crushes.remove(crushId);
 
   /// Fingers following a run.
   final Map<int, _Drag> _drags = {};
