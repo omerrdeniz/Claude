@@ -18,7 +18,10 @@ değil — ayrıntısı aşağıda "App'e geçiş"te.
 Çekirdek kural: **dokunuş her zaman doğru notayı çalar.** Oyuncu yanlış perde
 çalamaz, yalnızca yanlış an seçebilir.
 
-Dal: `claude/magic-piano-app-store-py724t`. Tüm geliştirme burada.
+Dal: **`main`**, ve tek dal o. Bir dönem her oturum kendi dalını açtı ve
+proje hiç `main`'e girmedi (`main` boş bir "Initial commit"ten ibaretti);
+geriye birbirinin içinde duran dört dal kaldı. Hepsi `main`'de toplandı,
+gerisi silindi.
 
 ## Oynanış kararları
 
@@ -962,9 +965,15 @@ Derler, damgalar, `gh-pages`'e ve çalışılan dala iter, sonuçta sürümü ya
 Çalışma dizini temiz değilse çalışmayı reddediyor — yayınlanan şeyin hangi
 commit olduğu belli olmalı.
 
-**Sürüm numarası.** Dalın commit sayısı (`git rev-list --count HEAD`), yani
-her yayında bir artıyor ve bakışta karşılaştırılabiliyor: v51'in v50'den yeni
-olduğu bellidir, iki commit hash'inin hangisinin yeni olduğu belli değildir.
+**Sürüm numarası.** Yayında ne varsa **onun bir fazlası**
+(`gh-pages:build.json`), yani her yayında bir artıyor ve bakışta
+karşılaştırılabiliyor: v51'in v50'den yeni olduğu bellidir, iki commit
+hash'inin hangisinin yeni olduğu belli değildir.
+
+Eskiden dalın commit sayısıydı ve bu sessizce **dal başına bir numaralandırma**
+demekti: site v84 sunarken aynı commit'in çalışma kopyasındaki sayımı 58
+çıkıyordu, ve yanlış daldan bir yayın numarayı geriye sardırırdı. Yayınlanan
+tek bir site var, sayaç orada duruyor.
 Yanında commit hash'i de duruyor, asıl kimlik o. İkisi de şarkı listesinin
 üstünde yazıyor (`versionLabel`), ve **her değişiklikten sonra oyuncuya
 söyleniyor** — bir düzeltmenin işe yaramadığını, hiç ulaşmadığından ayırmanın

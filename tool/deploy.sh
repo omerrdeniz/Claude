@@ -4,16 +4,31 @@
 #
 #     tool/deploy.sh
 #
-# The version is the branch's commit count, so it goes up by one every time
-# and can be compared at a glance; the build id is the commit itself. Both
-# are printed at the end and shown at the top of the song list, so "is this
-# the build with the fix in it" has an answer that does not need guessing.
+# The version counts publications, not commits: it is whatever is published
+# now, plus one. The build id is the commit itself. Both are printed at the
+# end and shown at the top of the song list, so "is this the build with the
+# fix in it" has an answer that does not need guessing.
+#
+# It used to be the branch's commit count, which quietly meant one numbering
+# per branch: the site was serving v84 while a checkout of the same commit
+# counted 58, and a deploy from the wrong branch would have sent the number
+# backwards. There is one published site, so the number lives there — and it
+# goes up by one however the work reached it.
 set -euo pipefail
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 SHA=$(git rev-parse --short HEAD)
-VERSION=$(git rev-list --count HEAD)
 WORKTREE=${PAGES_WORKTREE:-/tmp/pages}
+
+git fetch -q origin gh-pages
+PUBLISHED=$(git show origin/gh-pages:build.json 2>/dev/null |
+  sed -n 's/.*"version":"\([0-9][0-9]*\)".*/\1/p')
+if [ -z "$PUBLISHED" ]; then
+  echo "Yayındaki sürüm okunamadı (gh-pages:build.json)." >&2
+  echo "Sayacı geri sarmamak için elle verin: VERSION=<sayı> tool/deploy.sh" >&2
+  exit 1
+fi
+VERSION=${VERSION:-$((PUBLISHED + 1))}
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Çalışma dizini temiz değil — önce commit edin." >&2
