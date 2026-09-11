@@ -227,6 +227,18 @@ const List<Score> catalog = [
         '(Renato Biolcati Rinaldi), CC BY-SA 3.0, tam eser.',
   ),
   Score(
+    id: 'passacaglia',
+    title: 'Passacaglia',
+    composer: 'George Frideric Handel',
+    arrangement: 'passacaglia.notes',
+    // A ground bass is meant to be under everything, not on top of it.
+    leftVelocity: 0.45,
+    credit: 'Kamu malı (HWV 432/6, 1720); Johan Halvorsen\'in 1893 '
+        'düzenlemesiyle tanınır, o da kamu malı (Halvorsen † 1935). '
+        'Makine okunur bir nüsha bulunamadı: zemin bas Handel\'in, '
+        'çeşitlemeler Piano Flow\'un.',
+  ),
+  Score(
     id: 'house-of-the-rising-sun',
     title: 'House of the Rising Sun',
     composer: 'Geleneksel',

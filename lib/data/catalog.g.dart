@@ -140,6 +140,27 @@ const List<SongInfo> catalog = [
     highMidi: 99,
   ),
   SongInfo(
+    id: 'passacaglia',
+    title: 'Passacaglia',
+    composer: 'George Frideric Handel',
+    source: 'Kamu malı (HWV 432/6, 1720); Johan Halvorsen\'in '
+        '1893 düzenlemesiyle tanınır, o da kamu malı '
+        '(Halvorsen † 1935). Makine okunur bir nüsha '
+        'bulunamadı: zemin bas Handel\'in, çeşitlemeler Piano '
+        'Flow\'un.',
+    bpm: 92,
+    beatsPerBar: 3,
+    beatsPerQuarter: 1,
+    rightVelocity: 0.75,
+    leftVelocity: 0.45,
+    startBeat: 0,
+    noteCount: 428,
+    tapCount: 405,
+    durationMs: 95870,
+    lowMidi: 38,
+    highMidi: 86,
+  ),
+  SongInfo(
     id: 'waltz-in-a-minor',
     title: 'Waltz in A minor, B. 150',
     composer: 'Frédéric Chopin',
