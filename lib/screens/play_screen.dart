@@ -6,6 +6,7 @@ import '../game/chart.dart';
 import '../music/note.dart';
 import '../game/judgement.dart';
 import '../game/play_session.dart';
+import '../game/play_settings.dart';
 import '../music/song.dart';
 import '../render/hit_sparks.dart';
 import '../render/stage_painter.dart';
@@ -19,35 +20,17 @@ class PlayScreen extends StatefulWidget {
   const PlayScreen({
     super.key,
     required this.song,
-    this.difficulty = Difficulty.normal,
-    this.speed = 1.0,
-    this.tolerance = TimingTolerance.wide,
-    this.quantize = true,
-    this.fillMissed = false,
+    required this.settings,
     this.approachSeconds = 1.9,
-    this.latencyOffsetMs = 0,
   });
 
   final Song song;
-  final Difficulty difficulty;
 
-  /// Fraction of the written tempo to play at.
-  final double speed;
-
-  /// How forgiving the judging is.
-  final TimingTolerance tolerance;
-
-  /// Whether notes sound on their beat rather than under the finger.
-  final bool quantize;
-
-  /// Whether a note nobody plays sounds anyway, quietly.
-  final bool fillMissed;
-
-  /// The player's own calibration, on top of what the device reports.
+  /// What the player chose on the song list.
   ///
-  /// Positive means their taps are treated as that much earlier — which is
-  /// what to reach for when everything registers as late.
-  final double latencyOffsetMs;
+  /// Required rather than defaulted: this is the screen those choices have to
+  /// reach, and a default here is what let them go missing silently.
+  final PlaySettings settings;
 
   /// How long a note takes to travel from the top of the screen to the line.
   ///
@@ -90,19 +73,20 @@ class _PlayScreenState extends State<PlayScreen>
   void initState() {
     super.initState();
     _session = PlaySession(
-      chart: Chart.build(widget.song, difficulty: widget.difficulty),
+      chart:
+          Chart.build(widget.song, difficulty: widget.settings.difficulty),
       audio: _audio,
       // The hard level is the same notes judged more tightly; everything else
       // about it is identical, so this is the only place it differs.
       // Hard tightens whatever tolerance the player chose, rather than
       // replacing it.
-      judge: Judge.forTolerance(widget.tolerance)
-          .tightened(widget.difficulty == Difficulty.hard ? 0.6 : 1.0),
-      quantize: widget.quantize,
-      fillMissed: widget.fillMissed,
+      judge: Judge.forTolerance(widget.settings.tolerance).tightened(
+          widget.settings.difficulty == Difficulty.hard ? 0.6 : 1.0),
+      quantize: widget.settings.quantize,
+      fillMissed: widget.settings.fillMissed,
       approachSeconds: widget.approachSeconds,
-      latencyOffsetMs: widget.latencyOffsetMs,
-      speed: widget.speed,
+      latencyOffsetMs: widget.settings.latencyOffsetMs,
+      speed: widget.settings.speed,
     );
     _session.onMiss = (_) => setState(() {});
     // Runs play from inside the clock's own setState, so this only records —
@@ -317,7 +301,8 @@ class _PlayScreenState extends State<PlayScreen>
                     ),
                   ),
                   Text(
-                    '${widget.song.composer} · ${widget.difficulty.label}',
+                    '${widget.song.composer} · '
+                    '${widget.settings.difficulty.label}',
                     style: const TextStyle(
                         fontSize: 12, color: AppTheme.textMuted),
                   ),
