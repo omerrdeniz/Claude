@@ -140,14 +140,13 @@ const List<SongInfo> catalog = [
     highMidi: 99,
   ),
   SongInfo(
-    id: 'passacaglia',
-    title: 'Passacaglia',
+    id: 'passacaglia-easy',
+    title: 'Passacaglia (kolay)',
     composer: 'George Frideric Handel',
-    source: 'Kamu malı (HWV 432/6, 1720); Johan Halvorsen\'in '
-        '1893 düzenlemesiyle tanınır, o da kamu malı '
-        '(Halvorsen † 1935). Makine okunur bir nüsha '
-        'bulunamadı: zemin bas Handel\'in, çeşitlemeler Piano '
-        'Flow\'un.',
+    source: 'Kamu malı (HWV 432/6, 1720). Zemin bas ve inen üst '
+        'çizgi Handel\'in; çeşitlemeler Piano Flow\'un, '
+        'yetişilebilir olsun diye. Tam eser ayrıca '
+        'kütüphanede.',
     bpm: 92,
     beatsPerBar: 3,
     beatsPerQuarter: 1,
@@ -215,5 +214,25 @@ const List<SongInfo> catalog = [
     durationMs: 155833,
     lowMidi: 33,
     highMidi: 100,
+  ),
+  SongInfo(
+    id: 'passacaglia',
+    title: 'Passacaglia',
+    composer: 'George Frideric Handel',
+    source: 'Kamu malı (HWV 432/6, 1720). IMSLP baskısı (Pierre '
+        'Gouin, Éditions Outremontaises), CC BY-SA 4.0, tam '
+        'eser. Johan Halvorsen\'in 1893 düzenlemesiyle '
+        'tanınır.',
+    bpm: 120,
+    beatsPerBar: 3,
+    beatsPerQuarter: 1,
+    rightVelocity: 0.75,
+    leftVelocity: 0.45,
+    startBeat: 0,
+    noteCount: 2520,
+    tapCount: 1997,
+    durationMs: 248208,
+    lowMidi: 31,
+    highMidi: 82,
   ),
 ];
