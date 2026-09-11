@@ -81,6 +81,8 @@ String _recipeOf(Score score) => [
       score.entry ?? '',
       for (final name in [score.local, score.assemble, score.arrangement])
         if (name != null) File('$_scoreDir/$name').readAsStringSync(),
+      if (score.localMidi != null)
+        File('$_scoreDir/${score.localMidi}').lengthSync().toString(),
     ].join(' ');
 
 /// Read off the score everything a score can tell us; take the rest from the
@@ -149,6 +151,11 @@ Future<List<int>> _render(Score score) async {
   // A score already published as MIDI needs no rendering at all. See
   // [Score.midiUrl] for why that is not a shortcut.
   if (score.midiUrl != null) return _download(score.midiUrl!);
+
+  // A MIDI sitting next to the scores is already the notes.
+  if (score.localMidi != null) {
+    return File('$_scoreDir/${score.localMidi}').readAsBytes();
+  }
 
   // An arrangement of our own is already the notes; there is no engraving to
   // typeset, so LilyPond never enters into it.

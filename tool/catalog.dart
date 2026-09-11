@@ -22,6 +22,7 @@ class Score {
     this.midiUrl,
     this.local,
     this.arrangement,
+    this.localMidi,
     this.patchUrl,
     this.entry,
     this.assemble,
@@ -35,7 +36,8 @@ class Score {
             url != null ||
                 local != null ||
                 midiUrl != null ||
-                arrangement != null,
+                arrangement != null ||
+                localMidi != null,
             'a score has to come from somewhere');
 
   /// What the song is called in code, in the asset name, and in save data.
@@ -68,6 +70,12 @@ class Score {
   /// carries its own tempo and metre, because there is no edition to read
   /// them off.
   final String? arrangement;
+
+  /// A MIDI under `tool/scores/`, already the notes.
+  ///
+  /// For music that reached us as a sequence rather than as an engraving.
+  /// Nothing is rendered: the file is the score.
+  final String? localMidi;
 
   /// A score published as MIDI rather than as engraving source.
   ///
@@ -237,6 +245,17 @@ const List<Score> catalog = [
     credit: 'Kamu malı (HWV 432/6, 1720). IMSLP baskısı (Pierre Gouin, '
         'Éditions Outremontaises), CC BY-SA 4.0, tam eser. Johan '
         'Halvorsen\'in 1893 düzenlemesiyle tanınır.',
+  ),
+  Score(
+    id: 'passacaglia-halvorsen',
+    title: 'Passacaglia (Halvorsen)',
+    composer: 'Handel / Halvorsen',
+    localMidi: 'passacaglia-halvorsen.mid',
+    leftVelocity: 0.5,
+    credit: 'Kamu malı: Handel (HWV 432/6, 1720), Johan Halvorsen\'in 1893 '
+        'düzenlemesi (Halvorsen † 1935). Nota verisi bir Online Sequencer '
+        'dizgisinden çevrildi (onlinesequencer.net/2617124) — dizginin '
+        'kendisi künyesiz.',
   ),
   Score(
     id: 'passacaglia-easy',
