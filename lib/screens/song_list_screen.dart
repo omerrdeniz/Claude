@@ -4,6 +4,7 @@ import '../audio/piano_audio.dart';
 import '../data/song_library.dart';
 import '../game/chart.dart';
 import '../game/judgement.dart';
+import '../game/play_settings.dart';
 import '../theme/app_theme.dart';
 import 'calibration_screen.dart';
 import 'song_list/settings.dart';
@@ -47,44 +48,23 @@ class _SongListScreenState extends State<SongListScreen> {
     PianoAudio().loadSamples();
   }
 
-  Difficulty _difficulty = Difficulty.normal;
+  /// Everything the player has chosen, in one place.
+  ///
+  /// The defaults are [PlaySettings]'s own, and the reasoning for each of
+  /// them lives there beside the value it explains.
+  PlaySettings _settings = const PlaySettings();
 
   /// Speeds offered, as a fraction of the written tempo.
   static const List<double> _speeds = [0.4, 0.6, 0.8, 1.0];
-
-  /// Full speed by default: the songs are written at the tempo they are
-  /// actually played at and should sound that way on the first press. Slowing
-  /// down is a practice tool, one tap away, for the pieces that outrun a hand
-  /// — which at their real tempo, Chopin's and Beethoven's both do.
-  double _speed = 1.0;
-
-  /// The player's own timing calibration, in milliseconds, on top of whatever
-  /// the device reports about its own audio delay.
-  ///
-  /// It has to be adjustable because no device tells the truth about this.
-  /// A browser reports what it knows about; it cannot know about Bluetooth
-  /// headphones, and it says nothing about the player's own hand, which
-  /// reliably arrives a little after the eye says to move.
-  double _latencyOffsetMs = 0;
 
   /// Steps of the calibration, and how far it goes either way.
   static const double _latencyStep = 10;
   static const double _latencyLimit = 300;
 
-  /// Forgiving by default, and the music kept in time by default: the game
-  /// should flatter a beginner before it tests one.
-  TimingTolerance _tolerance = TimingTolerance.wide;
-  bool _quantize = true;
+  void _set(PlaySettings settings) => setState(() => _settings = settings);
 
-  /// A note nobody plays still sounds, quietly, so the piece keeps its shape.
-  ///
-  /// Off by default. It closes the holes a missed note leaves, but the price
-  /// is that a player who stops playing hears the song play itself — and
-  /// "nothing plays itself" is this game's oldest rule. Offered, not assumed.
-  bool _fillMissed = false;
-
-  void _setLatency(double value) => setState(
-      () => _latencyOffsetMs = value.clamp(-_latencyLimit, _latencyLimit));
+  void _setLatency(double value) => _set(_settings.copyWith(
+      latencyOffsetMs: value.clamp(-_latencyLimit, _latencyLimit)));
 
   Future<void> _measureLatency() async {
     final measured = await Navigator.of(context).push<double>(
@@ -138,67 +118,60 @@ class _SongListScreenState extends State<SongListScreen> {
             const SizedBox(height: 24),
             ChoiceRow<Difficulty>(
               options: Difficulty.values,
-              selected: _difficulty,
+              selected: _settings.difficulty,
               labelOf: (difficulty) => difficulty.label,
-              caption: _difficulty.description,
-              onChanged: (value) => setState(() => _difficulty = value),
+              caption: _settings.difficulty.description,
+              onChanged: (value) => _set(_settings.copyWith(difficulty: value)),
             ),
             const SizedBox(height: 20),
             ChoiceRow<double>(
               options: _speeds,
-              selected: _speed,
+              selected: _settings.speed,
               labelOf: (speed) =>
                   speed == 1.0 ? 'Tam hız' : '%${(speed * 100).round()}',
-              caption: _speed == 1.0
+              caption: _settings.speed == 1.0
                   ? 'Şarkının kendi temposu'
                   : 'Yavaşlatılmış — notalar arasında daha çok zaman',
-              onChanged: (value) => setState(() => _speed = value),
+              onChanged: (value) => _set(_settings.copyWith(speed: value)),
             ),
             const SizedBox(height: 20),
             ChoiceRow<TimingTolerance>(
               options: TimingTolerance.values,
-              selected: _tolerance,
+              selected: _settings.tolerance,
               labelOf: (tolerance) => tolerance.label,
-              caption: 'Tolerans — ${_tolerance.description.toLowerCase()}',
-              onChanged: (value) => setState(() => _tolerance = value),
+              caption: 'Tolerans — '
+                  '${_settings.tolerance.description.toLowerCase()}',
+              onChanged: (value) => _set(_settings.copyWith(tolerance: value)),
             ),
             const SizedBox(height: 14),
             SettingSwitch(
               title: 'Notalar tam zamanında çalsın',
-              subtitle: _quantize
+              subtitle: _settings.quantize
                   ? 'Erken basarsan nota vuruşu bekler'
                   : 'Nota parmağın değdiği anda çalar',
-              value: _quantize,
-              onChanged: (value) => setState(() => _quantize = value),
+              value: _settings.quantize,
+              onChanged: (value) => _set(_settings.copyWith(quantize: value)),
             ),
             const SizedBox(height: 14),
             SettingSwitch(
               title: 'Kaçırdıklarım da duyulsun',
-              subtitle: _fillMissed
+              subtitle: _settings.fillMissed
                   ? 'Basmadığın her nota kısık çalar — hiç basmazsan '
                       'şarkı kendi çalar'
                   : 'Yalnız senin bastığın notalar duyulur',
-              value: _fillMissed,
-              onChanged: (value) => setState(() => _fillMissed = value),
+              value: _settings.fillMissed,
+              onChanged: (value) => _set(_settings.copyWith(fillMissed: value)),
             ),
             const SizedBox(height: 14),
             LatencyPicker(
-              offsetMs: _latencyOffsetMs,
+              offsetMs: _settings.latencyOffsetMs,
               onChanged: _setLatency,
               step: _latencyStep,
               onMeasure: _measureLatency,
             ),
             const SizedBox(height: 24),
             for (final info in SongLibrary.all)
-              SongTile(
-                info: info,
-                difficulty: _difficulty,
-                speed: _speed,
-                tolerance: _tolerance,
-                quantize: _quantize,
-                fillMissed: _fillMissed,
-                latencyOffsetMs: _latencyOffsetMs,
-              ),
+              SongTile(info: info, settings: _settings),
             const SizedBox(height: 8),
             // The recorded piano is CC BY: the credit is a condition of using
             // it, not a courtesy, so it ships in the app and not only in the
