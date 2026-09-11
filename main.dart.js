@@ -275,11 +275,11 @@ ac7(a){var s,r,q,p=new Float32Array(16)
 for(s=0;s<4;++s)for(r=s*4,q=0;q<4;++q)p[q*4+s]=a[r+q]
 return p},
 ac8(a){var s,r,q,p=new Float32Array(9)
-for(s=a.length,r=0;r<9;++r){q=B.kV[r]
+for(s=a.length,r=0;r<9;++r){q=B.kW[r]
 if(q<s)p[r]=a[q]
 else p[r]=0}return p},
 auM(a){var s,r,q,p=new Float32Array(9)
-for(s=a.length,r=0;r<9;++r){q=B.kV[r]
+for(s=a.length,r=0;r<9;++r){q=B.kW[r]
 if(q<s)p[r]=a[q]
 else p[r]=0}return p},
 Mr(a){var s=new Float32Array(2)
@@ -834,7 +834,7 @@ s.QH()
 return s},
 amv(a){return new A.PL($.a8,a)},
 a9V(){var s,r,q,p,o,n=A.amb(v.G.window.navigator)
-if(n==null||n.length===0)return B.kW
+if(n==null||n.length===0)return B.kX
 s=A.c([],t.ss)
 for(r=n.length,q=0;q<n.length;n.length===r||(0,A.x)(n),++q){p=n[q]
 o=p.split("-")
@@ -9538,7 +9538,7 @@ adC(a,b,c){if(b!=null&&!b.j(0,B.N))return A.ada(b.bb(A.amr(c)),a)
 return a},
 amr(a){var s,r,q,p,o,n
 if(a<0)return 0
-for(s=0;r=B.kX[s],q=r.a,a>=q;){if(a===q||s+1===6)return r.b;++s}p=B.kX[s-1]
+for(s=0;r=B.kY[s],q=r.a,a>=q;){if(a===q||s+1===6)return r.b;++s}p=B.kY[s-1]
 o=p.a
 n=p.b
 return n+(a-o)/(q-o)*(r.b-n)},
@@ -36105,7 +36105,7 @@ n=o.e
 o=o.cx
 r=q.gWj()
 q.a.toString
-return new A.vN(p,p,p,new A.a4x(),p,p,p,p,p,n,B.Ee,p,p,p,B.C9,q.gWq(),o,p,B.Ku,s,p,r,p,p,B.kW,!1,!1,p,p,p,new A.lt(q,t.bT))},
+return new A.vN(p,p,p,new A.a4x(),p,p,p,p,p,n,B.Ee,p,p,p,B.C9,q.gWq(),o,p,B.Ku,s,p,r,p,p,B.kX,!1,!1,p,p,p,new A.lt(q,t.bT))},
 T(a){var s,r=null,q=A.rw(!1,!1,this.RH(a),r,r,r,r,!0,r,r,r,new A.a4y(),r,r)
 this.a.toString
 s=this.d
@@ -63087,7 +63087,7 @@ r=s-1
 q=b.b
 $.a_()
 p=A.aR()
-p.sfP(A.rG(new A.p(s,0),new A.p(s,q),A.c([B.i.b2(0),B.i.b2(0.1),B.i.b2(0)],t.W),B.kZ,B.au,null))
+p.sfP(A.rG(new A.p(s,0),new A.p(s,q),A.c([B.i.b2(0),B.i.b2(0.1),B.i.b2(0)],t.W),B.l_,B.au,null))
 a.a.di(new A.D(r,0,r+2,0+q),p)}o.XB(a,b,n)
 o.XE(a,n)
 o.XJ(a,n)},
@@ -63157,7 +63157,7 @@ r=m+48
 $.a_()
 q=A.aR()
 p=this.z
-q.sfP(A.rG(new A.p(0,m),new A.p(0,r),A.c([B.ak.b2(0),B.ak.b2(0.22+l*0.22+p*0.3),B.ak.b2(0)],t.W),B.kY,B.au,null))
+q.sfP(A.rG(new A.p(0,m),new A.p(0,r),A.c([B.ak.b2(0),B.ak.b2(0.22+l*0.22+p*0.3),B.ak.b2(0)],t.W),B.kZ,B.au,null))
 o=a.a
 o.di(new A.D(0,m,0+s,r),q)
 q=A.aR()
@@ -63210,7 +63210,7 @@ $.a_()
 a7=new A.d3(B.ai,B.Z,B.as,B.ae)
 a7.sfP(new A.m2(B.a0,0.5,B.au,c1,0,A.c([a5.b2(0.42*a6),a5.b2(0.16*a6),a5.b2(0)],k),B.Cm,c1).r2(A.jS(B.j,a)))
 b8=new A.d3(B.ai,B.Z,B.as,B.ae)
-b8.sfP(new A.m2(B.a0,0.5,B.au,c1,0,A.c([A.l(B.i,a5,0.15).b2(a6),a5.b2(a6),a5.b2(0.75*a6)],k),B.kZ,c1).r2(A.jS(B.j,b1)))
+b8.sfP(new A.m2(B.a0,0.5,B.au,c1,0,A.c([A.l(B.i,a5,0.15).b2(a6),a5.b2(a6),a5.b2(0.75*a6)],k),B.l_,c1).r2(A.jS(B.j,b1)))
 a5=new A.d3(B.ai,B.Z,B.as,B.ae)
 a5.b=B.ay
 a5.c=1.4
@@ -63309,7 +63309,7 @@ l=A.hB(new A.D(s,n-l,m,n+l),new A.aE(l,l))
 $.a_()
 k=A.aR()
 j=0.3*f
-k.sfP(A.rG(new A.p(s,n),new A.p(m,n),A.c([e.b2(j),e.b2(0.46*f),e.b2(j)],t.W),B.kY,B.au,null))
+k.sfP(A.rG(new A.p(s,n),new A.p(m,n),A.c([e.b2(j),e.b2(0.46*f),e.b2(j)],t.W),B.kZ,B.au,null))
 a.a.cw(l,k)},
 XC(a,b,c,d,e,f,g,h){var s,r,q,p,o,n
 if(e>=d)return
@@ -63736,7 +63736,7 @@ return A.S($async$q8,r)},
 T(a){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e=this,d=null,c=A.a5(a).ok.e
 c=A.bV("Piano Flow",c==null?d:c.a1L(B.aV,1.2),d)
 s=t.E
-r=A.iF(A.c([B.Ac,B.vx,A.bV("v82 \xb7 d1bb628",B.LV,d)],s),B.al,B.ax,B.a6)
+r=A.iF(A.c([B.Ac,B.vx,A.bV("v84 \xb7 37aa4de",B.LV,d)],s),B.al,B.ax,B.a6)
 q=e.d
 p=q.a
 o=A.am3(p)
@@ -63749,7 +63749,7 @@ i=j?"Erken basarsan nota vuru\u015fu bekler":"Nota parma\u011f\u0131n de\u011fdi
 h=q.e
 g=h?"Basmad\u0131\u011f\u0131n her nota k\u0131s\u0131k \xe7alar \u2014 hi\xe7 basmazsan \u015fark\u0131 kendi \xe7alar":"Yaln\u0131z senin bast\u0131\u011f\u0131n notalar duyulur"
 s=A.c([c,B.I6,r,B.iG,new A.i6(B.BA,p,new A.a6K(),o,new A.a6L(e),d,t.kM),B.iF,new A.i6(B.BL,n,new A.a6M(),m,new A.a6N(e),d,t.TU),B.iF,new A.i6(B.Bm,l,new A.a6O(),"Tolerans \u2014 "+k.toLowerCase(),new A.a6P(e),d,t.u6),B.f1,new A.uP("Notalar tam zaman\u0131nda \xe7als\u0131n",i,j,new A.a6Q(e),d),B.f1,new A.uP("Ka\xe7\u0131rd\u0131klar\u0131m da duyulsun",g,h,new A.a6R(e),d),B.f1,new A.BG(q.f,e.gZd(),10,e.gWA(),d),B.iG],s)
-for(f=0;f<13;++f)s.push(new A.Er(B.l_[f],e.d,d))
+for(f=0;f<13;++f)s.push(new A.Er(B.kV[f],e.d,d))
 s.push(B.f3)
 s.push(B.Nn)
 s.push(B.I1)
@@ -66674,10 +66674,24 @@ B.vX=new A.fV(0,"wide")
 B.Nu=new A.fV(1,"normal")
 B.Nv=new A.fV(2,"tight")
 B.Bm=s([B.vX,B.Nu,B.Nv],A.a6("v<fV>"))
+B.Ij=new A.dt("house-of-the-rising-sun","House of the Rising Sun","Geleneksel","Geleneksel Amerikan halk \u015fark\u0131s\u0131, anonim \u2014 kamu mal\u0131. Ezgi Frank Nordberg'in geleneksel transkripsiyonundan (Digital Tradition / abcnotation.com). Piyano d\xfczenlemesi Piano Flow.",80,4,1,0.45,0,315,313,99e3)
+B.Ii=new A.dt("gnossienne-1","Gnossienne No. 1","Erik Satie","Kamu mal\u0131 (1890). Mutopia Project bask\u0131s\u0131 (Knute Snortum), Salabert 1913 bask\u0131s\u0131ndan, CC BY-SA 4.0, tam eser.",100,4,1,0.55,0,832,632,196725)
+B.Il=new A.dt("canon-in-d","Canon in D","Johann Pachelbel","Kamu mal\u0131 (P. 37, 1694). Mutopia Project bask\u0131s\u0131 (Michael Fischer v. Mollard), CC BY 4.0. Piyano d\xfczenlemesi Piano Flow: sa\u011f el birinci keman, sol el zemin bas.",55,4,1,0.55,0,818,818,245455)
+B.Im=new A.dt("canon-run-test","Canon in D (run test)","Johann Pachelbel","Deneme par\xe7as\u0131 \u2014 Kanon'un 18. \xf6l\xe7\xfcs\xfcnden ba\u015flar, s\xfcr\xfckleme mekani\u011fini denemek i\xe7in.",55,4,1,0.55,68,624,624,171273)
+B.In=new A.dt("ode-to-joy","Ode to Joy","Ludwig van Beethoven","Kamu mal\u0131 (1824). D\xfczenleme Piano Flow.",160,4,1,0.55,0,149,91,24e3)
+B.Io=new A.dt("prelude-in-c","Prelude in C, BWV 846","Johann Sebastian Bach","Kamu mal\u0131 (BWV 846, 1722). Mutopia Project bask\u0131s\u0131 (Tobias Erbsland), tam eser.",60,4,1,0.55,0,549,546,14e4)
+B.Id=new A.dt("nocturne-op9-no2","Nocturne Op. 9 No. 2","Fr\xe9d\xe9ric Chopin","Kamu mal\u0131 (Op. 9 No. 2, 1832). Mutopia Project bask\u0131s\u0131 (Renato Biolcati Rinaldi), CC BY-SA 3.0, tam eser.",132,12,2,0.45,0,1231,805,202273)
+B.Ih=new A.dt("passacaglia-easy","Passacaglia (kolay)","George Frideric Handel","Kamu mal\u0131 (HWV 432/6, 1720). Zemin bas ve inen \xfcst \xe7izgi Handel'in; \xe7e\u015fitlemeler Piano Flow'un, yeti\u015filebilir olsun diye. Tam eser ayr\u0131ca k\xfct\xfcphanede.",92,3,1,0.45,0,428,405,95870)
+B.If=new A.dt("waltz-in-a-minor","Waltz in A minor, B. 150","Fr\xe9d\xe9ric Chopin","Kamu mal\u0131 (B. 150, 1847). Nota kayna\u011f\u0131: KernScores (CCARH, Stanford) \u2014 Humdrum **kern dizgisi: Craig Stuart Sapp, 2004.",120,3,1,0.45,0,920,581,12e4)
+B.Ip=new A.dt("entertainer","The Entertainer","Scott Joplin","Kamu mal\u0131 (1902). Mutopia Project bask\u0131s\u0131 (Chris Sawer), 1902 orijinal bask\u0131s\u0131n\u0131n t\u0131pk\u0131bas\u0131m\u0131, tam eser.",72,2,1,0.55,0,2621,1372,252917)
+B.Ig=new A.dt("fur-elise","F\xfcr Elise","Ludwig van Beethoven","Kamu mal\u0131 (WoO 59, 1810). Mutopia Project bask\u0131s\u0131 (Stelios Samelis), tam eser.",144,3,2,0.5,0,1038,927,155833)
+B.Ik=new A.dt("passacaglia-halvorsen","Passacaglia (Halvorsen)","Handel / Halvorsen","Kamu mal\u0131: Handel (HWV 432/6, 1720), Johan Halvorsen'in 1893 d\xfczenlemesi (Halvorsen \u2020 1935). Nota verisi bir Online Sequencer dizgisinden \xe7evrildi (onlinesequencer.net/2617124) \u2014 dizginin kendisi k\xfcnyesiz.",75,4,1,0.5,0,1028,940,118300)
+B.Ie=new A.dt("passacaglia","Passacaglia","George Frideric Handel","Kamu mal\u0131 (HWV 432/6, 1720). IMSLP bask\u0131s\u0131 (Pierre Gouin, \xc9ditions Outremontaises), CC BY-SA 4.0, tam eser. Johan Halvorsen'in 1893 d\xfczenlemesiyle tan\u0131n\u0131r.",120,3,1,0.45,0,2520,1997,248208)
+B.kV=s([B.Ij,B.Ii,B.Il,B.Im,B.In,B.Io,B.Id,B.Ih,B.If,B.Ip,B.Ig,B.Ik,B.Ie],A.a6("v<dt>"))
 B.j_=new A.xq(0,"named")
 B.wv=new A.xq(1,"anonymous")
 B.Bw=s([B.j_,B.wv],A.a6("v<xq>"))
-B.kV=s([0,4,12,1,5,13,3,7,15],t.t)
+B.kW=s([0,4,12,1,5,13,3,7,15],t.t)
 B.BA=s([B.bt,B.kt,B.fW],A.a6("v<fx>"))
 B.dy=new A.iM(0,"left")
 B.iH=new A.iM(1,"right")
@@ -66698,15 +66712,15 @@ B.ek=s([B.xj],A.a6("v<rA>"))
 B.BJ=s([B.aW,B.b9],A.a6("v<dx>"))
 B.BL=s([0.4,0.6,0.8,1],t.n)
 B.CB=new A.jF("en","US")
-B.kW=s([B.CB],t.ss)
+B.kX=s([B.CB],t.ss)
 B.OM=new A.iU(0,0)
 B.OR=new A.iU(1,0.05)
 B.OP=new A.iU(3,0.08)
 B.OQ=new A.iU(6,0.11)
 B.OO=new A.iU(8,0.12)
 B.ON=new A.iU(12,0.14)
-B.kX=s([B.OM,B.OR,B.OP,B.OQ,B.OO,B.ON],A.a6("v<iU>"))
-B.kY=s([0,0.5,1],t.n)
+B.kY=s([B.OM,B.OR,B.OP,B.OQ,B.OO,B.ON],A.a6("v<iU>"))
+B.kZ=s([0,0.5,1],t.n)
 B.BS=s(["C","C\u266f","D","E\u266d","E","F","F\u266f","G","A\u266d","A","B\u266d","B"],t.s)
 B.Iy=new A.v8(0,"left")
 B.Iz=new A.v8(1,"right")
@@ -66732,27 +66746,13 @@ B.wj=new A.oY(2,"bottomLeft")
 B.OI=new A.iT(B.wi,B.wj)
 B.OJ=new A.iT(B.wj,B.wi)
 B.C1=s([B.OH,B.OK,B.OI,B.OJ],A.a6("v<iT>"))
-B.kZ=s([0,0.55,1],t.n)
+B.l_=s([0,0.55,1],t.n)
 B.C2=s([6.33,2.68,3.52,5.38,2.6,3.53,2.54,4.75,3.98,2.69,3.34,3.17],t.n)
 B.C4=s(["click","scroll"],t.s)
 B.wZ=new A.n_()
 B.ih=new A.DQ(1,"page")
 B.ii=new A.eg(B.a1,B.ih)
 B.C5=s([B.wZ,B.ii],A.a6("v<ax>"))
-B.Ij=new A.dt("house-of-the-rising-sun","House of the Rising Sun","Geleneksel","Geleneksel Amerikan halk \u015fark\u0131s\u0131, anonim \u2014 kamu mal\u0131. Ezgi Frank Nordberg'in geleneksel transkripsiyonundan (Digital Tradition / abcnotation.com). Piyano d\xfczenlemesi Piano Flow.",80,4,1,0.45,0,315,313,99e3)
-B.Ii=new A.dt("gnossienne-1","Gnossienne No. 1","Erik Satie","Kamu mal\u0131 (1890). Mutopia Project bask\u0131s\u0131 (Knute Snortum), Salabert 1913 bask\u0131s\u0131ndan, CC BY-SA 4.0, tam eser.",100,4,1,0.55,0,832,632,196725)
-B.Ik=new A.dt("canon-in-d","Canon in D","Johann Pachelbel","Kamu mal\u0131 (P. 37, 1694). Mutopia Project bask\u0131s\u0131 (Michael Fischer v. Mollard), CC BY 4.0. Piyano d\xfczenlemesi Piano Flow: sa\u011f el birinci keman, sol el zemin bas.",55,4,1,0.55,0,818,818,245455)
-B.Il=new A.dt("canon-run-test","Canon in D (run test)","Johann Pachelbel","Deneme par\xe7as\u0131 \u2014 Kanon'un 18. \xf6l\xe7\xfcs\xfcnden ba\u015flar, s\xfcr\xfckleme mekani\u011fini denemek i\xe7in.",55,4,1,0.55,68,624,624,171273)
-B.In=new A.dt("ode-to-joy","Ode to Joy","Ludwig van Beethoven","Kamu mal\u0131 (1824). D\xfczenleme Piano Flow.",160,4,1,0.55,0,149,91,24e3)
-B.Io=new A.dt("prelude-in-c","Prelude in C, BWV 846","Johann Sebastian Bach","Kamu mal\u0131 (BWV 846, 1722). Mutopia Project bask\u0131s\u0131 (Tobias Erbsland), tam eser.",60,4,1,0.55,0,549,546,14e4)
-B.Id=new A.dt("nocturne-op9-no2","Nocturne Op. 9 No. 2","Fr\xe9d\xe9ric Chopin","Kamu mal\u0131 (Op. 9 No. 2, 1832). Mutopia Project bask\u0131s\u0131 (Renato Biolcati Rinaldi), CC BY-SA 3.0, tam eser.",132,12,2,0.45,0,1231,805,202273)
-B.Ih=new A.dt("passacaglia-easy","Passacaglia (kolay)","George Frideric Handel","Kamu mal\u0131 (HWV 432/6, 1720). Zemin bas ve inen \xfcst \xe7izgi Handel'in; \xe7e\u015fitlemeler Piano Flow'un, yeti\u015filebilir olsun diye. Tam eser ayr\u0131ca k\xfct\xfcphanede.",92,3,1,0.45,0,428,405,95870)
-B.If=new A.dt("waltz-in-a-minor","Waltz in A minor, B. 150","Fr\xe9d\xe9ric Chopin","Kamu mal\u0131 (B. 150, 1847). Nota kayna\u011f\u0131: KernScores (CCARH, Stanford) \u2014 Humdrum **kern dizgisi: Craig Stuart Sapp, 2004.",120,3,1,0.45,0,920,581,12e4)
-B.Ip=new A.dt("entertainer","The Entertainer","Scott Joplin","Kamu mal\u0131 (1902). Mutopia Project bask\u0131s\u0131 (Chris Sawer), 1902 orijinal bask\u0131s\u0131n\u0131n t\u0131pk\u0131bas\u0131m\u0131, tam eser.",72,2,1,0.55,0,2621,1372,252917)
-B.Ig=new A.dt("fur-elise","F\xfcr Elise","Ludwig van Beethoven","Kamu mal\u0131 (WoO 59, 1810). Mutopia Project bask\u0131s\u0131 (Stelios Samelis), tam eser.",144,3,2,0.5,0,1038,927,155833)
-B.Ie=new A.dt("passacaglia","Passacaglia","George Frideric Handel","Kamu mal\u0131 (HWV 432/6, 1720). IMSLP bask\u0131s\u0131 (Pierre Gouin, \xc9ditions Outremontaises), CC BY-SA 4.0, tam eser. Johan Halvorsen'in 1893 d\xfczenlemesiyle tan\u0131n\u0131r.",120,3,1,0.45,0,2520,1997,248208)
-B.Im=new A.dt("passacaglia-halvorsen","Passacaglia (Halvorsen)","Handel / Halvorsen","Kamu mal\u0131: Handel (HWV 432/6, 1720), Johan Halvorsen'in 1893 d\xfczenlemesi (Halvorsen \u2020 1935). Nota verisi bir Online Sequencer dizgisinden \xe7evrildi (onlinesequencer.net/2617124) \u2014 dizginin kendisi k\xfcnyesiz.",150,4,1,0.5,0,1028,940,59150)
-B.l_=s([B.Ij,B.Ii,B.Ik,B.Il,B.In,B.Io,B.Id,B.Ih,B.If,B.Ip,B.Ig,B.Ie,B.Im],A.a6("v<dt>"))
 B.Ce=s([],t.QP)
 B.C8=s([],t.sq)
 B.l2=s([],A.a6("v<auZ>"))
@@ -69130,7 +69130,7 @@ h=[400*d/(d+27.13),400*c/(c+27.13),400*i/(i+27.13)]
 return new A.a1m(l,(40*h[0]+20*h[1]+h[2])/20*k,k,k,a1,1,q,m,A.yW(m,0.25),1.48+e)})
 s($,"awL","ack",()=>A.VD(2048))
 s($,"awG","ajj",()=>{var q,p,o=A.q(t.N,A.a6("dt"))
-for(q=0;q<13;++q){p=B.l_[q]
+for(q=0;q<13;++q){p=B.kV[q]
 o.m(0,p.a,p)}return o})})();(function nativeSupport(){!function(){var s=function(a){var m={}
 m[a]=1
 return Object.keys(hunkHelpers.convertToFastObject(m))[0]}
