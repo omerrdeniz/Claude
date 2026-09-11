@@ -618,6 +618,44 @@ void main() {
       expect(session.scoreboard.score, before);
     });
 
+    test('and going the other way spends the chance', () {
+      // Otherwise a hand that wandered off the wrong way was still paid when
+      // it came back, which is not the gesture.
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      final outcome = playAt(session, 2.0);
+      expect(session.flick(outcome!.crushId!, right - PlaySession.flickReach),
+          isFalse);
+      expect(session.flick(outcome.crushId!, right + PlaySession.flickReach),
+          isFalse,
+          reason: 'coming back does not undo having gone');
+    });
+
+    test('the chance lasts until the hand is wanted again', () {
+      final session = sessionFor(
+          songOf([
+            note(1.9, 60, duration: 0.1),
+            note(2.0, 62, duration: 1.0),
+            note(4.0, 64, duration: 1.0),
+          ]),
+          difficulty: Difficulty.normal);
+      final outcome = playAt(session, 2.0);
+      wall(session, (3.5 + session.leadInBeats) / session.beatsPerSecond);
+      expect(session.flick(outcome!.crushId!, right + PlaySession.flickReach),
+          isTrue, reason: 'no hurry while the hand has nothing else to do');
+
+      final other = sessionFor(
+          songOf([
+            note(1.9, 60, duration: 0.1),
+            note(2.0, 62, duration: 1.0),
+            note(4.0, 64, duration: 1.0),
+          ]),
+          difficulty: Difficulty.normal);
+      final late = playAt(other, 2.0);
+      wall(other, (4.5 + other.leadInBeats) / other.beatsPerSecond);
+      expect(other.flick(late!.crushId!, right + PlaySession.flickReach),
+          isFalse, reason: 'but the next note has come and gone');
+    });
+
     test('an ornament leaning down asks for the other direction', () {
       final session = sessionFor(ornamented(grace: 64, main: 62),
           difficulty: Difficulty.normal);

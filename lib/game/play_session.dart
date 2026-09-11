@@ -478,7 +478,7 @@ class PlaySession {
       _crushes[crushId] = _Crush(
         from: across,
         lean: tapTarget.graceLean,
-        until: _flickUntil,
+        until: _flickUntil(tapTarget),
       );
     }
 
@@ -579,9 +579,22 @@ class PlaySession {
   static const double flickSeconds = 0.3;
 
   /// When this touch's flick stops counting.
-  double get _flickUntil => chart.difficulty == Difficulty.hard
-      ? _beat + flickSeconds * beatsPerSecond
-      : double.infinity;
+  ///
+  /// The hardest level gives it a stopwatch. Below that the chance lasts
+  /// until the hand is wanted again, which is the musical answer rather than
+  /// a number: there is no hurry, but a movement made long after the moment
+  /// has passed is not this ornament's.
+  double _flickUntil(Tap target) {
+    if (chart.difficulty == Difficulty.hard) {
+      return _beat + flickSeconds * beatsPerSecond;
+    }
+    for (final tap in chart.taps) {
+      if (tap.beat <= target.beat) continue;
+      if (chart.separatesHands && tap.hand != target.hand) continue;
+      return tap.beat;
+    }
+    return double.infinity;
+  }
 
   /// What a flick is worth, before the combo multiplier.
   ///
@@ -601,6 +614,15 @@ class PlaySession {
       return false;
     }
     final moved = (across - crush.from) * crush.lean;
+
+    // Going the other way spends the chance. Without this the hand could
+    // wander off the wrong way and still be paid when it happened to come
+    // back — which is not the gesture, and the player saw it: "diğer yöne
+    // kaydırsam da çarpma efekti yine de çalışıyor".
+    if (moved <= -flickReach) {
+      _crushes.remove(crushId);
+      return false;
+    }
     if (moved < flickReach) return false;
 
     _crushes.remove(crushId);

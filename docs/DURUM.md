@@ -141,6 +141,13 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   Tarama düzeltmeden sonra 21 kombinasyonun hepsinde sıfır veriyor.
   `test/play_session_test.dart` ikisini de kilitliyor.
 
+  **Ters yön fiskeyi harcar.** Oyuncu: *"diğer yöne kaydırsam da çarpma
+  efekti yine de çalışıyor."* Orta ve kolayda süre sınırı olmadığı için, ters
+  yöne gidip sonra dönen parmak yine ödül alıyordu. Artık bir fiske kadar
+  ters yöne gitmek şansı bitiriyor. Süre sınırı yerine de müzikal bir sınır
+  kondu: fiske, **elin bir sonraki notasına kadar** geçerli. Acele yok, ama
+  anı geçmiş bir hareket o süslemenin hareketi değil.
+
   **Yön gerçek, mesafe değil.** Süslemelerin %70'i aşağı, %30'u yukarı eğiliyor
   — yani yön okunacak bir bilgi. Ama çoğu 1-2 yarım ses uzakta, ki perdeden yer
   üreten bu ekranda 7 piksel eder. Onun için hem mekanik hem çizim yalnızca
@@ -1009,7 +1016,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 429 test geçiyor
+flutter test        # 431 test geçiyor
 ```
 
 ## Cihazsız doğrulama
