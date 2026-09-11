@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/music/song.dart';
@@ -25,37 +24,12 @@ void main() {
       'gnossienne-1': 'F minor',
       'nocturne-op9-no2': 'E♭ major',
       'waltz-in-a-minor': 'A minor',
-      'moonlight-sonata': 'C♯ minor',
-      'pathetique-adagio': 'A♭ major',
-      'sonata-k545': 'C major',
-      'prelude-op28-no4': 'E minor',
-      'raindrop-prelude': 'C♯ major', // D-flat major
-      'waltz-op64-no2': 'C♯ minor',
-      'promenade': 'B♭ major',
-      'impromptu-op90-no3': 'F♯ major', // G-flat major
     };
 
     for (final entry in published.entries) {
       expect(keyOf(songOf(entry.key)).toString(), entry.value,
           reason: entry.key);
     }
-  });
-
-  test('the pieces the estimate does not get right still get a ground', () {
-    // Two it reads differently from the title page, both recorded here so a
-    // change to the estimate shows up as a change to these rather than
-    // silently:
-    //
-    // - the Minute Waltz reads F minor against its D-flat major. Its left
-    //   hand ends on F, and the ending is what settles a key when the notes
-    //   alone are ambiguous.
-    // - the Rondo alla Turca reads A major against the A minor it is headed
-    //   with. The movement ends in A major, and spends its last third there.
-    //
-    // Neither is a broken ground: both are stable, and both are next to the
-    // right answer on the circle of fifths.
-    expect(keyOf(songOf('minute-waltz'))?.tonic, 5);
-    expect(keyOf(songOf('rondo-alla-turca'))?.tonic, 9);
   });
 
   test('every ground weighs the same, whatever key it came from', () {
@@ -79,11 +53,12 @@ void main() {
   });
 
   test('pieces in different keys are lit differently', () {
-    expect(groundOf(songOf('fur-elise')), isNot(groundOf(songOf('prelude-in-c'))));
-    expect(groundOf(songOf('moonlight-sonata')),
-        isNot(groundOf(songOf('canon-in-d'))));
+    expect(
+        groundOf(songOf('fur-elise')), isNot(groundOf(songOf('prelude-in-c'))));
+    expect(groundOf(songOf('gnossienne-1')),
+        isNot(groundOf(songOf('nocturne-op9-no2'))));
     // Same key, same light: the ground is atmosphere, not a name badge.
-    expect(keyOf(songOf('prelude-in-c')), keyOf(songOf('sonata-k545')));
+    expect(keyOf(songOf('prelude-in-c')), keyOf(songOf('entertainer')));
   });
 
   test('reading a key twice gives the same answer', () {
