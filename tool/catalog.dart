@@ -21,6 +21,7 @@ class Score {
     this.url,
     this.midiUrl,
     this.local,
+    this.arrangement,
     this.patchUrl,
     this.entry,
     this.assemble,
@@ -30,7 +31,11 @@ class Score {
     this.bpm,
     this.beatsPerBar,
     this.fromBar,
-  }) : assert(url != null || local != null || midiUrl != null,
+  })  : assert(
+            url != null ||
+                local != null ||
+                midiUrl != null ||
+                arrangement != null,
             'a score has to come from somewhere');
 
   /// What the song is called in code, in the asset name, and in save data.
@@ -51,6 +56,18 @@ class Score {
   /// A score of our own, under `tool/scores/`. Used where no edition exists
   /// to take — the theme from the Ninth is not written for a keyboard at all.
   final String? local;
+
+  /// An arrangement of our own, under `tool/scores/`, written in the game's
+  /// own notation rather than engraved.
+  ///
+  /// [local] is for music nobody publishes for a keyboard; this is for music
+  /// nobody publishes at all. A folk tune has no edition to take — it has a
+  /// melody people sang before anyone wrote it down, and whatever
+  /// accompaniment the player in front of you felt like. So the arrangement
+  /// is ours, written out where it can be read and corrected by eye. It
+  /// carries its own tempo and metre, because there is no edition to read
+  /// them off.
+  final String? arrangement;
 
   /// A score published as MIDI rather than as engraving source.
   ///
@@ -208,5 +225,18 @@ const List<Score> catalog = [
     leftVelocity: 0.45,
     credit: 'Kamu malı (Op. 9 No. 2, 1832). Mutopia Project baskısı '
         '(Renato Biolcati Rinaldi), CC BY-SA 3.0, tam eser.',
+  ),
+  Score(
+    id: 'house-of-the-rising-sun',
+    title: 'House of the Rising Sun',
+    composer: 'Geleneksel',
+    arrangement: 'house-of-the-rising-sun.notes',
+    // The left hand is an arpeggio under a melody that is one note at a
+    // time: at level velocities the accompaniment would be the loudest
+    // thing in the piece.
+    leftVelocity: 0.45,
+    credit: 'Geleneksel Amerikan halk şarkısı, anonim — kamu malı. Ezgi '
+        'Frank Nordberg\'in geleneksel transkripsiyonundan (Digital '
+        'Tradition / abcnotation.com). Piyano düzenlemesi Piano Flow.',
   ),
 ];

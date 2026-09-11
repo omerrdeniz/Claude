@@ -9,6 +9,26 @@ import 'song_info.dart';
 
 const List<SongInfo> catalog = [
   SongInfo(
+    id: 'house-of-the-rising-sun',
+    title: 'House of the Rising Sun',
+    composer: 'Geleneksel',
+    source: 'Geleneksel Amerikan halk şarkısı, anonim — kamu '
+        'malı. Ezgi Frank Nordberg\'in geleneksel '
+        'transkripsiyonundan (Digital Tradition / '
+        'abcnotation.com). Piyano düzenlemesi Piano Flow.',
+    bpm: 80,
+    beatsPerBar: 4,
+    beatsPerQuarter: 1,
+    rightVelocity: 0.75,
+    leftVelocity: 0.45,
+    startBeat: 0,
+    noteCount: 315,
+    tapCount: 313,
+    durationMs: 99000,
+    lowMidi: 40,
+    highMidi: 81,
+  ),
+  SongInfo(
     id: 'gnossienne-1',
     title: 'Gnossienne No. 1',
     composer: 'Erik Satie',

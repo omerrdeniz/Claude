@@ -11,11 +11,29 @@ void main() {
   /// song's name into a test is writing down which one happens to be first.
   final firstSong = SongLibrary.all.first.title;
 
-  /// A tall surface, so the whole list fits without scrolling.
+  /// A tall surface, so most of the list fits without scrolling.
   Future<void> pumpList(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(420, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const MaterialApp(home: SongListScreen()));
+  }
+
+  /// Scroll to a song and open it.
+  ///
+  /// [scrollUntilVisible] stops as soon as the widget is built, which is not
+  /// the same as being on screen: a row hanging over the bottom edge is
+  /// found and cannot be tapped. Every song added pushes one more row over
+  /// that edge, so this ends with [ensureVisible] rather than trusting the
+  /// list to be short.
+  Future<void> openSong(WidgetTester tester, String title) async {
+    final song = find.text(title);
+    await tester.scrollUntilVisible(song, 120,
+        scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(song);
+    await tester.pumpAndSettle();
+    await tester.tap(song);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
   }
 
   testWidgets('lists every song, none of them locked', (tester) async {
@@ -74,10 +92,7 @@ void main() {
 
   testWidgets('tapping a song opens the playfield', (tester) async {
     await pumpList(tester);
-    await tester.scrollUntilVisible(find.text('Für Elise'), 200);
-    await tester.tap(find.text('Für Elise'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await openSong(tester, 'Für Elise');
     expect(find.byType(PlayScreen), findsOneWidget);
   });
 
@@ -90,10 +105,7 @@ void main() {
     await tester.tap(find.ancestor(
         of: find.text('%40'), matching: find.byType(InkWell)));
     await tester.pump();
-    await tester.scrollUntilVisible(find.text(firstSong), 200);
-    await tester.tap(find.text(firstSong));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await openSong(tester, firstSong);
 
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
     expect(screen.difficulty, Difficulty.hard);
@@ -122,10 +134,7 @@ void main() {
         of: switchUnder('Kaçırdıklarım da duyulsun'),
         matching: find.byType(Switch)));
     await tester.pump();
-    await tester.scrollUntilVisible(find.text('Für Elise'), 200);
-    await tester.tap(find.text('Für Elise'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await openSong(tester, 'Für Elise');
 
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
     expect(screen.tolerance, TimingTolerance.tight);
@@ -146,10 +155,7 @@ void main() {
     expect(find.text('+30 ms'), findsOneWidget);
     expect(find.text('Dokunuşların 30 ms erken sayılıyor'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text(firstSong), 200);
-    await tester.tap(find.text(firstSong));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await openSong(tester, firstSong);
 
     expect(tester.widget<PlayScreen>(find.byType(PlayScreen)).latencyOffsetMs,
         30);

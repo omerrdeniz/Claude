@@ -24,6 +24,7 @@ import 'package:piano_flow/data/song_info.dart';
 import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/music/midi_reader.dart';
 
+import 'arrangement.dart';
 import 'catalog.dart';
 
 const _cacheDir = 'tool/.cache';
@@ -78,7 +79,7 @@ String _recipeOf(Score score) => [
       score.midiUrl ?? '',
       score.patchUrl ?? '',
       score.entry ?? '',
-      for (final name in [score.local, score.assemble])
+      for (final name in [score.local, score.assemble, score.arrangement])
         if (name != null) File('$_scoreDir/$name').readAsStringSync(),
     ].join(' ');
 
@@ -148,6 +149,13 @@ Future<List<int>> _render(Score score) async {
   // A score already published as MIDI needs no rendering at all. See
   // [Score.midiUrl] for why that is not a shortcut.
   if (score.midiUrl != null) return _download(score.midiUrl!);
+
+  // An arrangement of our own is already the notes; there is no engraving to
+  // typeset, so LilyPond never enters into it.
+  if (score.arrangement != null) {
+    final source = await File('$_scoreDir/${score.arrangement}').readAsString();
+    return Arrangement.parse(source).toMidi();
+  }
 
   final work = await Directory.systemTemp.createTemp('piano-flow-${score.id}');
   try {
