@@ -51,6 +51,25 @@ class StageGeometry {
   double get noteRadius =>
       (size.width * 0.055).clamp(9.0, 26.0).clamp(9.0, size.height * 0.048);
 
+  /// How wide a note is drawn.
+  ///
+  /// Narrower than it is tall, and narrower than the disc it replaced. Where
+  /// a note sits comes from its pitch, so the width of a note is the width of
+  /// the smallest interval the screen can show apart — and a disc as wide as
+  /// it was tall meant a hand's zone held three notes and no more. Measured
+  /// over the library, ninety-three of every hundred gaps inside a chord were
+  /// being stretched to clear it; at this width, a quarter of them are drawn
+  /// at the distance the music actually has.
+  double get noteWidth => noteRadius * 2 * _noteWidthShare;
+
+  /// As a share of what the disc's width was, so the number means what it
+  /// says: a note is a little over half as wide as the note it replaced.
+  static const double _noteWidthShare = 0.6;
+
+  /// The least a chord's notes may be apart, in pixels: a note's width and
+  /// daylight enough to read as two things.
+  double get noteGap => noteWidth + noteRadius * 0.3;
+
   /// Progress of a tap that is [beatsAway] beats from being played, given a
   /// view that looks [window] beats ahead. 1 means it is on the line.
   static double progressFor(double beatsAway, double window) =>

@@ -316,6 +316,33 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   gerçek saniyeye bağlı: telefonda eşik 0.32 saniyeye denk geliyor. Şarkıyı
   %40 hıza aldığınızda aynı nota 0.8 saniyelik kuyruk çiziyor ve yine tutmalı
   görünüyor — çalışma hızında yapının görünmesi doğru olan.
+- **Nota bir dikdörtgen ve boyu süresi kadar.** Oyuncu bir Synthesia videosu
+  gösterdi: *"kafamda biraz daha buna benzetme fikri vardı."* Oradan üç şey
+  alındı, biri bilerek alınmadı.
+
+  **Alınanlar:** (1) nota artık daire değil, dik duran yuvarlatılmış bir
+  çubuk; (2) çubuğun boyu notanın süresi — eskiden nota başı ile tutma çubuğu
+  ayrı iki şeydi, şimdi tek şekil hem "hangi nota" hem "ne kadar" diyor;
+  (3) nota **eskisinin yarısından biraz geniş** (`StageGeometry.noteWidth`,
+  disk genişliğinin %60'ı).
+
+  **Neden incelme işe yarıyor:** nota genişliği, ekranın ayırt edebileceği en
+  küçük aralığın genişliğidir. Kütüphanede ölçüldü: eski diskle akor
+  aralıklarının **%93'ü** asgari aralığa geriliyordu, yani üçlü ile beşli aynı
+  genişlikte çiziliyordu. Yeni genişlikte bu %73'e iniyor — dörtte biri artık
+  müziğin gerçek mesafesinde.
+
+  **Alınmayan: klavye.** Ekranın altına klavye çizmek "doğru tuşa bas" sözü
+  verir; bu oyun onu istemiyor ve isteyemez (iki parmak, 88 tuş), ve en eski
+  kural dokunuşun her zaman doğru notayı çalmasıdır. Referanstaki şey bir oyun
+  değil, bir öğretim videosu.
+
+  **Alınmayan: mutlak konum.** Her notanın hep aynı yerden gelmesi ölçüldü ve
+  yatay çözünürlük olarak **kazançlı** çıkıyordu (13 parçanın 12'sinde), ama
+  ellerin tek bir sürekli alanı paylaşmasını gerektiriyor. Oyuncu: *"sol el ve
+  sağ el ayrımı olmalı, yaptığımız oyunun temel mantığı bu."* Dört parçada
+  eller 14-19 yarım ses örtüşüyor (Nokturn, Für Elise, Prelüd, Entertainer),
+  yani mutlak konumda ekranın aynı bölgesi iki ele birden ait olurdu.
 - **Nota boyutu sabit.** Eskiden yaklaşırken büyüyüp çizgiyi geçince
   küçülüyordu; oyuncu sabit olmasını istedi. Uzaklık artık yalnız solgunlukla
   anlatılıyor — "ne zaman" demeye çalışan bir resimde bir şeyin daha

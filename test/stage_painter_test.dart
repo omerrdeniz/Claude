@@ -272,37 +272,32 @@ void main() {
     // gives a chord's notes, but the painter opens a chord out before drawing
     // it so its notes do not overlap. On a single note the two agree; on a
     // chord the light stood beside the notes it came from.
+    //
+    // A chord of its own rather than one found in the library: three notes a
+    // semitone apart are certainly tight enough to be opened out, and with
+    // nothing else in the piece nothing else is near the line to be mistaken
+    // for a note or a spark.
     const g = StageGeometry(size: phone);
-    // Tight enough that the painter has to move it: a chord whose notes are
-    // closer together than a note is wide. A chord already standing apart is
-    // drawn where its pitches put it and would prove nothing.
-    final minGap = g.noteRadius * 2.3 / phone.width;
-    Chart? chart;
-    Tap? tap;
-    for (final song in shippedSongs) {
-      final built = Chart.build(song);
-      for (final candidate in built.taps) {
-        final places = [...candidate.noteAcross]..sort();
-        if (places.length < 2) continue;
-        final tight = [
-          for (var i = 1; i < places.length; i++) places[i] - places[i - 1],
-        ].any((gap) => gap < minGap - 1e-9);
-        if (tight) {
-          chart = built;
-          tap = candidate;
-          break;
-        }
-      }
-      if (tap != null) break;
-    }
-    expect(tap, isNotNull, reason: 'no chord close enough to be opened out');
+    final song = Song(
+      id: 't',
+      title: 'T',
+      composer: '',
+      bpm: 120,
+      notes: [
+        for (final midi in [72, 73, 74])
+          Note(beat: 4, midi: midi, duration: 0.5, hand: Hand.right),
+      ],
+    );
+    final chart = Chart.build(song);
+    final tap = chart.taps.single;
+    expect(tap.notes, hasLength(3));
 
     final recorder = _Recorder();
     StagePainter(
-      chart: chart!,
+      chart: chart,
       // Half a beat early, so the notes are still above the line and the
       // spark is on it: the two are then told apart by height alone.
-      beat: tap!.beat - 0.5,
+      beat: tap.beat - 0.5,
       windowInBeats: 4,
       sparks: [
         Spark(
@@ -315,18 +310,20 @@ void main() {
     ).paint(recorder, phone);
 
     final line = g.hitLineY;
-    // The plumes: the only thing drawn below the line.
-    final plumes = [
+    final plumes = {
       for (final rect in recorder.rects)
         if (rect.top >= line - 0.5) rect.center.dx,
-    ]..sort();
-    expect(plumes, hasLength(tap.noteAcross.length));
+    }.toList()
+      ..sort();
+    expect(plumes, hasLength(tap.notes.length));
 
-    // The notes of that chord: heads still on their way down.
-    final heads = [
-      for (final centre in recorder.circles)
-        if (centre.dy < line - 1) centre.dx,
-    ];
+    // The notes of that chord: bars still on their way down.
+    final heads = {
+      for (final rect in recorder.rects)
+        if (rect.bottom < line - 1) rect.center.dx,
+    };
+    expect(heads, hasLength(tap.notes.length));
+
     for (final plume in plumes) {
       expect(heads.any((head) => (head - plume).abs() < 0.5), isTrue,
           reason: 'a spark at $plume has no note above it');

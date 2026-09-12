@@ -410,19 +410,16 @@ class StagePainter extends CustomPainter {
         // of what the player has to read — see [_paintChordBand].
         final (low, high) = chart.pitchRange;
         final ink = AppTheme.pitchColor(dot.midi, low: low, high: high);
-        if (dot.isHold) {
-          _paintHoldBar(
-            canvas,
-            g,
-            dot.across,
-            head,
-            StageGeometry.progressFor(dot.endBeat - beat, windowInBeats),
-            radius,
-            ink,
-            fade,
-          );
-        }
-        _paintNote(canvas, g, dot.across, head, radius, ink, fade);
+        _paintNote(
+          canvas,
+          g,
+          dot.across,
+          head,
+          StageGeometry.progressFor(dot.endBeat - beat, windowInBeats),
+          radius,
+          ink,
+          fade,
+        );
       }
     }
 
@@ -577,7 +574,7 @@ class StagePainter extends CustomPainter {
     return StageGeometry.spreadChord(
       [...places]..sort(),
       // Edge to edge plus a little daylight, in the 0..1 the chart works in.
-      minGap: radius * 2.3 / g.size.width,
+      minGap: g.noteGap / g.size.width,
       zoneStart: zoneStart,
       zoneEnd: zoneEnd,
     );
@@ -604,7 +601,7 @@ class StagePainter extends CustomPainter {
 
     final left = g.positionAtPosition(lowest, progress);
     final right = g.positionAtPosition(highest, progress);
-    final thickness = g.noteRadius * 1.35;
+    final thickness = g.noteWidth * 0.7;
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -621,41 +618,6 @@ class StagePainter extends CustomPainter {
     );
   }
 
-  /// The body of a note that has to be held down, drawn as a bar as long as
-  /// the note lasts.
-  void _paintHoldBar(Canvas canvas, StageGeometry g, double across,
-      double progress, double tailProgress, double radius, Color colour,
-      double fade) {
-    if (tailProgress >= progress) return;
-
-    // The bar reaches from the head back the distance the note lasts. Once
-    // the head has stopped at the line the bar can only shorten, its far end
-    // sliding down to meet it — so however long it looks is how much of the
-    // note is still to come.
-    final head = g.positionAtPosition(across, progress);
-    final tail = g.positionAtPosition(across, tailProgress);
-    final width = radius * StageGeometry.holdBarWidth;
-
-    final top = StageGeometry.holdBarTop(head.dy, tail.dy, radius);
-    if (top == null) return;
-
-    final bar = RRect.fromRectAndRadius(
-      Rect.fromLTRB(head.dx - width, top, head.dx + width, head.dy),
-      Radius.circular(width),
-    );
-
-    canvas.drawRRect(
-      bar,
-      Paint()..color = colour.withValues(alpha: 0.35 * fade),
-    );
-    canvas.drawRRect(
-      bar,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = Colors.white.withValues(alpha: 0.28 * fade),
-    );
-  }
 
   /// The mark on a touch that carries an ornament: the small note itself,
   /// drawn under the one it leans into.
@@ -703,24 +665,45 @@ class StagePainter extends CustomPainter {
   /// written as, big enough to see at arm's length.
   static const double _graceRadius = 0.42;
 
-  void _paintNote(Canvas canvas, StageGeometry g, double across,
-      double progress, double radius, Color colour, double fade) {
-    final centre = g.positionAtPosition(across, progress);
-    final brush = _Brushes.forNote(colour, fade, radius);
+  /// The shortest a note is drawn, in note widths. Taller than it is wide,
+  /// so that even a semiquaver reads as an upright mark rather than a dot —
+  /// the shape says "a note", and every note is the same shape.
+  static const double _leastNote = 1.5;
 
-    // The brushes are baked around the origin so they can be reused, so the
-    // canvas is moved to the note rather than the note to the canvas.
-    canvas.save();
-    canvas.translate(centre.dx, centre.dy);
+  /// A note: an upright rounded bar, as long as the note lasts.
+  ///
+  /// It used to be a disc with a separate bar behind it when the note was
+  /// long. One shape now says both things — *which note, and for how long* —
+  /// which is how a piano roll says it, and the player asked for that after
+  /// seeing one. It also settles a worry from the drawing before it: a
+  /// rectangular head beside an upright bar would have been two shapes
+  /// saying the same thing.
+  ///
+  /// The bar stops short of whatever this hand plays next, and a note too
+  /// short to have a bar is drawn as a stub a note wide — see
+  /// [StageGeometry.holdBarTop]. Whether the head waits at the line is a
+  /// separate question and still [StageGeometry.headProgressFor]'s.
+  void _paintNote(Canvas canvas, StageGeometry g, double across,
+      double progress, double tailProgress, double radius, Color colour,
+      double fade) {
+    final bottom = g.yAt(progress);
+    final top = StageGeometry.holdBarTop(bottom, g.yAt(tailProgress), radius) ??
+        bottom - g.noteWidth * _leastNote;
+    final width = g.noteWidth;
+    final x = g.xAtPosition(across);
+    final brush = _Brushes.forNote(colour, fade, width);
+
+    final body = RRect.fromRectAndRadius(
+      Rect.fromLTRB(x - width / 2, top, x + width / 2, bottom),
+      Radius.circular(width / 2),
+    );
 
     // The halo is a gradient, not a blur: a blur filter here costs more per
     // frame than everything else on screen put together.
-    canvas.drawCircle(Offset.zero, radius * 2.0, brush.halo);
-    canvas.drawCircle(Offset.zero, radius, brush.body);
+    canvas.drawRRect(body.inflate(width * 0.55), brush.halo);
+    canvas.drawRRect(body, brush.body);
     // A bright rim reads as a hard edge at any size.
-    canvas.drawCircle(Offset.zero, radius, brush.rim);
-
-    canvas.restore();
+    canvas.drawRRect(body, brush.rim);
   }
 
   @override
@@ -767,41 +750,46 @@ class _Brushes {
   static final Map<int, _Brushes> _cache = {};
   static double _cachedRadius = -1;
 
-  static _Brushes forNote(Color colour, double fade, double radius) {
-    if (radius != _cachedRadius) {
+  static _Brushes forNote(Color colour, double fade, double width) {
+    if (width != _cachedRadius) {
       _cache.clear();
-      _cachedRadius = radius;
+      _cachedRadius = width;
     }
     final step = (fade * _fadeSteps).round().clamp(0, _fadeSteps);
     return _cache[Object.hash(colour.toARGB32(), step)] ??=
-        _build(colour, step / _fadeSteps, radius);
+        _build(colour, step / _fadeSteps, width);
   }
 
-  static _Brushes _build(Color colour, double fade, double radius) {
+  static _Brushes _build(Color colour, double fade, double width) {
+    // Shaded across the bar rather than out from its middle: a note's length
+    // is its duration and changes from note to note, so anything baked to a
+    // height could not be reused. Across, it is always the same width.
+    Rect span(double reach) =>
+        Rect.fromLTRB(-width * reach, 0, width * reach, 0);
     return _Brushes(
       Paint()
-        ..shader = RadialGradient(
+        ..shader = LinearGradient(
           colors: [
-            colour.withValues(alpha: 0.42 * fade),
-            colour.withValues(alpha: 0.16 * fade),
+            colour.withValues(alpha: 0.0),
+            colour.withValues(alpha: 0.30 * fade),
             colour.withValues(alpha: 0.0),
           ],
-          stops: const [0.35, 0.6, 1.0],
-        ).createShader(
-            Rect.fromCircle(center: Offset.zero, radius: radius * 2.0)),
+          stops: const [0.0, 0.5, 1.0],
+        ).createShader(span(1.1)),
       Paint()
-        ..shader = RadialGradient(
+        ..shader = LinearGradient(
           colors: [
-            Color.lerp(Colors.white, colour, 0.15)!.withValues(alpha: fade),
-            colour.withValues(alpha: fade),
-            colour.withValues(alpha: 0.75 * fade),
+            colour.withValues(alpha: 0.85 * fade),
+            Color.lerp(Colors.white, colour, 0.3)!.withValues(alpha: fade),
+            colour.withValues(alpha: 0.9 * fade),
           ],
-          stops: const [0.0, 0.55, 1.0],
-        ).createShader(Rect.fromCircle(center: Offset.zero, radius: radius)),
+          stops: const [0.0, 0.4, 1.0],
+        ).createShader(span(0.5)),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..color = Colors.white.withValues(alpha: 0.55 * fade),
+        ..strokeWidth = 1.2
+        ..color = Colors.white.withValues(alpha: 0.5 * fade),
     );
   }
+
 }
