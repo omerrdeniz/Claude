@@ -1,8 +1,11 @@
 # Durum ve devir notu
 
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
-sürdürebilmesi için yazıldı. Son güncelleme: vuruş geri bildirimi eklendi;
-kütüphane 18 parçaya indirildi.
+sürdürebilmesi için yazıldı.
+
+**Son güncelleme (v93):** çarpma süslemesi (acciaccatura) mekaniği eklendi;
+notalar perdesine göre renklenmeye başladı; akorlar kendi aralık oranlarıyla
+çiziliyor. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -801,29 +804,30 @@ buna değmediğini söylüyor ve `Chart`'a ekran boyutu vermeyi gerektirir.
 
 ## Şarkılar
 
-On sekiz parça, hepsi kamu malı, hepsi basılı nüshadan. Liste **en sakinden
-en yoğuna** sıralı ve her satırın yanında saniyede kaç dokunuş istediği yazıyor.
+**On üç parça.** Hepsi kamu malı. Liste **en sakinden en yoğuna** sıralı ve
+her satırın yanında saniyede kaç dokunuş istediği yazıyor — listeyi sıralayan
+ve her satırda Sakin/Akıcı/Hızlı/Çok hızlı yazan ölçü bu.
 
 | Ad | Besteci | BPM | Nota | Süre | Dokunuş/sn |
 |---|---|---|---|---|---|
-| Gymnopédie No. 2 | Satie | 66 | 371 | 2:57 | 1.1 |
-| Prelude Op. 28 No. 20 | Chopin | 42 | 286 | 1:14 | 1.5 |
-| Sonata K. 331 (theme) | Mozart | 112 | 476 | 1:55 | 2.8 |
-| Gnossienne No. 1 | Satie | 100 | 832 | 3:16 | 3.2 |
+| House of the Rising Sun | Geleneksel | 80 | 315 | 1:39 | 3.2 |
+| Gnossienne No. 1 | Satie | 100 | 832 | 3:17 | 3.2 |
 | Canon in D | Pachelbel | 55 | 818 | 4:05 | 3.3 |
 | Canon in D (run test) | Pachelbel | 55 | 624 | 2:51 | 3.6 |
-| Menuett, WoO 82 | Beethoven | 112 | 1160 | 3:15 | 3.7 |
 | Ode to Joy | Beethoven | 160 | 149 | 0:24 | 3.8 |
 | Prelude in C, BWV 846 | Bach | 60 | 549 | 2:20 | 3.9 |
 | Nocturne Op. 9 No. 2 | Chopin | 132 | 1231 | 3:22 | 4.0 |
-| Minuet in G minor, BWV Anh. 115 | Petzold | 140 | 398 | 1:22 | 4.6 |
-| Melodie, Op. 68 No. 1 | Schumann | 92 | 303 | 1:02 | 4.7 |
-| Minuet in G, BWV Anh. 114 | Petzold | 140 | 408 | 1:22 | 4.9 |
-| La Candeur, Op. 100 No. 1 | Burgmüller | 152 | 340 | 1:00 | 4.9 |
-| The Entertainer | Joplin | 72 | 2621 | 4:12 | 5.4 |
-| Für Elise | Beethoven | 144 | 1038 | 2:35 | 5.9 |
-| L'Arabesque, Op. 100 No. 2 | Burgmüller | 152 | 357 | 0:43 | 6.2 |
-| Albumblatt, Op. 12 No. 3 | Grieg | 112 | 614 | 1:08 | 6.7 |
+| Passacaglia (kolay) | Handel | 92 | 428 | 1:36 | 4.2 |
+| Waltz in A minor, B. 150 | Chopin | 120 | 920 | 2:00 | 4.8 |
+| The Entertainer | Joplin | 72 | 2621 | 4:13 | 5.4 |
+| Für Elise | Beethoven | 144 | 1038 | 2:36 | 5.9 |
+| Passacaglia (Halvorsen) | Handel / Halvorsen | 75 | 1028 | 1:58 | 7.9 |
+| Passacaglia | Handel | 120 | 2520 | 4:08 | 8.0 |
+
+Üç Passacaglia aynı eserin üç ayrı hâli: Handel'in kendi HWV 432/6'sı,
+Halvorsen'in 1893 düzenlemesi, ve elle yazılmış kolay hâl. `canon-run-test`
+kalıcı değil — sürükleme mekaniğini denemek için 18. ölçüden başlayan bir
+kopya.
 
 **Adlar orijinal dilinde ya da yerleşik İngilizcesiyle**, Türkçeleştirilmiyor.
 Künye metinleri Türkçe — onlar ad değil, cümle.
@@ -1239,32 +1243,48 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
 
 ## Sıradaki iş
 
-Oyun bir oyun; öğretme aracı değil. Sıra buna göre:
+Oyun bir oyun; öğretme aracı değil — tek el modu, ölçüden başlama, hız
+merdiveni gibi öğretim fikirleri **istenmiyor**. Sıra buna göre.
 
-1. **Bitiş bir şey ifade etsin.** Şu an sonunda puan ve yüzde var. Yerine
+Açık kalan, oyuncunun bildirdiği şeyler:
+
+1. **Çarpmanın ödülü oyuncuya görünmüyor.** Oyuncu v91'den sonra da "bas çek
+   yapsam da puan veriyor" diyor; ölçüm tersini söylüyor (ekranda gerçek
+   parmakla basan test 120 ve 500 ms'de ödül vermiyor). En olası açıklama,
+   ödülün kendisinin görünmemesi: nota zaten 100 puan veriyor, süsleme 50
+   ekliyor, ve 100 ile 150'yi ayırt etmenin bir yolu yok. Kazanıldığı an
+   ekranda ayrı bir şey olmalı. Oyuncu "şimdilik böyle kalsın" dedi.
+   Ayrıntı ve üç iz, acciaccatura bölümünde.
+2. **Passacaglia'da 31 ms'lik dokunuş çiftleri var.** Aynı elde 31 ms arayla
+   iki ayrı dokunuş isteyen yerler. Süsleme değiller (arkalarından gelen nota
+   kısa, yani hızlı figür), ve basılamazlar. Çarpma taraması sırasında çıktı,
+   dokunulmadı.
+
+Oyunu oyun yapacak işler:
+
+3. **Bitiş bir şey ifade etsin.** Şu an sonunda puan ve yüzde var. Yerine
    büyük bir harf/yıldız, "yeni rekor" patlaması, en uzun serinin öne
    çıkarılması.
-2. **Arka plan müzikle yaşasın.** 38 parçanın hepsi aynı koyu zeminde
-   geçiyor. Işık havuzu vuruşla nefes alsa, renk parçanın perdesine göre
-   kaysa, her parça başka bir yerde geçiyormuş gibi olur.
-3. **Kütüphane doldurulacak bir koleksiyon olsun.** Şarkı başına en iyi puan
+4. **Kütüphane doldurulacak bir koleksiyon olsun.** Şarkı başına en iyi puan
    ve yıldız listede görünsün. Hiçbir şey saklanmıyor şu an.
-4. **Uzun koşuları ödüllendir.** İp ve boncuk oyunun en gösterişli anı;
+5. **Uzun koşuları ödüllendir.** İp ve boncuk oyunun en gösterişli anı;
    koşuyu baştan sona takip edince ekranın patlaması, parçaların doruk
    noktalarını olay hâline getirir.
+6. **Arka plan müzikle yaşasın.** Zemin parçanın tonundan renkleniyor ama
+   artık bilerek çok soluk (notalar renk taşıdığı için — bkz. renk kararı).
+   Geriye kalan fikir, ışık havuzunun vuruşla nefes alması.
+7. **Sıradaki piyano tekniği.** Acciaccatura ilkiydi ve yöntemi kurdu: önce
+   kütüphanede gerçekten var mı diye ölç, sonra mekaniği tasarla. Sonraki
+   adaylar tril, arpej ve stride bası olabilir — ama önce **veride var mı**
+   diye bakılmalı, çünkü acciaccatura'da tanıma kuralı işin yarısıydı.
 
 Kapanmamış eski işler:
 
-0. **Passacaglia'da 31 ms'lik dokunuş çiftleri var.** Çarpma taraması sırasında
-   çıktı: Handel'in parçasında aynı elde 31 ms arayla iki ayrı dokunuş isteyen
-   yerler var. Süsleme değiller — arkalarından gelen nota kısa, yani hızlı
-   figür. Basılamazlar. Ayrı bir iş, dokunulmadı.
-
-5. **Kolay moddaki seyreltme vuruş cinsinden** (`Chart._divideVoices`,
+8. **Kolay moddaki seyreltme vuruş cinsinden** (`Chart._divideVoices`,
    `minGap = 0.5` vuruş). Vuruş/saniye hatasının üçüncü ve sonuncusu:
    "Kolay" Kanon'da 545 ms, Ode to Joy'da 188 ms aralık bırakıyor. Sorulacak
    bir şey yok, düzeltilecek.
-6. **Delik/kendi çalma ikilemi** seçeneğe bağlı duruyor. Zorluğa bağlamak
+9. **Delik/kendi çalma ikilemi** seçeneğe bağlı duruyor. Zorluğa bağlamak
    üçüncü bir yol olabilir — **oyuncuya sorulmalı**, oyunun en eski kuralına
    dokunuyor.
-7. **`canon-run-test`** sürükleme oturunca listeden kaldırılacak.
+10. **`canon-run-test`** sürükleme oturunca listeden kaldırılacak.
