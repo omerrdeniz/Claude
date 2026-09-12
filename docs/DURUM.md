@@ -320,11 +320,16 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   gösterdi: *"kafamda biraz daha buna benzetme fikri vardı."* Oradan üç şey
   alındı, biri bilerek alınmadı.
 
-  **Alınanlar:** (1) nota artık daire değil, dik duran yuvarlatılmış bir
-  çubuk; (2) çubuğun boyu notanın süresi — eskiden nota başı ile tutma çubuğu
-  ayrı iki şeydi, şimdi tek şekil hem "hangi nota" hem "ne kadar" diyor;
-  (3) nota **eskisinin yarısından biraz geniş** (`StageGeometry.noteWidth`,
-  disk genişliğinin %60'ı).
+  **Alınanlar:** nota artık daire değil, dik duran yuvarlatılmış bir çubuk —
+  **eski dairenin boyunda, ama dar** (`StageGeometry.noteWidth`, disk
+  genişliğinin %60'ı). Tutma kuyruğu da ona uyacak şekilde daraltıldı.
+
+  **Alınmayan: boy = süre.** Bir tur denendi ve oyuncu geri yolladı: *"şu an
+  aşırı kötü olmuş... dikdörtgen yükseklik olarak mevcut toplar ile aynı
+  olsun, bizim zamanlamamız zaten yükseklik ile ilgili."* Haklı — bu oyunda
+  zamanlama notanın **nerede** olduğundan okunuyor, yani boyu değişen bir
+  nota, gözün ölçtüğü tek şeyi değiştiriyor. Sürenin yeri, eskiden olduğu
+  gibi, arkasındaki kuyruk.
 
   **Neden incelme işe yarıyor:** nota genişliği, ekranın ayırt edebileceği en
   küçük aralığın genişliğidir. Kütüphanede ölçüldü: eski diskle akor

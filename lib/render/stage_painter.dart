@@ -399,6 +399,10 @@ class StagePainter extends CustomPainter {
         _paintGrace(canvas, g, dots, headOf(dots.first), radius, colour, fade);
       }
 
+      // Half the bar's thickness, as [_paintHoldBar] wants it: the tail comes
+      // out about seven tenths of the note's width, narrower than the note so
+      // the head still reads as the thing to aim at.
+      final barWidth = g.noteWidth * 0.35;
       for (final dot in dots) {
         final head = headOf(dot);
         // A note that was played is spent at the line — the burst of light
@@ -410,16 +414,20 @@ class StagePainter extends CustomPainter {
         // of what the player has to read — see [_paintChordBand].
         final (low, high) = chart.pitchRange;
         final ink = AppTheme.pitchColor(dot.midi, low: low, high: high);
-        _paintNote(
-          canvas,
-          g,
-          dot.across,
-          head,
-          StageGeometry.progressFor(dot.endBeat - beat, windowInBeats),
-          radius,
-          ink,
-          fade,
-        );
+        if (dot.isHold) {
+          _paintHoldBar(
+            canvas,
+            g,
+            dot.across,
+            head,
+            StageGeometry.progressFor(dot.endBeat - beat, windowInBeats),
+            radius,
+            barWidth,
+            ink,
+            fade,
+          );
+        }
+        _paintNote(canvas, g, dot.across, head, radius, ink, fade);
       }
     }
 
@@ -665,36 +673,28 @@ class StagePainter extends CustomPainter {
   /// written as, big enough to see at arm's length.
   static const double _graceRadius = 0.42;
 
-  /// The shortest a note is drawn, in note widths. Taller than it is wide,
-  /// so that even a semiquaver reads as an upright mark rather than a dot —
-  /// the shape says "a note", and every note is the same shape.
-  static const double _leastNote = 1.5;
-
-  /// A note: an upright rounded bar, as long as the note lasts.
+  /// A note: an upright rounded bar, as tall as the disc it replaced and
+  /// narrower.
   ///
-  /// It used to be a disc with a separate bar behind it when the note was
-  /// long. One shape now says both things — *which note, and for how long* —
-  /// which is how a piano roll says it, and the player asked for that after
-  /// seeing one. It also settles a worry from the drawing before it: a
-  /// rectangular head beside an upright bar would have been two shapes
-  /// saying the same thing.
+  /// **The height does not say the duration.** It was tried, straight off a
+  /// piano roll, and the player sent it back: the timing in this game is read
+  /// from *where* a note is, so a note that changes height changes the one
+  /// thing the eye is measuring. How long a note lasts is the bar behind it,
+  /// as it always was.
   ///
-  /// The bar stops short of whatever this hand plays next, and a note too
-  /// short to have a bar is drawn as a stub a note wide — see
-  /// [StageGeometry.holdBarTop]. Whether the head waits at the line is a
-  /// separate question and still [StageGeometry.headProgressFor]'s.
+  /// What the narrower shape is for is across, not down: the width of a note
+  /// is the width of the smallest interval the screen can show apart. Ninety
+  /// three of every hundred gaps inside a chord used to be stretched to clear
+  /// a disc; a bar this wide leaves a quarter of them at the distance the
+  /// music actually has.
   void _paintNote(Canvas canvas, StageGeometry g, double across,
-      double progress, double tailProgress, double radius, Color colour,
-      double fade) {
-    final bottom = g.yAt(progress);
-    final top = StageGeometry.holdBarTop(bottom, g.yAt(tailProgress), radius) ??
-        bottom - g.noteWidth * _leastNote;
+      double progress, double radius, Color colour, double fade) {
+    final centre = g.positionAtPosition(across, progress);
     final width = g.noteWidth;
-    final x = g.xAtPosition(across);
     final brush = _Brushes.forNote(colour, fade, width);
 
     final body = RRect.fromRectAndRadius(
-      Rect.fromLTRB(x - width / 2, top, x + width / 2, bottom),
+      Rect.fromCenter(center: centre, width: width, height: radius * 2),
       Radius.circular(width / 2),
     );
 
@@ -704,6 +704,42 @@ class StagePainter extends CustomPainter {
     canvas.drawRRect(body, brush.body);
     // A bright rim reads as a hard edge at any size.
     canvas.drawRRect(body, brush.rim);
+  }
+
+  /// The body of a note that has to be held down, drawn as a bar as long as
+  /// the note lasts — and no wider than the note, so the two read as one
+  /// thing rather than a head on a post.
+  void _paintHoldBar(Canvas canvas, StageGeometry g, double across,
+      double progress, double tailProgress, double radius, double width,
+      Color colour, double fade) {
+    if (tailProgress >= progress) return;
+
+    // The bar reaches from the head back the distance the note lasts. Once
+    // the head has stopped at the line the bar can only shorten, its far end
+    // sliding down to meet it — so however long it looks is how much of the
+    // note is still to come.
+    final head = g.positionAtPosition(across, progress);
+    final tail = g.positionAtPosition(across, tailProgress);
+
+    final top = StageGeometry.holdBarTop(head.dy, tail.dy, radius);
+    if (top == null) return;
+
+    final bar = RRect.fromRectAndRadius(
+      Rect.fromLTRB(head.dx - width, top, head.dx + width, head.dy),
+      Radius.circular(width),
+    );
+
+    canvas.drawRRect(
+      bar,
+      Paint()..color = colour.withValues(alpha: 0.35 * fade),
+    );
+    canvas.drawRRect(
+      bar,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = Colors.white.withValues(alpha: 0.28 * fade),
+    );
   }
 
   @override
