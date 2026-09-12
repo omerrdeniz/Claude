@@ -77,8 +77,13 @@ void main() {
 
   group('a note is coloured by which note it is', () {
     // A piece of a little over four octaves, as the Gnossienne is.
-    HSLColor hsl(int midi) =>
-        HSLColor.fromColor(AppTheme.pitchColor(midi, low: 34, high: 83));
+    //
+    // Read back as HSV, because that is what the rule is written in: the
+    // octave moves *brightness*, which dims a colour towards black. Read as
+    // HSL it would look as though saturation moved too, which is only how
+    // the two models describe the same dark red.
+    HSVColor hsl(int midi) =>
+        HSVColor.fromColor(AppTheme.pitchColor(midi, low: 34, high: 83));
 
     test('twelve notes, twelve hues', () {
       final hues = {for (var midi = 60; midi < 72; midi++) hsl(midi).hue};
@@ -100,7 +105,7 @@ void main() {
     test('and it is lighter the higher it is', () {
       var last = -1.0;
       for (var midi = 34; midi <= 83; midi += 12) {
-        final light = hsl(midi).lightness;
+        final light = hsl(midi).value;
         expect(light, greaterThan(last));
         last = light;
       }
@@ -116,7 +121,7 @@ void main() {
       expect(low.hue, closeTo(high.hue, 1.0), reason: 'the same note');
       expect(low.saturation, closeTo(high.saturation, 0.02),
           reason: 'and so the same colour — only the light may move');
-      expect(high.lightness - low.lightness, greaterThan(0.1));
+      expect(high.value - low.value, greaterThan(0.1));
     });
 
     test('a key does not come out in one colour', () {

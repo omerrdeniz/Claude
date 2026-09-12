@@ -51,11 +51,14 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
     kullanır, yani kendi aralığına ölçünce bir oktav ölçeğin üçte biri olur.
     Ekrandaki yer de zaten elin kendi aralığından hesaplanıyor, aynı sebeple.
 
-    **Farkı yalnız parlaklık taşır.** Doygunluk da denendi ve oyuncu geri
-    yolladı: onunla pes bir *do* koyu kırmızı, tiz bir *do* soluk pembe
-    oluyordu — yani iki ayrı renk, oysa kural "aynı renk, iki ayrı ağırlık".
-    Parçanın kendi aralığına ölçülünce parlaklık tek başına yetiyor
-    (Gnossienne'de bir oktav 14 puan).
+    **Farkı yalnız parlaklık taşır, ve parlaklık HSV'nin "value"su.** İki
+    deneme geri yollandı, ikisi de aynı sebepten: oyuncu aynı notayı iki ayrı
+    renk olarak gördü. Önce doygunluk da değişiyordu; sonra HSL "lightness"
+    kullanıldı, ki o da açıldıkça rengi **beyaza** götürür — pes *do* bordo,
+    tiz *do* pembe çıkıyordu. HSV parlaklığı rengi yalnızca karartır, yani
+    koyu kırmızı hâlâ kırmızıdır. Dört oktavdaki *do*: `#852525`, `#A42E2E`,
+    `#C33737`, `#E23F3F` — ton 0°, doygunluk %72, değişen yalnız parlaklık
+    (%52'den %89'a).
   - **Akor büyüklüğü** artık notaların arkasındaki **bandın** rengi: sarı
     ikili, mavi üçlü, yeşil dörtlü. Bant yoksa tek nota demektir. Bilgi
     kaybolmadı, yer değiştirdi.
@@ -323,6 +326,13 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   **Alınanlar:** nota artık daire değil, dik duran yuvarlatılmış bir çubuk —
   **eski dairenin boyunda, ama dar** (`StageGeometry.noteWidth`, disk
   genişliğinin %60'ı). Tutma kuyruğu da ona uyacak şekilde daraltıldı.
+
+  **Şekil değişti, boya değişmedi.** İlk denemede dikdörtgen için yeni boyalar
+  da yazılmıştı (yatay çizgisel gradyanlar) ve sonuç oyuncunun deyişiyle
+  "felaket" oldu: gövde tam örtmediği için **kuyruk notanın içinden
+  görünüyordu**. Dairenin kendi ışıma gradyanları geri alındı ve yalnız
+  şeklin dış hattı değişti. Kural: bir şekli değiştirirken boyasını da
+  değiştirmeyin, ikisi ayrı sorulardır.
 
   **Alınmayan: boy = süre.** Bir tur denendi ve oyuncu geri yolladı: *"şu an
   aşırı kötü olmuş... dikdörtgen yükseklik olarak mevcut toplar ile aynı

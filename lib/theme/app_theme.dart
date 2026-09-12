@@ -71,11 +71,13 @@ abstract final class AppTheme {
   /// scale and plainly visible. Where a note sits across the screen is
   /// already worked out from the hand's own range, for the same reason.
   ///
-  /// **Only the light moves.** Saturation was tried as a second channel and
-  /// the player sent it back: with it, a low C read as a deep red and a high
-  /// C as a pale pink — two colours, where the rule is one colour at two
-  /// weights. Measured against the piece's own range the light alone has
-  /// room enough to say it.
+  /// **Only the light moves, and it moves towards dark rather than towards
+  /// white.** Lightness was tried first, and it fails the rule it was meant
+  /// to keep: taking an HSL lightness up goes to *white*, so a low C came out
+  /// maroon and a high C came out pink — the player saw two colours where the
+  /// rule says one. Brightness in the HSV sense only dims the colour, so a
+  /// dark red is still plainly red. Saturation was tried as a second channel
+  /// and sent back for the same reason.
   ///
   /// The ground had to give way for all this — see [groundOf]. It is coloured
   /// from the key, and the notes of that key landed on its own hue and
@@ -83,17 +85,21 @@ abstract final class AppTheme {
   static Color pitchColor(int midi, {required int low, required int high}) {
     final span = high - low;
     final height = span <= 0 ? 0.5 : ((midi - low) / span).clamp(0.0, 1.0);
-    return HSLColor.fromAHSL(
+    return HSVColor.fromAHSV(
       1,
       midi % 12 * 30.0,
       _pitchSaturation,
-      _darkestPitch + (_lightestPitch - _darkestPitch) * height,
+      _dimmest + (_brightest - _dimmest) * height,
     ).toColor();
   }
 
   static const double _pitchSaturation = 0.72;
-  static const double _darkestPitch = 0.28;
-  static const double _lightestPitch = 0.86;
+
+  /// How dim the lowest note of a piece is drawn, and how bright its highest.
+  /// Dark enough to read as the bottom of the piece, never so dark that it
+  /// sinks into the ground behind it.
+  static const double _dimmest = 0.5;
+  static const double _brightest = 1.0;
 
   /// Kept for the keyboard's key highlight and other accents.
   static const List<Color> beamColors = chordColors;

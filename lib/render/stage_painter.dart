@@ -691,19 +691,29 @@ class StagePainter extends CustomPainter {
       double progress, double radius, Color colour, double fade) {
     final centre = g.positionAtPosition(across, progress);
     final width = g.noteWidth;
-    final brush = _Brushes.forNote(colour, fade, width);
+    final brush = _Brushes.forNote(colour, fade, radius);
+
+    // The brushes are baked around the origin so they can be reused, so the
+    // canvas is moved to the note rather than the note to the canvas. They
+    // are the disc's own gradients: only the outline changed, and painting
+    // the new shape with new paint made a flat, half-transparent tile with
+    // the tail showing through it.
+    canvas.save();
+    canvas.translate(centre.dx, centre.dy);
 
     final body = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: centre, width: width, height: radius * 2),
+      Rect.fromCenter(center: Offset.zero, width: width, height: radius * 2),
       Radius.circular(width / 2),
     );
 
     // The halo is a gradient, not a blur: a blur filter here costs more per
     // frame than everything else on screen put together.
-    canvas.drawRRect(body.inflate(width * 0.55), brush.halo);
+    canvas.drawRRect(body.inflate(radius * 0.9), brush.halo);
     canvas.drawRRect(body, brush.body);
     // A bright rim reads as a hard edge at any size.
     canvas.drawRRect(body, brush.rim);
+
+    canvas.restore();
   }
 
   /// The body of a note that has to be held down, drawn as a bar as long as
@@ -786,45 +796,41 @@ class _Brushes {
   static final Map<int, _Brushes> _cache = {};
   static double _cachedRadius = -1;
 
-  static _Brushes forNote(Color colour, double fade, double width) {
-    if (width != _cachedRadius) {
+  static _Brushes forNote(Color colour, double fade, double radius) {
+    if (radius != _cachedRadius) {
       _cache.clear();
-      _cachedRadius = width;
+      _cachedRadius = radius;
     }
     final step = (fade * _fadeSteps).round().clamp(0, _fadeSteps);
     return _cache[Object.hash(colour.toARGB32(), step)] ??=
-        _build(colour, step / _fadeSteps, width);
+        _build(colour, step / _fadeSteps, radius);
   }
 
-  static _Brushes _build(Color colour, double fade, double width) {
-    // Shaded across the bar rather than out from its middle: a note's length
-    // is its duration and changes from note to note, so anything baked to a
-    // height could not be reused. Across, it is always the same width.
-    Rect span(double reach) =>
-        Rect.fromLTRB(-width * reach, 0, width * reach, 0);
+  static _Brushes _build(Color colour, double fade, double radius) {
     return _Brushes(
       Paint()
-        ..shader = LinearGradient(
+        ..shader = RadialGradient(
           colors: [
-            colour.withValues(alpha: 0.0),
-            colour.withValues(alpha: 0.30 * fade),
+            colour.withValues(alpha: 0.42 * fade),
+            colour.withValues(alpha: 0.16 * fade),
             colour.withValues(alpha: 0.0),
           ],
-          stops: const [0.0, 0.5, 1.0],
-        ).createShader(span(1.1)),
+          stops: const [0.35, 0.6, 1.0],
+        ).createShader(
+            Rect.fromCircle(center: Offset.zero, radius: radius * 2.0)),
       Paint()
-        ..shader = LinearGradient(
+        ..shader = RadialGradient(
           colors: [
-            colour.withValues(alpha: 0.85 * fade),
-            Color.lerp(Colors.white, colour, 0.3)!.withValues(alpha: fade),
-            colour.withValues(alpha: 0.9 * fade),
+            Color.lerp(Colors.white, colour, 0.15)!.withValues(alpha: fade),
+            colour.withValues(alpha: fade),
+            colour.withValues(alpha: 0.75 * fade),
           ],
-          stops: const [0.0, 0.4, 1.0],
-        ).createShader(span(0.5)),
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Rect.fromCircle(center: Offset.zero, radius: radius)),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
-        ..color = Colors.white.withValues(alpha: 0.5 * fade),
+        ..strokeWidth = 1.4
+        ..color = Colors.white.withValues(alpha: 0.55 * fade),
     );
   }
 
