@@ -33,10 +33,39 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
 - **Şerit yok.** Notalar ekranın herhangi bir yerinden gelir, konumu perdeden
   türetilir. (Önce 4 şeritli bir düzen yapıldı, oyuncu "Magic piano'da şerit
   yok" diyerek reddetti.)
-- **Renk = akorun kaç nota olduğu.** Tekli mor, ikili sarı, üçlü mavi, dörtlü
-  yeşil. Perdeye göre renk **yok**. `Tap.voices` bunu tutar ve dokunuş değil
-  **nota** sayar; yani kolay modda akor tek parmakla basılsa bile üçlü akor
-  mavi görünür.
+- **Renk = perde. Akorun kaç nota olduğu banda taşındı.** (Bu karar
+  **değişti**; eskiden renk akor büyüklüğünü söylüyordu ve perdeye göre
+  renklendirme "reddedilenler" listesindeydi. Oyuncu geri getirdi: *"her
+  notayı farklı renk yapsak nasıl olur, görsel açıdan çeşitlilik katar mı."*)
+
+  - **Ton = perde**, kromatik sırada, yarım ses başına 30°
+    (`AppTheme.pitchColor`).
+  - **Parlaklık = oktav**: aynı nota pes oktavda koyu ve dolgun, tiz oktavda
+    açık ve parlak. Kütüphanenin gerçek aralığı MIDI 29-100.
+  - **Akor büyüklüğü** artık notaların arkasındaki **bandın** rengi: sarı
+    ikili, mavi üçlü, yeşil dörtlü. Bant yoksa tek nota demektir. Bilgi
+    kaybolmadı, yer değiştirdi.
+
+  **Beşliler çemberi denendi ve geri alındı — tekrar önermeyin.** İlk öneri
+  oydu (oyunun zemini de o çemberi kullanıyor, tutarlı olurdu). Ama render
+  gösterdi ki **bir tonun notaları o çemberde yan yana durur**: Für Elise
+  baştan aşağı yeşil, Kanon yeşil-sarı çıktı. Yani istenen çeşitliliği tam
+  olarak öldürüyor. Kromatikte bir tonun notaları çarkın her yerine dağılıyor.
+
+  Kromatiğe karşı endişe şuydu: ekranda yer perdeden geldiği için yan yana
+  duran notalar komşu tonlarda olur. Pratikte olmuyor — yan yana duran şey
+  genelde bir gam basamağı, yani bir tam ses, yani 60°: kırmızıya karşı sarı.
+  Yalnız yarım sesler yakın, onlar da yan yana pek durmuyor.
+  `test/song_ground_test.dart` ikisini de kilitliyor.
+
+  **Siyah tuş ayrı bir şey değil.** Piyanonun imalat düzeni, müziğin yazımı
+  değil: Gnossienne fa minör, yani si♭ mi♭ la♭ re♭ parçanın normal notaları ve
+  hepsi siyah tuş. On ikisi de eşit.
+
+  **Zemin geri çekildi** (`song_ground.dart`, `_held` = 0.4). Zemin de tondan
+  ve aynı çemberden renkleniyordu, yani parçanın notaları zeminin rengine
+  düşüp kayboluyordu — Für Elise yeşil zeminde yeşil notalardı. Ton duruyor
+  ama artık bir ipucu kadar; renk notaların işi.
 - **Akorun her notası ayrı çizilir.** Tek parmakla basılsa bile üç nota üç
   daire olarak görünür (`Tap.noteAcross`), arkalarında onları birleştiren bir
   şerit/bant vardır.
@@ -544,7 +573,6 @@ Oynanış:
 - "Yelpaze" düzeni — oyuncunun gönderdiği ekran görüntüsündeki arka plan
   süsünden yanlışlıkla türetilmişti.
 - Notaların arkasındaki dikey izler (hold trail çizgileri).
-- Perdeye göre renklendirme.
 
 Teknik:
 
@@ -1046,7 +1074,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 427 test geçiyor
+flutter test        # 432 test geçiyor
 ```
 
 ## Cihazsız doğrulama

@@ -74,11 +74,24 @@ Ground groundOf(Song song) {
   // same, and this is the direction every listener already expects.
   final lift = song.notes.isEmpty ? 0.0 : _pace(song);
   return Ground(
-    top: _lit(hue, key.minor ? 0.46 : 0.38, 0.0130 + lift * 0.0022),
-    bottom: _lit(hue, 0.5, 0.0032),
-    glow: _lit(hue, key.minor ? 0.58 : 0.66, 0.2000 + lift * 0.0450),
+    top: _lit(hue, (key.minor ? 0.46 : 0.38) * _held, 0.0130 + lift * 0.0022),
+    bottom: _lit(hue, 0.5 * _held, 0.0032),
+    glow: _lit(hue, (key.minor ? 0.58 : 0.66) * _held, 0.2000 + lift * 0.0450),
   );
 }
+
+/// How much of the ground's colour is actually let through.
+///
+/// The notes are coloured by pitch now, and by the same circle of fifths the
+/// ground is built on — so a piece's own notes landed on very nearly the
+/// ground's own hue and disappeared into it. Für Elise was green notes on a
+/// green field.
+///
+/// The hue stays, because which piece you are in should still be something
+/// you can see; it is only held back, to a tint. The colour of the playfield
+/// belongs to the notes now, and the piece still says which key it is in —
+/// through the notes it is written from.
+const double _held = 0.4;
 
 /// A colour of this hue and saturation, taken down to a given weight on the
 /// screen.

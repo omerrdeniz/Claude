@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/music/song.dart';
@@ -72,5 +73,54 @@ void main() {
         id: 'empty', title: '', composer: '', bpm: 120, notes: const <Note>[]);
     expect(keyOf(empty), isNull);
     expect(groundOf(empty), AppTheme.defaultGround);
+  });
+
+  group('a note is coloured by which note it is', () {
+    HSLColor hsl(int midi) => HSLColor.fromColor(AppTheme.pitchColor(midi));
+
+    test('twelve notes, twelve hues', () {
+      final hues = {for (var midi = 60; midi < 72; midi++) hsl(midi).hue};
+      expect(hues, hasLength(12));
+    });
+
+    test('the same note is the same hue in every octave', () {
+      // Within a degree: the colour goes out through eight-bit channels and
+      // comes back, so the hue that returns is never exactly the one asked
+      // for. A degree is far below anything an eye can pick out.
+      for (var pitch = 0; pitch < 12; pitch++) {
+        final low = hsl(36 + pitch).hue;
+        for (final octave in [48, 60, 72, 84]) {
+          expect(hsl(octave + pitch).hue, closeTo(low, 1.0));
+        }
+      }
+    });
+
+    test('and it is lighter the higher it is', () {
+      var last = -1.0;
+      for (var midi = 29; midi <= 100; midi += 12) {
+        final light = hsl(midi).lightness;
+        expect(light, greaterThan(last));
+        last = light;
+      }
+    });
+
+    test('a key does not come out in one colour', () {
+      // What sent the circle of fifths back: a key's notes are neighbours on
+      // it, so every piece was one colour family. A minor's own notes have to
+      // land right round the wheel, not in one corner of it.
+      const aMinor = [69, 71, 72, 74, 76, 77, 79]; // A B C D E F G
+      final hues = aMinor.map((m) => hsl(m).hue).toList()..sort();
+      final spread = hues.last - hues.first;
+      expect(spread, greaterThan(180),
+          reason: 'a piece should not be one colour');
+    });
+
+    test('neighbouring steps of a scale are told apart', () {
+      // The worry about going chromatic. A whole tone is sixty degrees.
+      for (final pair in [(60, 62), (62, 64), (65, 67), (67, 69)]) {
+        final apart = (hsl(pair.$1).hue - hsl(pair.$2).hue).abs();
+        expect(apart, greaterThan(55.0));
+      }
+    });
   });
 }

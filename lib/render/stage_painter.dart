@@ -405,6 +405,10 @@ class StagePainter extends CustomPainter {
         // there is what happened to it. Only what nobody caught goes on
         // falling, which is how the screen says which is which.
         if (dot.isPlayed && head > 1) continue;
+        // Each note in its own colour: which note it is, and how high.
+        // The band behind a chord keeps the old one, which is the other half
+        // of what the player has to read — see [_paintChordBand].
+        final ink = AppTheme.pitchColor(dot.midi);
         if (dot.isHold) {
           _paintHoldBar(
             canvas,
@@ -413,11 +417,11 @@ class StagePainter extends CustomPainter {
             head,
             StageGeometry.progressFor(dot.endBeat - beat, windowInBeats),
             radius,
-            colour,
+            ink,
             fade,
           );
         }
-        _paintNote(canvas, g, dot.across, head, radius, tap.voices, fade);
+        _paintNote(canvas, g, dot.across, head, radius, ink, fade);
       }
     }
 
@@ -699,9 +703,9 @@ class StagePainter extends CustomPainter {
   static const double _graceRadius = 0.42;
 
   void _paintNote(Canvas canvas, StageGeometry g, double across,
-      double progress, double radius, int voices, double fade) {
+      double progress, double radius, Color colour, double fade) {
     final centre = g.positionAtPosition(across, progress);
-    final brush = _Brushes.forNote(voices, fade, radius);
+    final brush = _Brushes.forNote(colour, fade, radius);
 
     // The brushes are baked around the origin so they can be reused, so the
     // canvas is moved to the note rather than the note to the canvas.
@@ -752,21 +756,24 @@ class _Brushes {
 
   static const int _fadeSteps = 32;
 
-  /// One entry per (voices, fade step). Cleared when the note size changes,
+  /// One entry per (colour, fade step). Cleared when the note size changes,
   /// which happens only when the screen does.
+  ///
+  /// There used to be four colours and so at most a hundred and thirty
+  /// entries. Notes are coloured by pitch now, so it is one per note of the
+  /// piece per step of fading — built as they are first needed, and a piece
+  /// only ever uses the notes it is written from.
   static final Map<int, _Brushes> _cache = {};
   static double _cachedRadius = -1;
 
-  static _Brushes forNote(int voices, double fade, double radius) {
+  static _Brushes forNote(Color colour, double fade, double radius) {
     if (radius != _cachedRadius) {
       _cache.clear();
       _cachedRadius = radius;
     }
-    final colours = AppTheme.chordColors.length;
-    final index = (voices - 1).clamp(0, colours - 1);
     final step = (fade * _fadeSteps).round().clamp(0, _fadeSteps);
-    return _cache[index * (_fadeSteps + 1) + step] ??=
-        _build(AppTheme.chordColors[index], step / _fadeSteps, radius);
+    return _cache[Object.hash(colour.toARGB32(), step)] ??=
+        _build(colour, step / _fadeSteps, radius);
   }
 
   static _Brushes _build(Color colour, double fade, double radius) {

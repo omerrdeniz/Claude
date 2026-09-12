@@ -38,6 +38,51 @@ abstract final class AppTheme {
   static Color chordColor(int fingers) =>
       chordColors[(fingers - 1).clamp(0, chordColors.length - 1)];
 
+  /// A note's own colour: which note it is as hue, how high it is as light.
+  ///
+  /// **Straight round the chromatic scale**, a semitone every thirty degrees.
+  /// The circle of fifths was tried first and was wrong for this, which only
+  /// a picture showed: the notes of a key sit *next to each other* on that
+  /// circle, so every piece came out in one colour family — Für Elise all
+  /// green, the canon all green and yellow. The variety this is for was
+  /// exactly what it removed. Chromatically, a key's notes are spread right
+  /// round the wheel.
+  ///
+  /// The worry about going chromatic was that place on this screen comes from
+  /// pitch, so notes sitting side by side would be neighbouring hues. In
+  /// practice they are not: side by side is usually a step of the scale, a
+  /// whole tone, which is sixty degrees — red against yellow. Only semitones
+  /// are close, and they rarely stand together.
+  ///
+  /// **The black keys are not a category.** They are how a keyboard is built,
+  /// not how music is written: the first Gnossienne is in F minor, where B♭,
+  /// E♭, A♭ and D♭ are the ordinary notes of the piece and every one of them
+  /// is a black key. So all twelve are treated alike.
+  ///
+  /// **The octave is the light.** The same note is deep and dark low down,
+  /// pale and bright high up, over the range this library actually uses
+  /// (MIDI 29 to 100, a little under six octaves).
+  ///
+  /// The ground had to give way for this — see [groundOf]. It is coloured
+  /// from the key, and the notes of that key landed on its own hue and
+  /// vanished into it, so its colour is now held back to a tint.
+  static Color pitchColor(int midi) {
+    final height = ((midi - _lowestLit) / (_highestLit - _lowestLit))
+        .clamp(0.0, 1.0);
+    return HSLColor.fromAHSL(
+      1,
+      midi % 12 * 30.0,
+      _pitchSaturation,
+      _darkestPitch + (_lightestPitch - _darkestPitch) * height,
+    ).toColor();
+  }
+
+  static const int _lowestLit = 29;
+  static const int _highestLit = 100;
+  static const double _pitchSaturation = 0.68;
+  static const double _darkestPitch = 0.44;
+  static const double _lightestPitch = 0.78;
+
   /// Kept for the keyboard's key highlight and other accents.
   static const List<Color> beamColors = chordColors;
 
