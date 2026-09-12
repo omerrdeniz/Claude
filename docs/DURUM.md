@@ -40,8 +40,18 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
 
   - **Ton = perde**, kromatik sırada, yarım ses başına 30°
     (`AppTheme.pitchColor`).
-  - **Parlaklık = oktav**: aynı nota pes oktavda koyu ve dolgun, tiz oktavda
-    açık ve parlak. Kütüphanenin gerçek aralığı MIDI 29-100.
+  - **Oktav = parlaklık *ve* doygunluk**, üstelik **parçanın kendi aralığına
+    göre**. İlk hâli kütüphanenin tamamına (MIDI 29-100, altı oktav) yayıyordu
+    ve bir oktav 6 puanlık parlaklık farkı ediyordu — kural vardı, görünmüyordu.
+    Oyuncu ilk bakışta yakaladı: Gnossienne do4-fa4-do5 ile açılıyor ve bir
+    oktav arayla duran iki *do* aynı kırmızı çıkıyordu. Bir parça iki-üç oktav
+    kullanır, yani kendi aralığına ölçünce bir oktav ölçeğin üçte biri olur.
+    Ekrandaki yer de zaten elin kendi aralığından hesaplanıyor, aynı sebeple.
+
+    Parlaklık tek başına taşıyamadı: altı oktavı ayıracak kadar koyulaşmak alt
+    uçtaki notaları zemine gömüyor. O yüzden oktav doygunluğu da taşıyor —
+    pesler dolgun, tizler soluk — ve ikisi birlikte, ikisi de uca gitmeden
+    söylüyor.
   - **Akor büyüklüğü** artık notaların arkasındaki **bandın** rengi: sarı
     ikili, mavi üçlü, yeşil dörtlü. Bant yoksa tek nota demektir. Bilgi
     kaybolmadı, yer değiştirdi.
@@ -1074,7 +1084,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 432 test geçiyor
+flutter test        # 433 test geçiyor
 ```
 
 ## Cihazsız doğrulama

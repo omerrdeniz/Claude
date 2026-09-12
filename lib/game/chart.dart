@@ -204,6 +204,12 @@ class Chart {
   final Song song;
   final Difficulty difficulty;
 
+  /// The lowest and highest note in the piece, worked out once.
+  ///
+  /// The painter colours every note against it and would otherwise ask the
+  /// song to count its own notes on every frame.
+  late final (int, int) pitchRange = song.pitchRange;
+
   /// What the player plays, in time order.
   final List<Tap> taps;
 

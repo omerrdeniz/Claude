@@ -59,29 +59,41 @@ abstract final class AppTheme {
   /// E♭, A♭ and D♭ are the ordinary notes of the piece and every one of them
   /// is a black key. So all twelve are treated alike.
   ///
-  /// **The octave is the light.** The same note is deep and dark low down,
-  /// pale and bright high up, over the range this library actually uses
-  /// (MIDI 29 to 100, a little under six octaves).
+  /// **The octave is the light and the weight.** The same note is deep, dark
+  /// and heavy low down, pale and bright high up.
   ///
-  /// The ground had to give way for this — see [groundOf]. It is coloured
+  /// **Across this piece's own range, not the whole piano's.** The library
+  /// spans nearly six octaves, and spread over that, one octave came to six
+  /// points of lightness — the rule was there and nobody could see it. The
+  /// player found it at once: the Gnossienne opens on C4-F4-C5, and the two
+  /// C's, an octave apart, came out the same red. A piece uses two or three
+  /// octaves, so measured against its own range an octave is a third of the
+  /// scale and plainly visible. Where a note sits across the screen is
+  /// already worked out from the hand's own range, for the same reason.
+  ///
+  /// Lightness alone could not carry it: going dark enough to separate six
+  /// octaves puts the bottom notes into the background. So the octave moves
+  /// saturation too — low notes deep and full, high notes pale — and the two
+  /// together say it without either going to an extreme.
+  ///
+  /// The ground had to give way for all this — see [groundOf]. It is coloured
   /// from the key, and the notes of that key landed on its own hue and
   /// vanished into it, so its colour is now held back to a tint.
-  static Color pitchColor(int midi) {
-    final height = ((midi - _lowestLit) / (_highestLit - _lowestLit))
-        .clamp(0.0, 1.0);
+  static Color pitchColor(int midi, {required int low, required int high}) {
+    final span = high - low;
+    final height = span <= 0 ? 0.5 : ((midi - low) / span).clamp(0.0, 1.0);
     return HSLColor.fromAHSL(
       1,
       midi % 12 * 30.0,
-      _pitchSaturation,
+      _deepest + (_palest - _deepest) * height,
       _darkestPitch + (_lightestPitch - _darkestPitch) * height,
     ).toColor();
   }
 
-  static const int _lowestLit = 29;
-  static const int _highestLit = 100;
-  static const double _pitchSaturation = 0.68;
-  static const double _darkestPitch = 0.44;
-  static const double _lightestPitch = 0.78;
+  static const double _deepest = 0.92;
+  static const double _palest = 0.42;
+  static const double _darkestPitch = 0.28;
+  static const double _lightestPitch = 0.86;
 
   /// Kept for the keyboard's key highlight and other accents.
   static const List<Color> beamColors = chordColors;

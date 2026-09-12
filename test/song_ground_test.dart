@@ -76,7 +76,9 @@ void main() {
   });
 
   group('a note is coloured by which note it is', () {
-    HSLColor hsl(int midi) => HSLColor.fromColor(AppTheme.pitchColor(midi));
+    // A piece of a little over four octaves, as the Gnossienne is.
+    HSLColor hsl(int midi) =>
+        HSLColor.fromColor(AppTheme.pitchColor(midi, low: 34, high: 83));
 
     test('twelve notes, twelve hues', () {
       final hues = {for (var midi = 60; midi < 72; midi++) hsl(midi).hue};
@@ -97,11 +99,24 @@ void main() {
 
     test('and it is lighter the higher it is', () {
       var last = -1.0;
-      for (var midi = 29; midi <= 100; midi += 12) {
+      for (var midi = 34; midi <= 83; midi += 12) {
         final light = hsl(midi).lightness;
         expect(light, greaterThan(last));
         last = light;
       }
+    });
+
+    test('one octave of it is a difference the eye can find', () {
+      // What the player caught: the Gnossienne opens on C4-F4-C5 and the two
+      // C's came out the same red, because an octave was six points of
+      // lightness out of a range six octaves wide. Measured against the
+      // piece's own range, and with the weight of the colour moving too, an
+      // octave has to be plain.
+      final low = hsl(60), high = hsl(72);
+      expect(low.hue, closeTo(high.hue, 1.0), reason: 'the same note');
+      expect(high.lightness - low.lightness, greaterThan(0.1));
+      expect(low.saturation - high.saturation, greaterThan(0.08),
+          reason: 'the low one is the fuller colour');
     });
 
     test('a key does not come out in one colour', () {

@@ -408,7 +408,8 @@ class StagePainter extends CustomPainter {
         // Each note in its own colour: which note it is, and how high.
         // The band behind a chord keeps the old one, which is the other half
         // of what the player has to read — see [_paintChordBand].
-        final ink = AppTheme.pitchColor(dot.midi);
+        final (low, high) = chart.pitchRange;
+        final ink = AppTheme.pitchColor(dot.midi, low: low, high: high);
         if (dot.isHold) {
           _paintHoldBar(
             canvas,
