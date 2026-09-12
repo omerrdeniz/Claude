@@ -24,6 +24,66 @@ void main() {
     }
   }
 
+  group('an ornament is earned by staying on it', () {
+    // One ornamented note with the hand free afterwards, so the whole of the
+    // hold is the player's to give.
+    final ornamented = Song(
+      id: 't',
+      title: 'T',
+      composer: '',
+      bpm: 100,
+      notes: [
+        Note(beat: 1.895, midi: 72, duration: 0.105, hand: Hand.right),
+        Note(beat: 2.0, midi: 71, duration: 1.75, hand: Hand.right),
+      ],
+    );
+
+    /// Play the note, keeping the finger down for [ms], and give back the
+    /// score. Written through the screen on purpose: the session was right
+    /// about all of this while the screen was still throwing it away, and
+    /// only a test that presses a real finger could tell.
+    Future<int> scoreAfterHolding(WidgetTester tester, int ms,
+        {required int run}) async {
+      await tester.pumpWidget(MaterialApp(
+          home: PlayScreen(
+              // A fresh key, or the framework keeps the old State — and with
+              // it a song that has already finished.
+              key: ValueKey(run),
+              song: ornamented,
+              settings: const PlaySettings())));
+      // Bring the note to the line: two beats at 100, after the lead-in.
+      await play(tester, const Duration(milliseconds: 3100), frames: 60);
+
+      final stage = tester.getRect(find.byType(PlayScreen));
+      final target =
+          Chart.build(ornamented).taps.firstWhere((t) => t.hasGrace);
+      final finger = await tester.startGesture(
+          Offset(stage.left + stage.width * target.across, stage.center.dy));
+      await play(tester, Duration(milliseconds: ms), frames: 8);
+      await finger.up();
+      await play(tester, const Duration(milliseconds: 400), frames: 8);
+      return scoreOf(tester);
+    }
+
+    testWidgets('a press and a release is not staying', (tester) async {
+      final quick = await scoreAfterHolding(tester, 120, run: 1);
+      final stayed = await scoreAfterHolding(tester, 1000, run: 2);
+      expect(quick, greaterThan(0), reason: 'the note itself still scores');
+      expect(stayed, greaterThan(quick),
+          reason: 'staying on it is what earns the ornament');
+    });
+
+    testWidgets('and neither is most of a tap', (tester) async {
+      // Three tenths of a second was the first threshold and it was too
+      // short: a hand resting in time with a slow piece stays about that
+      // long, so a press and a stay came out the same. The note itself is
+      // asked for most of its own length now.
+      final resting = await scoreAfterHolding(tester, 500, run: 3);
+      final stayed = await scoreAfterHolding(tester, 1000, run: 4);
+      expect(resting, lessThan(stayed));
+    });
+  });
+
   testWidgets('shows the song being played', (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: PlayScreen(

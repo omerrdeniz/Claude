@@ -553,8 +553,7 @@ class PlaySession {
   /// Called when a finger has stayed on an ornament long enough to earn it.
   void Function(Tap tap)? onCrush;
 
-  /// How long the finger has to stay down to have played the ornament, in
-  /// seconds.
+  /// The longest a finger is ever asked to stay on an ornament, in seconds.
   ///
   /// An acciaccatura is one movement of the hand that *lands* — the weight
   /// goes into the note it leans on and stays there. A finger that touches
@@ -567,7 +566,20 @@ class PlaySession {
   /// was left rewarding a movement that changed nothing anyone could hear.
   /// Staying put is a thing the game *can* watch for, honestly, after the
   /// fact.
-  static const double crushHoldSeconds = 0.3;
+  ///
+  /// A plain three tenths of a second was tried and was too short: tapping in
+  /// time with a slow piece, a hand rests about that long anyway, so a press
+  /// and a stay were the same thing. The player found it at once.
+  static const double crushHoldSeconds = 0.6;
+
+  /// How much of the note's own life the finger has to see out.
+  ///
+  /// Asking for all of it would leave nothing to lift and land the next note
+  /// in; the last sixth is the hand's to move in. Said as a share rather than
+  /// a number because the whole point is that the answer is *this note's*
+  /// length, not a stopwatch: Satie leaves the hand alone for six tenths of a
+  /// second, Handel for a quarter of one.
+  static const double crushHoldShare = 0.85;
 
   /// What holding it is worth, before the combo multiplier.
   ///
@@ -575,14 +587,16 @@ class PlaySession {
   /// timing, and this is not a timing question.
   static const int crushPoints = 50;
 
-  /// How long this touch's finger has to stay, in beats — never longer than
-  /// the hand's own next note, because the music may call it away first.
-  /// Handel's passacaglia leaves a quarter of a second between the two; the
-  /// Gnossienne leaves a full one.
+  /// How long this touch's finger has to stay, in beats.
+  ///
+  /// Most of the note's own life, and never more than [crushHoldSeconds] —
+  /// a note written to ring for three seconds is still let go of after the
+  /// hand has plainly stayed with it.
   double _crushEarnBeats(Tap target) {
-    final wanted = crushHoldSeconds * beatsPerSecond;
     final available = target.drawnEndBeat - target.beat;
-    return available > 0 && available < wanted ? available : wanted;
+    final wanted = available > 0 ? available * crushHoldShare : 0.0;
+    final cap = crushHoldSeconds * beatsPerSecond;
+    return wanted < cap ? wanted : cap;
   }
 
   /// The finger that took an ornament has left. Too early, and it was a tap.

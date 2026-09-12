@@ -94,12 +94,19 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   çalar, **aradaki 63 ms'yi oyun verir** — el değil. Süsleme biraz daha hafif
   vurulur (`_graceWeight` = 0.8); acciaccatura'nın ağırlığı asıl notadadır.
 
-  **Basılı tutma:** notayı tutmak süslemeyi kazandırır
-  (`PlaySession.crushHoldSeconds` = 0.3 sn, 50 puan). Parmak erken kalkarsa
-  kazanılmaz. Süre asla **elin bir sonraki notasından** uzun istenmez:
-  Handel'de el çeyrek saniye sonra çağrılıyor, orada üç onda bir istemek
-  müziğin yasakladığı şeyi istemek olurdu. Gnossienne'de el en az 0.53
-  saniye (ortanca 0.60) boşta, yani rahatça tutuluyor.
+  **Basılı tutma:** notayı tutmak süslemeyi kazandırır (50 puan). Parmak
+  erken kalkarsa kazanılmaz.
+
+  **İstenen süre notanın kendi süresidir**, bir kronometre değil: elin boşta
+  olduğu sürenin %85'i (`crushHoldShare`), en fazla 0.6 saniye
+  (`crushHoldSeconds`). Son altıda bir sonraki notaya hazırlanmak için elde
+  kalıyor. Parçaya göre: Gnossienne 0.45-0.60 sn (ortanca 0.51), Nokturn
+  0.39-0.60, Für Elise 0.35-0.60, Chopin valsi 0.32, Handel 0.03-0.32 —
+  sonuncusunda el hemen çağrıldığı için kısa, ama müziğin izin verdiği bu.
+
+  **Sabit 0.3 saniye denendi ve kısa kaldı.** Oyuncu: *"bas çek yapsam da
+  kabul ediyor."* Yavaş bir parçada tempoyla basarken el zaten o kadar
+  duruyor, yani basış ile tutuş aynı şey oluyordu.
 
   **Toplama değil ekleme:** tutmasan da iki nota çalar ve tam puan alırsın;
   tutmak yalnız üstüne ekler. Puan doğruluğa (`accuracy`) girmez — doğruluk
@@ -154,6 +161,13 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
      iki talep çakışırsa müziğin kastettiği uzun olanıdır.
 
   Tarama düzeltmeden sonra 21 kombinasyonun hepsinde sıfır veriyor.
+
+  **Ekran yolunu ekrandan test edin.** Tutma kuralı birim testlerde geçiyordu
+  ama gerçekten çalıştığını ancak parmak basan bir widget testi gösterebildi
+  (`test/play_screen_test.dart` → "an ornament is earned by staying on it").
+  Bir tuzak da orada çıktı: `pumpWidget` aynı tipte ekranı yeniden kurmuyor,
+  eski `State`'i koruyor — anahtarsız ikinci bir senaryo **bitmiş bir şarkıda**
+  çalışıyor ve sessizce hep aynı sonucu veriyor.
 
   **Yol üstünde bulunan üçüncü hata:** Kolay moddaki seyreltme süslemeyi tutup
   **asıl melodi notasını atıyordu** — çünkü süsleme önce geliyor ve seyreltme
@@ -1015,7 +1029,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 425 test geçiyor
+flutter test        # 427 test geçiyor
 ```
 
 ## Cihazsız doğrulama
