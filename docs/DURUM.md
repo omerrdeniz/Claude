@@ -366,8 +366,18 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
 
   Yani ekranda müziğin kendi sayımını gösteren hiçbir şey yoktu.
   `StagePainter._paintBarLines` her ölçü başına notalarla birlikte inen ince
-  bir çizgi çiziyor. Bilerek **soluk**: müziğin altındaki bir cetvel, okunacak
-  bir şey değil; daha güçlüsü notalarla aynı bakışı paylaşmaya başlıyor.
+  bir çizgi çiziyor. Soluk, ama görülecek kadar: müziğin altındaki bir cetvel,
+  okunacak bir şey değil.
+
+  **Nota yarıçapı kadar yukarıda çiziliyor.** Çizgi ölçünün ilk vuruşunda
+  olduğu için o vuruşun notalarıyla aynı yükseklikteydi — yani notaların
+  ortasından geçiyordu. İlk hâlinde görünmeyecek kadar soluk olduğu için fark
+  edilmiyordu; koyulaşınca nota başlarını kesiyor gibi durdu. Bir yarıçap
+  yukarı alınınca "burada yeni ölçü başlıyor" diyen bir sınır gibi okunuyor.
+
+  Bir ölçü çizgisi **bir sıra notaya değil**, ölçü boyu müziğe karşılık
+  geliyor: iki çizgi arasında Gnossienne'de ~4 sıra nota var, Für Elise'de
+  ~6, Kanon'da ~11.
 
   Ölçü uzunluğu `Song.beatsPerBar`'dan geliyor, yani 12/8 yazılmış Nokturn'e
   dörtlük ölçü çizilmiyor.
