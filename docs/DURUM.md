@@ -48,10 +48,11 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
     kullanır, yani kendi aralığına ölçünce bir oktav ölçeğin üçte biri olur.
     Ekrandaki yer de zaten elin kendi aralığından hesaplanıyor, aynı sebeple.
 
-    Parlaklık tek başına taşıyamadı: altı oktavı ayıracak kadar koyulaşmak alt
-    uçtaki notaları zemine gömüyor. O yüzden oktav doygunluğu da taşıyor —
-    pesler dolgun, tizler soluk — ve ikisi birlikte, ikisi de uca gitmeden
-    söylüyor.
+    **Farkı yalnız parlaklık taşır.** Doygunluk da denendi ve oyuncu geri
+    yolladı: onunla pes bir *do* koyu kırmızı, tiz bir *do* soluk pembe
+    oluyordu — yani iki ayrı renk, oysa kural "aynı renk, iki ayrı ağırlık".
+    Parçanın kendi aralığına ölçülünce parlaklık tek başına yetiyor
+    (Gnossienne'de bir oktav 14 puan).
   - **Akor büyüklüğü** artık notaların arkasındaki **bandın** rengi: sarı
     ikili, mavi üçlü, yeşil dörtlü. Bant yoksa tek nota demektir. Bilgi
     kaybolmadı, yer değiştirdi.
@@ -316,6 +317,24 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   küçülüyordu; oyuncu sabit olmasını istedi. Uzaklık artık yalnız solgunlukla
   anlatılıyor — "ne zaman" demeye çalışan bir resimde bir şeyin daha
   kıpırdaması fazlaydı. `StageGeometry.noteRadius` (artık parametresiz).
+- **Akor kendi oranlarıyla çizilir.** Oyuncu: *"az önceki örnekte iki do
+  arasında baya mesafe var ama 3 top da yan yana duruyor... mevcut alanımız
+  içinde bu üç notayı birbirlerine olan mesafelerine göre konumlandıralım."*
+
+  Sebep ölçüldü: bir el 129 px, bir nota 43 px, yani bir elin bölgesine tam üç
+  nota sığıyor — ve asgari aralık kuralı (49 px) gerçek aralıkların çoğundan
+  büyük. Gnossienne'in açılışında do4→fa4 28 px, fa4→do5 39 px; ikisi de 49'a
+  itiliyordu, yani üçlü ile beşli aynı genişlikte çiziliyordu.
+
+  Artık asgari aralık, notaları tek tek iterek değil **akorun tamamını
+  ortasından gerdirerek** sağlanıyor: en dar çift asgariye ulaşana kadar bütün
+  aralıklar aynı katsayıyla büyüyor, oranlar korunuyor. Aynı akor şimdi 49/69
+  px, yani 5:7. Gerdirme bölgeden taşarsa akor kaydırılıyor; ancak gerçekten
+  sığmıyorsa eski "eşit dağıt" davranışına düşüyor.
+
+  **Sığdırma da düzeltildi:** eskiden yalnız sağdan taşma kaydırılıyordu,
+  soldan taşan akor doğrudan eşit dağıtıma düşüyordu — yani gerdirme ilk
+  denemede kendi kendini iptal ediyordu.
 - **Akorun notaları üst üste binmez.** Yer perdeden geliyor, yakın aralıklı
   bir akor (üçlü, beşli) notaları ekranın yüzde birkaçı içine sıkıştırıyor ve
   tek bir leke gibi çiziliyordu. `StageGeometry.spreadChord` yalnızca
@@ -1084,7 +1103,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 433 test geçiyor
+flutter test        # 434 test geçiyor
 ```
 
 ## Cihazsız doğrulama

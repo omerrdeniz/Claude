@@ -114,9 +114,9 @@ void main() {
       // octave has to be plain.
       final low = hsl(60), high = hsl(72);
       expect(low.hue, closeTo(high.hue, 1.0), reason: 'the same note');
+      expect(low.saturation, closeTo(high.saturation, 0.02),
+          reason: 'and so the same colour — only the light may move');
       expect(high.lightness - low.lightness, greaterThan(0.1));
-      expect(low.saturation - high.saturation, greaterThan(0.08),
-          reason: 'the low one is the fuller colour');
     });
 
     test('a key does not come out in one colour', () {

@@ -63,11 +63,16 @@ class StageGeometry {
   /// Drawn at that spacing they overlapped into one smudge and the player
   /// could not see how many fingers the moment wanted.
   ///
-  /// Only the minimum is enforced. A chord already spread out — an octave, a
-  /// tenth — is left exactly where its pitches put it, so the picture still
-  /// says which note is higher and by how much. Order is never changed, and
-  /// nothing is pushed out of [zoneStart]..[zoneEnd], which is the hand's own
-  /// half of the screen.
+  /// Only the minimum is enforced, and it is enforced by **stretching the
+  /// whole chord**, not by pushing notes apart one at a time. The difference
+  /// is the point: a hand's zone is about three notes wide, so almost every
+  /// interval used to be flattened to the same least gap and a fifth looked
+  /// like a second. Scaling about the middle keeps the ratios — in the
+  /// Gnossienne's opening C4-F4-C5 the two gaps stay five to seven — and a
+  /// chord already spread out is left exactly where its pitches put it.
+  ///
+  /// Order is never changed, and nothing is pushed out of
+  /// [zoneStart]..[zoneEnd], which is the hand's own half of the screen.
   ///
   /// [places] must be sorted. Returns positions in the same order.
   static List<double> spreadChord(
@@ -79,24 +84,52 @@ class StageGeometry {
     if (places.length < 2) return List.of(places);
     final out = List.of(places);
 
+    // Stretch the whole chord about its middle, by whatever the closest pair
+    // needs, so every gap grows by the same factor and the chord keeps its
+    // own shape. Pushing each note out to a fixed least gap instead — which
+    // is what this did — made every interval the same width on screen: a
+    // third and a fifth both came out at the minimum, and the player saw it
+    // ("iki do arasında baya mesafe var ama 3 top da yan yana duruyor").
+    var tightest = double.infinity;
     for (var i = 1; i < out.length; i++) {
-      final least = out[i - 1] + minGap;
-      if (out[i] < least) out[i] = least;
+      final gap = out[i] - out[i - 1];
+      if (gap < tightest) tightest = gap;
     }
-
-    // Pushing right may have run the top note out of the hand's half; bring
-    // the whole chord back rather than let one note stray into the other's.
-    final overflow = out.last - zoneEnd;
-    if (overflow > 0) {
+    if (tightest > 0 && tightest < minGap) {
+      final stretch = minGap / tightest;
+      final middle = (out.first + out.last) / 2;
       for (var i = 0; i < out.length; i++) {
-        out[i] -= overflow;
+        out[i] = middle + (out[i] - middle) * stretch;
+      }
+    } else if (tightest <= 0) {
+      // Two notes in the same place is not a chord with proportions to keep.
+      for (var i = 1; i < out.length; i++) {
+        final least = out[i - 1] + minGap;
+        if (out[i] < least) out[i] = least;
       }
     }
 
-    if (out.first < zoneStart) {
-      // More notes than the zone can hold apart. Share it out evenly: some
-      // overlap is then unavoidable, and even overlap reads better than a
-      // pile at one end.
+    // Stretching may have run the chord out of the hand's half at either end;
+    // slide the whole of it back rather than let one note stray into the
+    // other hand's, and rather than reshape it — a chord that fits keeps its
+    // proportions wherever it has to sit.
+    final over = out.last - zoneEnd;
+    if (over > 0) {
+      for (var i = 0; i < out.length; i++) {
+        out[i] -= over;
+      }
+    }
+    final under = zoneStart - out.first;
+    if (under > 0) {
+      for (var i = 0; i < out.length; i++) {
+        out[i] += under;
+      }
+    }
+
+    if (out.last > zoneEnd) {
+      // Only now is it really too wide: more notes than the zone can hold
+      // apart. Share it out evenly — some overlap is then unavoidable, and
+      // even overlap reads better than a pile at one end.
       final step = (zoneEnd - zoneStart) / (out.length - 1);
       for (var i = 0; i < out.length; i++) {
         out[i] = zoneStart + i * step;

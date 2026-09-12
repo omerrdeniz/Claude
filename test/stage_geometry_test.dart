@@ -201,6 +201,20 @@ void main() {
       }
     });
 
+    test('a chord keeps its own proportions', () {
+      // What the player asked for: "bu üç notayı birbirlerine olan
+      // mesafelerine göre konumlandıralım". The Gnossienne opens on
+      // C4-F4-C5 — five semitones then seven — and both gaps used to come
+      // out at the minimum, so a third looked like a fifth.
+      final out = StageGeometry.spreadChord([0.60, 0.65, 0.72],
+          minGap: 0.12, zoneStart: 0.55, zoneEnd: 0.95);
+      final first = out[1] - out[0], second = out[2] - out[1];
+      expect(second / first, closeTo(0.07 / 0.05, 0.02),
+          reason: 'five to seven, as it is written');
+      expect(first, greaterThanOrEqualTo(0.12 - 1e-9),
+          reason: 'and the closest pair still clears');
+    });
+
     test('a single note is left alone', () {
       expect(spread([0.7]), [0.7]);
       expect(spread([]), isEmpty);

@@ -71,10 +71,11 @@ abstract final class AppTheme {
   /// scale and plainly visible. Where a note sits across the screen is
   /// already worked out from the hand's own range, for the same reason.
   ///
-  /// Lightness alone could not carry it: going dark enough to separate six
-  /// octaves puts the bottom notes into the background. So the octave moves
-  /// saturation too — low notes deep and full, high notes pale — and the two
-  /// together say it without either going to an extreme.
+  /// **Only the light moves.** Saturation was tried as a second channel and
+  /// the player sent it back: with it, a low C read as a deep red and a high
+  /// C as a pale pink — two colours, where the rule is one colour at two
+  /// weights. Measured against the piece's own range the light alone has
+  /// room enough to say it.
   ///
   /// The ground had to give way for all this — see [groundOf]. It is coloured
   /// from the key, and the notes of that key landed on its own hue and
@@ -85,13 +86,12 @@ abstract final class AppTheme {
     return HSLColor.fromAHSL(
       1,
       midi % 12 * 30.0,
-      _deepest + (_palest - _deepest) * height,
+      _pitchSaturation,
       _darkestPitch + (_lightestPitch - _darkestPitch) * height,
     ).toColor();
   }
 
-  static const double _deepest = 0.92;
-  static const double _palest = 0.42;
+  static const double _pitchSaturation = 0.72;
   static const double _darkestPitch = 0.28;
   static const double _lightestPitch = 0.86;
 
