@@ -367,14 +367,17 @@ void main() {
       }
     });
 
-    test('and land on the bar, not beside it', () {
+    test('and sit just over the notes of that bar, not through them', () {
       const g = StageGeometry(size: phone);
       final song = shipped('gnossienne-1');
       const window = 16.0;
-      // Beat 8 is the start of a bar in a piece of four: a line has to be
-      // exactly on the hit line at that moment.
+      // Beat 8 starts a bar in a piece counted in four. Its notes are on the
+      // hit line at that moment; the line belongs a note's radius above them,
+      // so it reads as a boundary rather than cutting the heads in half.
       final lines = barsAt(song, 8.0, window);
-      expect(lines.any((y) => (y - g.hitLineY).abs() < 0.01), isTrue);
+      expect(
+          lines.any((y) => (y - (g.hitLineY - g.noteRadius)).abs() < 0.01),
+          isTrue);
     });
 
     test('a piece counted in twelve gets fewer of them', () {

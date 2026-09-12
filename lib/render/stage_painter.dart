@@ -324,22 +324,33 @@ class StagePainter extends CustomPainter {
     final perBar = chart.song.beatsPerBar.toDouble();
     if (perBar <= 0) return;
 
-    // Everything the screen can show, above the line and below it.
-    final firstVisible = beat - windowInBeats * (1 - g.hitLineFraction) /
-        g.hitLineFraction;
+    // A note's own radius, in beats: the line is drawn that far above the
+    // beat it belongs to, so it passes over the heads of the notes on that
+    // beat rather than through the middle of them. Level with them it cut
+    // them in half, which was tolerable only while the line was too faint to
+    // see.
+    final lift = g.noteRadius / g.hitLineY * windowInBeats;
+
+    // Everything the screen can show, above the line and below it — and one
+    // note further down, since the lift can bring a line back into view.
+    final firstVisible = beat -
+        windowInBeats * (1 - g.hitLineFraction) / g.hitLineFraction -
+        lift;
     final lastVisible = beat + windowInBeats;
 
     final paint = Paint()..strokeWidth = 1;
     for (var bar = (firstVisible / perBar).ceil() * perBar;
         bar <= lastVisible;
         bar += perBar) {
-      final progress = StageGeometry.progressFor(bar - beat, windowInBeats);
+      // Plus the lift, not minus: further from the line is higher up.
+      final progress =
+          StageGeometry.progressFor(bar - beat + lift, windowInBeats);
       final y = g.yAt(progress);
       // Dimmer the further off it is, like the notes, so the top of the
       // screen stays quiet.
       final near = progress.clamp(0.0, 1.0);
       paint.color = Colors.white
-          .withValues(alpha: (0.05 + near * 0.07) * (progress > 1 ? 0.4 : 1));
+          .withValues(alpha: (0.10 + near * 0.12) * (progress > 1 ? 0.4 : 1));
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
