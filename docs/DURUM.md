@@ -108,6 +108,23 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   kabul ediyor."* Yavaş bir parçada tempoyla basarken el zaten o kadar
   duruyor, yani basış ile tutuş aynı şey oluyordu.
 
+  **AÇIK: oyuncu hâlâ "bas çek yapsam da puan veriyor" diyor.** Süre notanın
+  kendi süresine bağlandıktan (v91) sonra da. Kendi tarafımda tutmuyor:
+  ekranda gerçek parmakla basan test 120 ms ve 500 ms'de ödül vermiyor,
+  1000 ms'de veriyor (`test/play_screen_test.dart`). Oyuncu "şimdilik böyle
+  kalsın" dedi, iş park edildi. Bir dahaki turda bakılacak üç iz:
+
+  1. **En olası:** ödül görünmüyor, sadece sayı değişiyor. Notanın kendisi
+     zaten 100 puan veriyor; süsleme 50 ekliyor. Oyuncunun gördüğü şey
+     "puan verdi" — 100 ile 150'yi ayırt etmesinin bir yolu yok. Yani sorun
+     mekanikte değil geri bildirimde olabilir: kazanıldığında ayrı bir şey
+     görünmeli/duyulmalı.
+  2. Telefonda `onPointerUp`/`onPointerCancel` beklendiği gibi gelmiyor
+     olabilir — gelmezse `endCrush` çağrılmıyor ve parmak kalkmış olmasına
+     rağmen ödül veriliyor. Tarayıcıda kaydırma/jest yakalama bunu yapabilir.
+  3. Oyuncunun "bas çek"i gerçekten yarım saniyeden uzun olabilir; ölçmenin
+     yolu, kazanıldığı anı ekranda göstermek (yine 1. madde).
+
   **Toplama değil ekleme:** tutmasan da iki nota çalar ve tam puan alırsın;
   tutmak yalnız üstüne ekler. Puan doğruluğa (`accuracy`) girmez — doğruluk
   zamanlama sorusudur, bu değil.
