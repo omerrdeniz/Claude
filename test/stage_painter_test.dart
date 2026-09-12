@@ -123,9 +123,22 @@ class _Recorder implements Canvas {
   void drawCircle(Offset c, double radius, Paint paint) =>
       circles.add(c + _shift);
 
+  final List<double> lines = [];
+
   @override
   void drawRRect(RRect rrect, Paint paint) =>
       rects.add(rrect.outerRect.shift(_shift));
+
+  @override
+  void drawLine(Offset from, Offset to, Paint paint) {
+    // The bar lines: level, and hairline. The divide between the hands is
+    // upright; the hit line is level too but drawn twice as thick, and a bar
+    // line is allowed to land exactly on it, so thickness is what tells them
+    // apart rather than height.
+    if ((from.dy - to.dy).abs() < 0.01 && paint.strokeWidth < 1.5) {
+      lines.add(from.dy + _shift.dy);
+    }
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
@@ -328,6 +341,50 @@ void main() {
       expect(heads.any((head) => (head - plume).abs() < 0.5), isTrue,
           reason: 'a spark at $plume has no note above it');
     }
+  });
+
+  group('the bar lines', () {
+    /// Every level line the painter drew, top to bottom.
+    List<double> barsAt(Song song, double beat, double window) {
+      final recorder = _Recorder();
+      StagePainter(chart: Chart.build(song), beat: beat, windowInBeats: window)
+          .paint(recorder, phone);
+      return recorder.lines..sort();
+    }
+
+    test('come one to a bar', () {
+      const g = StageGeometry(size: phone);
+      final song = shipped('gnossienne-1'); // four beats to a bar
+      // A wide window, so several are on screen at once and the spacing can
+      // be read from the picture rather than from one line.
+      const window = 16.0;
+      final lines = barsAt(song, 8.0, window);
+      expect(lines.length, greaterThan(2));
+      final step = g.hitLineY * song.beatsPerBar / window;
+      for (var i = 1; i < lines.length; i++) {
+        expect(lines[i] - lines[i - 1], closeTo(step, 0.01),
+            reason: 'the lines are a bar apart, not something else');
+      }
+    });
+
+    test('and land on the bar, not beside it', () {
+      const g = StageGeometry(size: phone);
+      final song = shipped('gnossienne-1');
+      const window = 16.0;
+      // Beat 8 is the start of a bar in a piece of four: a line has to be
+      // exactly on the hit line at that moment.
+      final lines = barsAt(song, 8.0, window);
+      expect(lines.any((y) => (y - g.hitLineY).abs() < 0.01), isTrue);
+    });
+
+    test('a piece counted in twelve gets fewer of them', () {
+      // The nocturne is written in twelve-eight; a line every four beats
+      // would be ruling the music into bars it does not have.
+      final song = shipped('nocturne-op9-no2');
+      expect(song.beatsPerBar, 12);
+      final lines = barsAt(song, 24.0, 16.0);
+      expect(lines, hasLength(lessThan(3)));
+    });
   });
 
   test('an empty window still paints the stage', () {

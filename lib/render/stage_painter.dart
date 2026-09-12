@@ -116,6 +116,7 @@ class StagePainter extends CustomPainter {
 
     _paintBackground(canvas, size, geometry);
     if (chart.separatesHands) _paintHandDivide(canvas, size, geometry);
+    _paintBarLines(canvas, size, geometry);
     _paintHitLine(canvas, size, geometry);
     _paintNotes(canvas, geometry);
     _paintSparks(canvas, geometry);
@@ -307,6 +308,40 @@ class StagePainter extends CustomPainter {
         ..strokeWidth = 2 + heat * 1.5
         ..color = Colors.white.withValues(alpha: 0.75 + flash * 0.25),
     );
+  }
+
+  /// The bar lines, falling with the music.
+  ///
+  /// The screen shows less than a bar in most pieces — a third of one in the
+  /// nocturne, half in the canon, one and a half in Für Elise — so there was
+  /// nothing on it to say where the music's own counting was. A line every
+  /// bar gives the falling notes a frame: it arrives on the beat the bar
+  /// does, and the player can feel a bar coming rather than only a note.
+  ///
+  /// Faint on purpose. It is a ruling under the music, not a thing to read;
+  /// anything stronger competes with the notes for the same glance.
+  void _paintBarLines(Canvas canvas, Size size, StageGeometry g) {
+    final perBar = chart.song.beatsPerBar.toDouble();
+    if (perBar <= 0) return;
+
+    // Everything the screen can show, above the line and below it.
+    final firstVisible = beat - windowInBeats * (1 - g.hitLineFraction) /
+        g.hitLineFraction;
+    final lastVisible = beat + windowInBeats;
+
+    final paint = Paint()..strokeWidth = 1;
+    for (var bar = (firstVisible / perBar).ceil() * perBar;
+        bar <= lastVisible;
+        bar += perBar) {
+      final progress = StageGeometry.progressFor(bar - beat, windowInBeats);
+      final y = g.yAt(progress);
+      // Dimmer the further off it is, like the notes, so the top of the
+      // screen stays quiet.
+      final near = progress.clamp(0.0, 1.0);
+      paint.color = Colors.white
+          .withValues(alpha: (0.05 + near * 0.07) * (progress > 1 ? 0.4 : 1));
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
   }
 
   void _paintNotes(Canvas canvas, StageGeometry g) {

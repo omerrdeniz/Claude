@@ -358,6 +358,19 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   sağ el ayrımı olmalı, yaptığımız oyunun temel mantığı bu."* Dört parçada
   eller 14-19 yarım ses örtüşüyor (Nokturn, Für Elise, Prelüd, Entertainer),
   yani mutlak konumda ekranın aynı bölgesi iki ele birden ait olurdu.
+- **Ölçü çizgileri var.** Oyuncu sordu: ekranda kaç ölçü gösteriyoruz?
+  Cevap parçaya göre değişiyor, çünkü sabit olan ölçü değil **süre**: bir
+  nota 1.9 saniyede iniyor (`approachSeconds`). Ölçüye çevrilince Nokturn'de
+  0.35, Kanon'da 0.44, Gnossienne'de 0.79, Für Elise'de 1.52 ölçü —
+  **hiçbir parçada iki ölçü görünmüyor**, çoğunda bir ölçüden az.
+
+  Yani ekranda müziğin kendi sayımını gösteren hiçbir şey yoktu.
+  `StagePainter._paintBarLines` her ölçü başına notalarla birlikte inen ince
+  bir çizgi çiziyor. Bilerek **soluk**: müziğin altındaki bir cetvel, okunacak
+  bir şey değil; daha güçlüsü notalarla aynı bakışı paylaşmaya başlıyor.
+
+  Ölçü uzunluğu `Song.beatsPerBar`'dan geliyor, yani 12/8 yazılmış Nokturn'e
+  dörtlük ölçü çizilmiyor.
 - **Nota boyutu sabit.** Eskiden yaklaşırken büyüyüp çizgiyi geçince
   küçülüyordu; oyuncu sabit olmasını istedi. Uzaklık artık yalnız solgunlukla
   anlatılıyor — "ne zaman" demeye çalışan bir resimde bir şeyin daha
@@ -1149,7 +1162,7 @@ verir, sorun değil.
 
 ```bash
 flutter analyze     # temiz olmalı
-flutter test        # 434 test geçiyor
+flutter test        # 437 test geçiyor
 ```
 
 ## Cihazsız doğrulama
