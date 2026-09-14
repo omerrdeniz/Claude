@@ -19,8 +19,10 @@ Song shipped(String id) => _read[id] ??= _load(id);
 final Map<String, Song> _read = {};
 
 Song _load(String id) {
-  final info = catalog.firstWhere((info) => info.id == id,
-      orElse: () => throw ArgumentError.value(id, 'id', 'no such song'));
+  final info = catalog.firstWhere(
+    (info) => info.id == id,
+    orElse: () => throw ArgumentError.value(id, 'id', 'no such song'),
+  );
   return ScoreImport.read(File(info.asset).readAsBytesSync(), info);
 }
 

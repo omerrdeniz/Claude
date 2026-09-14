@@ -55,16 +55,24 @@ A2:1 E3:0.5 A3:0.5 | G#2:1
     final song = MidiReader.read(Arrangement.parse(source).toMidi());
     final left = song.notes.where((n) => n.hand == Hand.left);
     final right = song.notes.where((n) => n.hand == Hand.right);
-    expect(left.map((n) => n.midi).reduce((a, b) => a > b ? a : b),
-        lessThan(right.map((n) => n.midi).reduce((a, b) => a < b ? a : b)));
+    expect(
+      left.map((n) => n.midi).reduce((a, b) => a > b ? a : b),
+      lessThan(right.map((n) => n.midi).reduce((a, b) => a < b ? a : b)),
+    );
   });
 
   test('an arrangement missing a hand or a tempo says so', () {
-    expect(() => Arrangement.parse('bpm: 90\n[right]\nC4:1'),
-        throwsA(isA<FormatException>()));
-    expect(() => Arrangement.parse('[right]\nC4:1\n[left]\nC3:1'),
-        throwsA(isA<FormatException>()));
-    expect(() => Arrangement.parse('tempo: 90\n[right]\nC4:1\n[left]\nC3:1'),
-        throwsA(isA<FormatException>()));
+    expect(
+      () => Arrangement.parse('bpm: 90\n[right]\nC4:1'),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => Arrangement.parse('[right]\nC4:1\n[left]\nC3:1'),
+      throwsA(isA<FormatException>()),
+    );
+    expect(
+      () => Arrangement.parse('tempo: 90\n[right]\nC4:1\n[left]\nC3:1'),
+      throwsA(isA<FormatException>()),
+    );
   });
 }

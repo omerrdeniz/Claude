@@ -101,8 +101,10 @@ void main() {
     test('so device plus offset comes back to what was measured', () {
       const device = 73.0;
       final tally = run(lateMs: 155);
-      expect(device + tally.offsetAgainst(device)!,
-          closeTo(tally.measuredMs!, 0.001));
+      expect(
+        device + tally.offsetAgainst(device)!,
+        closeTo(tally.measuredMs!, 0.001),
+      );
     });
 
     test('nothing is offered before there is a measurement', () {

@@ -19,16 +19,18 @@ void main() {
   }
 
   Future<void> pumpPanel(WidgetTester tester, Scoreboard board) async {
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: ResultPanel(
-          scoreboard: board,
-          songTitle: 'Für Elise',
-          onReplay: () {},
-          onBack: () {},
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ResultPanel(
+            scoreboard: board,
+            songTitle: 'Für Elise',
+            onReplay: () {},
+            onBack: () {},
+          ),
         ),
       ),
-    ));
+    );
   }
 
   testWidgets('reports the grade, score and what went wrong', (tester) async {
@@ -48,16 +50,18 @@ void main() {
   testWidgets('offers a replay and a way back', (tester) async {
     var replayed = false;
     var wentBack = false;
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: ResultPanel(
-          scoreboard: boardWith(perfect: 3),
-          songTitle: 'Test',
-          onReplay: () => replayed = true,
-          onBack: () => wentBack = true,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ResultPanel(
+            scoreboard: boardWith(perfect: 3),
+            songTitle: 'Test',
+            onReplay: () => replayed = true,
+            onBack: () => wentBack = true,
+          ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('Tekrar çal'));
     expect(replayed, isTrue);
@@ -65,7 +69,9 @@ void main() {
     expect(wentBack, isTrue);
   });
 
-  testWidgets('a performance with no notes played still renders', (tester) async {
+  testWidgets('a performance with no notes played still renders', (
+    tester,
+  ) async {
     await pumpPanel(tester, Scoreboard());
     expect(find.text('-'), findsOneWidget, reason: 'no grade to give yet');
   });

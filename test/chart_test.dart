@@ -5,17 +5,15 @@ import 'package:piano_flow/music/song.dart';
 
 import 'support/library.dart';
 
-Song songOf(List<Note> notes, {double bpm = 120}) => Song(
-      id: 'test',
-      title: 'Test',
-      composer: '',
-      bpm: bpm,
-      notes: notes,
-    );
+Song songOf(List<Note> notes, {double bpm = 120}) =>
+    Song(id: 'test', title: 'Test', composer: '', bpm: bpm, notes: notes);
 
-Note note(double beat, int midi,
-        {double duration = 0.5, Hand hand = Hand.right}) =>
-    Note(beat: beat, midi: midi, duration: duration, hand: hand);
+Note note(
+  double beat,
+  int midi, {
+  double duration = 0.5,
+  Hand hand = Hand.right,
+}) => Note(beat: beat, midi: midi, duration: duration, hand: hand);
 
 void main() {
   group('what the player is given', () {
@@ -48,14 +46,21 @@ void main() {
     test('hard asks for a finger per note of a chord', () {
       final chart = Chart.build(twoHands, difficulty: Difficulty.hard);
       final atZero = chart.taps.where((t) => t.beat == 0).toList();
-      expect(atZero, hasLength(4), reason: 'three in the left, one in the right');
+      expect(
+        atZero,
+        hasLength(4),
+        reason: 'three in the left, one in the right',
+      );
       expect(atZero.where((t) => t.hand == Hand.left), hasLength(3));
       expect(atZero.every((t) => t.notes.length == 1), isTrue);
     });
 
     test('nothing plays itself once the hands are separated', () {
       for (final difficulty in [Difficulty.normal, Difficulty.hard]) {
-        expect(Chart.build(twoHands, difficulty: difficulty).autoNotes, isEmpty);
+        expect(
+          Chart.build(twoHands, difficulty: difficulty).autoNotes,
+          isEmpty,
+        );
       }
     });
 
@@ -66,10 +71,14 @@ void main() {
           // An ornament is played by the player too — it just rides the touch
           // it decorates rather than being one of its own. Counting it with
           // the touch is what keeps this sum honest.
-          final tapped =
-              chart.taps.expand((t) => [...t.notes, ...t.grace]).length;
-          expect(tapped + chart.autoNotes.length, song.notes.length,
-              reason: '${song.title} on ${difficulty.label}');
+          final tapped = chart.taps
+              .expand((t) => [...t.notes, ...t.grace])
+              .length;
+          expect(
+            tapped + chart.autoNotes.length,
+            song.notes.length,
+            reason: '${song.title} on ${difficulty.label}',
+          );
         }
       }
     });
@@ -88,25 +97,35 @@ void main() {
           ..sort((a, b) => a.beat.compareTo(b.beat));
         for (var i = 1; i < line.length; i++) {
           final gap = (line[i].beat - line[i - 1].beat) * ms;
-          expect(gap, greaterThan(Tap.graceSeconds * 1000),
-              reason: 'two touches ${gap.toStringAsFixed(0)} ms apart at '
-                  'beat ${line[i].beat}');
+          expect(
+            gap,
+            greaterThan(Tap.graceSeconds * 1000),
+            reason:
+                'two touches ${gap.toStringAsFixed(0)} ms apart at '
+                'beat ${line[i].beat}',
+          );
         }
       }
     });
 
     test('and the piece keeps all of them', () {
       final withGrace = gnossienne().taps.where((t) => t.hasGrace);
-      expect(withGrace, hasLength(100),
-          reason: "Satie's first Gnossienne is written with a hundred");
+      expect(
+        withGrace,
+        hasLength(100),
+        reason: "Satie's first Gnossienne is written with a hundred",
+      );
     });
 
     test('it leans from its own pitch', () {
       for (final tap in gnossienne().taps.where((t) => t.hasGrace)) {
         final main = tap.notes.first.midi;
         final grace = tap.grace.first.midi;
-        expect(tap.graceLean, main > grace ? 1 : -1,
-            reason: 'the hand goes towards the note it lands on');
+        expect(
+          tap.graceLean,
+          main > grace ? 1 : -1,
+          reason: 'the hand goes towards the note it lands on',
+        );
       }
     });
 
@@ -115,17 +134,22 @@ void main() {
       // stays. In a run everything is short, so nothing there is one.
       for (final song in shippedSongs) {
         for (final tap in Chart.build(song).taps.where((t) => t.hasGrace)) {
-          expect(tap.duration * 60 / song.bpm,
-              greaterThanOrEqualTo(Tap.graceMainSeconds),
-              reason: '${song.title} at beat ${tap.beat}');
+          expect(
+            tap.duration * 60 / song.bpm,
+            greaterThanOrEqualTo(Tap.graceMainSeconds),
+            reason: '${song.title} at beat ${tap.beat}',
+          );
         }
       }
     });
 
     test('the pieces without them are left alone', () {
       for (final id in ['canon-in-d', 'entertainer', 'prelude-in-c']) {
-        expect(Chart.build(shipped(id)).taps.where((t) => t.hasGrace), isEmpty,
-            reason: '$id has no acciaccatura in its edition');
+        expect(
+          Chart.build(shipped(id)).taps.where((t) => t.hasGrace),
+          isEmpty,
+          reason: '$id has no acciaccatura in its edition',
+        );
       }
     });
   });
@@ -152,8 +176,11 @@ void main() {
     test('a gap is left down the middle', () {
       final chart = Chart.build(spread, difficulty: Difficulty.hard);
       for (final tap in chart.taps) {
-        expect((tap.across - 0.5).abs(), greaterThan(0.04),
-            reason: 'nothing should sit on the divide');
+        expect(
+          (tap.across - 0.5).abs(),
+          greaterThan(0.04),
+          reason: 'nothing should sit on the divide',
+        );
       }
     });
 
@@ -167,17 +194,17 @@ void main() {
     test('on easy the notes use the whole width instead', () {
       // Separate moments, so nothing is merged and the extremes are visible.
       final chart = Chart.build(
-        songOf([
-          note(0, 40, hand: Hand.left),
-          note(1, 84),
-        ]),
+        songOf([note(0, 40, hand: Hand.left), note(1, 84)]),
         difficulty: Difficulty.easy,
       );
       final places = chart.taps.map((t) => t.across).toList()..sort();
       expect(places.first, lessThan(0.15));
       expect(places.last, greaterThan(0.85));
-      expect(places.last - places.first, greaterThan(0.7),
-          reason: 'one zone, so the full width is used');
+      expect(
+        places.last - places.first,
+        greaterThan(0.7),
+        reason: 'one zone, so the full width is used',
+      );
     });
 
     test('notes stay on the screen', () {
@@ -201,8 +228,11 @@ void main() {
     test('a touch knows a place for every note it carries', () {
       for (final difficulty in Difficulty.values) {
         for (final tap in Chart.build(chord, difficulty: difficulty).taps) {
-          expect(tap.noteAcross, hasLength(tap.notes.length),
-              reason: 'on ${difficulty.label}');
+          expect(
+            tap.noteAcross,
+            hasLength(tap.notes.length),
+            reason: 'on ${difficulty.label}',
+          );
         }
       }
     });
@@ -211,11 +241,17 @@ void main() {
       final chart = Chart.build(chord, difficulty: Difficulty.normal);
       final tap = chart.taps.single;
       expect(tap.notes, hasLength(3), reason: 'one touch');
-      expect(tap.noteAcross.toSet(), hasLength(3),
-          reason: 'but three notes to draw, at three pitches');
+      expect(
+        tap.noteAcross.toSet(),
+        hasLength(3),
+        reason: 'but three notes to draw, at three pitches',
+      );
       final sorted = [...tap.noteAcross]..sort();
-      expect(sorted, tap.noteAcross,
-          reason: 'in pitch order, like the notes themselves');
+      expect(
+        sorted,
+        tap.noteAcross,
+        reason: 'in pitch order, like the notes themselves',
+      );
     });
 
     test('the touch sits at the middle of the notes it carries', () {
@@ -242,8 +278,11 @@ void main() {
     test('a hand counts only its own notes', () {
       final chart = Chart.build(chord, difficulty: Difficulty.hard);
       for (final tap in chart.taps) {
-        expect(tap.voices, tap.hand == Hand.left ? 3 : 1,
-            reason: 'the other hand should not inflate the count');
+        expect(
+          tap.voices,
+          tap.hand == Hand.left ? 3 : 1,
+          reason: 'the other hand should not inflate the count',
+        );
       }
     });
 
@@ -252,10 +291,12 @@ void main() {
       // three whether it arrives under one finger or three.
       for (final difficulty in Difficulty.values) {
         final chart = Chart.build(chord, difficulty: difficulty);
-        final left = chart.taps.where((t) =>
-            t.notes.any((n) => n.hand == Hand.left));
-        expect(left.map((t) => t.voices).toSet(), {difficulty == Difficulty.easy ? 4 : 3},
-            reason: 'on ${difficulty.label}');
+        final left = chart.taps.where(
+          (t) => t.notes.any((n) => n.hand == Hand.left),
+        );
+        expect(left.map((t) => t.voices).toSet(), {
+          difficulty == Difficulty.easy ? 4 : 3,
+        }, reason: 'on ${difficulty.label}');
       }
     });
 
@@ -292,25 +333,34 @@ void main() {
       final normal = Chart.build(run, difficulty: Difficulty.normal);
       expect(easy.taps.length, lessThanOrEqualTo(normal.taps.length ~/ 2));
       for (var i = 1; i < easy.taps.length; i++) {
-        expect(easy.taps[i].beat - easy.taps[i - 1].beat,
-            greaterThanOrEqualTo(0.5 - 0.001));
+        expect(
+          easy.taps[i].beat - easy.taps[i - 1].beat,
+          greaterThanOrEqualTo(0.5 - 0.001),
+        );
       }
     });
 
     test('and the rest is played, not dropped', () {
       final easy = Chart.build(run, difficulty: Difficulty.easy);
-      expect(easy.taps.expand((t) => t.notes).length + easy.autoNotes.length, 16);
+      expect(
+        easy.taps.expand((t) => t.notes).length + easy.autoNotes.length,
+        16,
+      );
     });
 
     test('a sparse song is left alone', () {
       final sparse = songOf([note(0, 60), note(1, 62), note(2, 64)]);
-      expect(Chart.build(sparse, difficulty: Difficulty.easy).taps, hasLength(3));
+      expect(
+        Chart.build(sparse, difficulty: Difficulty.easy).taps,
+        hasLength(3),
+      );
     });
   });
 
   group('what is on screen', () {
     final chart = Chart.build(
-        songOf([for (var i = 0; i < 20; i++) note(i.toDouble(), 60 + i)]));
+      songOf([for (var i = 0; i < 20; i++) note(i.toDouble(), 60 + i)]),
+    );
 
     test('only notes inside the look-ahead window are shown', () {
       expect(chart.visibleAt(0, 4).map((t) => t.beat), [0, 1, 2, 3, 4]);
@@ -400,8 +450,7 @@ void main() {
         ]),
         difficulty: Difficulty.normal,
       );
-      expect(runOf(chart).map((t) => t.beat),
-          [0, 0.25, 0.5, 0.75, 1.0, 1.25]);
+      expect(runOf(chart).map((t) => t.beat), [0, 0.25, 0.5, 0.75, 1.0, 1.25]);
     });
 
     test('a chord is a moment, not a hurry', () {
@@ -422,9 +471,13 @@ void main() {
         ]),
         difficulty: Difficulty.normal,
       );
-      expect(runOf(chart), hasLength(6),
-          reason: 'a left-hand note landing inside a right-hand run is not '
-              'part of it and does not interrupt it');
+      expect(
+        runOf(chart),
+        hasLength(6),
+        reason:
+            'a left-hand note landing inside a right-hand run is not '
+            'part of it and does not interrupt it',
+      );
     });
 
     test('the pieces that prompted this have them', () {
@@ -447,8 +500,11 @@ void main() {
           expect(run.length, greaterThanOrEqualTo(Chart.runLength));
           for (var i = 1; i < run.length; i++) {
             final gap = (run[i].beat - run[i - 1].beat) * secondsPerBeat;
-            expect(gap, lessThanOrEqualTo(Chart.runGapSeconds + 1e-9),
-                reason: '${song.title}: a run reaching over a real gap');
+            expect(
+              gap,
+              lessThanOrEqualTo(Chart.runGapSeconds + 1e-9),
+              reason: '${song.title}: a run reaching over a real gap',
+            );
           }
           for (var i = 1; i < run.length; i++) {
             expect(run[i].beat, greaterThan(run[i - 1].beat));
@@ -464,11 +520,10 @@ void main() {
     test('it is a length of time, not a number of beats', () {
       // The same written note, in two pieces at different tempos. A hand
       // knows seconds; it does not know beats.
-      Tap only(double bpm) => Chart
-          .build(songOf([note(0, 60, duration: 1.2)], bpm: bpm),
-              difficulty: Difficulty.normal)
-          .taps
-          .single;
+      Tap only(double bpm) => Chart.build(
+        songOf([note(0, 60, duration: 1.2)], bpm: bpm),
+        difficulty: Difficulty.normal,
+      ).taps.single;
 
       expect(only(40).isHold, isTrue, reason: '1.2 beats at 40 is 1.8 s');
       expect(only(200).isHold, isFalse, reason: '1.2 beats at 200 is 0.36 s');
@@ -481,18 +536,24 @@ void main() {
       // seconds. Nothing in the bass reached it.
       final chart = Chart.build(shipped('canon-in-d'));
       final opening = chart.taps.take(8);
-      expect(opening.every((tap) => tap.isHold), isTrue,
-          reason: 'the ground bass rings for a second a note');
+      expect(
+        opening.every((tap) => tap.isHold),
+        isTrue,
+        reason: 'the ground bass rings for a second a note',
+      );
     });
 
     test('nothing quick is ever asked to be held', () {
       for (final song in shippedSongs) {
         final secondsPerBeat = 60 / song.bpm;
         for (final tap in Chart.build(song).taps.where((t) => t.isHold)) {
-          expect(tap.duration * secondsPerBeat,
-              greaterThanOrEqualTo(Tap.holdSeconds - 1e-9),
-              reason: '${song.title}: a hold of '
-                  '${(tap.duration * secondsPerBeat * 1000).round()} ms');
+          expect(
+            tap.duration * secondsPerBeat,
+            greaterThanOrEqualTo(Tap.holdSeconds - 1e-9),
+            reason:
+                '${song.title}: a hold of '
+                '${(tap.duration * secondsPerBeat * 1000).round()} ms',
+          );
         }
       }
     });
@@ -507,8 +568,11 @@ void main() {
         ]),
         difficulty: Difficulty.normal,
       );
-      expect(chart.taps.first.sustains, isFalse,
-          reason: 'the left hand has its own finger');
+      expect(
+        chart.taps.first.sustains,
+        isFalse,
+        reason: 'the left hand has its own finger',
+      );
     });
 
     test('notes struck together do not', () {
@@ -525,8 +589,11 @@ void main() {
         final chart = Chart.build(shipped(id));
         final holds = chart.taps.where((t) => t.isHold);
         final sustained = holds.where((t) => t.sustains);
-        expect(sustained.length, greaterThan(holds.length ~/ 3),
-            reason: '$id: ${sustained.length} of ${holds.length}');
+        expect(
+          sustained.length,
+          greaterThan(holds.length ~/ 3),
+          reason: '$id: ${sustained.length} of ${holds.length}',
+        );
       }
     });
   });
@@ -540,9 +607,7 @@ void main() {
 
   test('the accompaniment can be read back for a stretch of the song', () {
     final chart = Chart.build(
-      songOf([
-        for (var i = 0; i < 8; i++) note(i * 0.25, 60 + i),
-      ]),
+      songOf([for (var i = 0; i < 8; i++) note(i * 0.25, 60 + i)]),
       difficulty: Difficulty.easy,
     );
     expect(chart.accompanimentBetween(0, 1), isNotEmpty);

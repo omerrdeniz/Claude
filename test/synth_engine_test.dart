@@ -162,12 +162,18 @@ void main() {
     test('and it falls away by the octave above it', () {
       expect(SynthEngine.trebleGain(96), closeTo(0.5, 0.01), reason: 'C7');
       expect(SynthEngine.trebleGain(90), lessThan(1.0));
-      expect(SynthEngine.trebleGain(90), greaterThan(SynthEngine.trebleGain(96)));
+      expect(
+        SynthEngine.trebleGain(90),
+        greaterThan(SynthEngine.trebleGain(96)),
+      );
     });
 
     test('but never all the way to nothing', () {
-      expect(SynthEngine.trebleGain(108), greaterThan(0.25),
-          reason: 'the top of the keyboard still has to sound struck');
+      expect(
+        SynthEngine.trebleGain(108),
+        greaterThan(0.25),
+        reason: 'the top of the keyboard still has to sound struck',
+      );
     });
 
     test('a high note really is quieter than a middle one', () {

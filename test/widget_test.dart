@@ -32,7 +32,10 @@ void main() {
     await tester.pumpWidget(const PianoFlowApp());
     await tester.pumpAndSettle();
 
-    expect(find.text(first), findsOneWidget,
-        reason: 'the first song has to be visible when the screen opens');
+    expect(
+      find.text(first),
+      findsOneWidget,
+      reason: 'the first song has to be visible when the screen opens',
+    );
   });
 }

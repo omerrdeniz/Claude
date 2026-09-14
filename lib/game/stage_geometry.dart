@@ -188,13 +188,10 @@ class StageGeometry {
     return tailY + (span < room * 2 ? span / 2 : room);
   }
 
-  /// Whether a tail reaching [length] pixels behind its head is worth drawing
-  /// as a hold at all.
+  /// Whether a tail lasting [seconds] is worth drawing as a hold at all.
   ///
-  /// Asked of the tail at its longest — before the head reaches the line,
-  /// where the gap between head and tail is the whole of it. Under this a
-  /// touch is drawn as an ordinary note: it flows past the line and leaves,
-  /// with no bar and no pause.
+  /// Under this a touch is drawn as an ordinary note: it flows past the line
+  /// and leaves, with no bar and no pause.
   ///
   /// Sounding long and *being drawn* long are not the same thing, and this is
   /// the second. A note's bar is drawn only as far as the next thing its hand
@@ -205,33 +202,30 @@ class StageGeometry {
   /// in Satie's first Gnossienne. The sound is untouched: it still rings its
   /// written length, and a hand forced off it still keeps it (see
   /// [Tap.sustains]).
-  static bool holdReadsAsBar(double length, double radius) =>
-      length >= (holdBarClearance + holdBarLeast) * radius;
+  ///
+  /// **In seconds, and that took two goes to get right.** It was in pixels,
+  /// on the reasoning that a note takes a fixed 1.9 seconds to come down the
+  /// screen, so a length on the screen *is* a length of time. That is true of
+  /// one screen. The note is sized from the width and the line sits at 68% of
+  /// the height, so the same rule came to 0.30 seconds at 390×844 and 0.34 in
+  /// a browser with its toolbars showing — and the player, told the cut was
+  /// at three tenths, was looking at a phone where it was not. A stay the
+  /// hand has no time to make is a fact about the music and the player's
+  /// hand. It has nothing to do with how tall the window is.
+  static bool holdReadsAsBar(double seconds) => seconds >= holdLeastSeconds;
+
+  /// The shortest stay worth asking for, in seconds.
+  ///
+  /// Three tenths of a second, which is the player's own number: Satie's
+  /// first Gnossienne has fourteen touches whose tails are exactly that, and
+  /// looking at them they asked for them kept.
+  static const double holdLeastSeconds = 0.3;
 
   /// How much room the bar leaves for the next note, in note radii.
   static const double holdBarClearance = 1.6;
 
   /// Half the bar's thickness, in note radii.
   static const double holdBarWidth = 0.72;
-
-  /// The shortest bar a touch can be *given*, in note radii — part of what
-  /// [holdReadsAsBar] asks of a tail before the touch is drawn as a hold at
-  /// all. Not a floor on the bar as it shrinks: a bar that is running out is
-  /// telling the player how much of the hold is left, and there is no length
-  /// at which that stops being worth saying.
-  ///
-  /// Comfortably longer than the bar is thick — a bar wider than it is long
-  /// is a lump behind the note rather than a line leading away from it, and
-  /// reads as neither a hold nor a tap. It was exactly four times the
-  /// thickness until the player asked for the cut at three tenths of a
-  /// second; with the clearance it now comes to 4.2 radii, which on a phone
-  /// is 0.30 seconds of tail.
-  ///
-  /// Why that number and not a rounder one: Satie's first Gnossienne has
-  /// fourteen touches whose tails are three tenths of a second exactly, and
-  /// they sat eighteen milliseconds under the old cut. The player, looking
-  /// at them, asked for them back.
-  static const double holdBarLeast = 2.6;
 
   /// Where a note's head is drawn, given how far along it is.
   ///

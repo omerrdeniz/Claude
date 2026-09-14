@@ -322,19 +322,28 @@ void main() {
 
   group('a tail too short to be worth calling a hold', () {
     const radius = 20.0;
-    bool reads(double length) => StageGeometry.holdReadsAsBar(length, radius);
+    bool reads(double seconds) => StageGeometry.holdReadsAsBar(seconds);
 
     test('a long tail is a hold', () {
-      expect(reads(400), isTrue);
+      expect(reads(2.0), isTrue);
     });
 
     test('a short one is just a note', () {
       expect(
-        reads(radius),
+        reads(0.2),
         isFalse,
-        reason: 'a tail no longer than the note is wide says nothing',
+        reason: 'a fifth of a second is not a stay anybody can make',
       );
       expect(reads(0), isFalse);
+    });
+
+    test('the cut is exactly where it says it is', () {
+      // It used to be in pixels, so the number it came to depended on the
+      // shape of the window — 0.30 seconds tall and 0.34 in a browser with
+      // its toolbars showing. What that costs is in stage_painter_test:
+      // 'a short stay is the same stay on every screen'.
+      expect(reads(StageGeometry.holdLeastSeconds), isTrue);
+      expect(reads(StageGeometry.holdLeastSeconds - 0.001), isFalse);
     });
 
     test('the cut is made once, of the whole tail', () {
@@ -352,10 +361,10 @@ void main() {
       }
     });
 
-    // A phone, the song at its written speed, and the 1.9 seconds a note
-    // takes to come down the screen — PlaySession.approachSeconds.
-    double tailPixels(Tap tap, double bpm) =>
-        (tap.drawnEndBeat - tap.beat) / (1.9 * bpm / 60) * g.hitLineY;
+    /// How long a touch asks the hand to stay, in seconds, at the song's
+    /// written speed.
+    double tailSeconds(Tap tap, double bpm) =>
+        (tap.drawnEndBeat - tap.beat) / (bpm / 60);
 
     List<Tap> quiet(String id) {
       final song = shipped(id);
@@ -364,10 +373,7 @@ void main() {
           .where(
             (t) =>
                 t.isHold &&
-                !StageGeometry.holdReadsAsBar(
-                  tailPixels(t, song.bpm),
-                  g.noteRadius,
-                ),
+                !StageGeometry.holdReadsAsBar(tailSeconds(t, song.bpm)),
           )
           .toList();
     }
@@ -408,13 +414,15 @@ void main() {
     });
 
     test('the bar it lets through is longer than it is thick', () {
-      final least =
-          (StageGeometry.holdBarClearance + StageGeometry.holdBarLeast) *
-          radius;
-      final bar = least - StageGeometry.holdBarClearance * radius;
+      // The shortest tail that gets through, drawn on the screen the game is
+      // played on: still a line leading away from the note rather than a
+      // lump behind it.
+      const phone = StageGeometry(size: Size(390, 844));
+      final least = StageGeometry.holdLeastSeconds / 1.9 * phone.hitLineY;
+      final bar = least - StageGeometry.holdBarTop(least, 0, phone.noteRadius)!;
       expect(
         bar,
-        greaterThan(radius * StageGeometry.holdBarWidth * 2),
+        greaterThan(phone.noteRadius * StageGeometry.holdBarWidth * 2),
         reason: 'a bar, not a lump under the note',
       );
     });

@@ -11,8 +11,11 @@ void main() {
 
     test('early and late are treated alike', () {
       for (final error in [30.0, 80.0, 150.0, 400.0]) {
-        expect(judge.verdictFor(error), judge.verdictFor(-error),
-            reason: 'rushing and dragging by ${error}ms should score the same');
+        expect(
+          judge.verdictFor(error),
+          judge.verdictFor(-error),
+          reason: 'rushing and dragging by ${error}ms should score the same',
+        );
       }
     });
 
@@ -104,8 +107,11 @@ void main() {
       }
 
       expect(advantageOver(30), greaterThan(1.5));
-      expect(advantageOver(120), greaterThan(advantageOver(30)),
-          reason: 'the reward for a streak should grow with it');
+      expect(
+        advantageOver(120),
+        greaterThan(advantageOver(30)),
+        reason: 'the reward for a streak should grow with it',
+      );
       // It closes on the top multiplier from below but can never reach it:
       // every run has to climb through the lower tiers first.
       expect(advantageOver(120), greaterThan(3));

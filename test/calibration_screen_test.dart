@@ -40,8 +40,9 @@ Future<void> settleRoute(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('asks the player to answer the sound, not the screen',
-      (tester) async {
+  testWidgets('asks the player to answer the sound, not the screen', (
+    tester,
+  ) async {
     await tester.pumpWidget(screenUnder(FakeClock()));
     await tester.pump();
 
@@ -65,23 +66,27 @@ void main() {
     expect(find.textContaining('Kullan'), findsOneWidget);
   });
 
-  testWidgets('hands the measurement back to whoever asked for it',
-      (tester) async {
+  testWidgets('hands the measurement back to whoever asked for it', (
+    tester,
+  ) async {
     final clock = FakeClock();
     double? returned;
-    await tester.pumpWidget(MaterialApp(
-      home: Builder(
-        builder: (context) => TextButton(
-          onPressed: () async {
-            returned = await Navigator.of(context).push<double>(
-              MaterialPageRoute(
-                  builder: (_) => CalibrationScreen(nowMs: clock.read)),
-            );
-          },
-          child: const Text('ölç'),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              returned = await Navigator.of(context).push<double>(
+                MaterialPageRoute(
+                  builder: (_) => CalibrationScreen(nowMs: clock.read),
+                ),
+              );
+            },
+            child: const Text('ölç'),
+          ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('ölç'));
     await settleRoute(tester);
@@ -93,21 +98,24 @@ void main() {
     expect(returned, isNotNull);
   });
 
-  testWidgets('backing out returns nothing rather than a wrong number',
-      (tester) async {
+  testWidgets('backing out returns nothing rather than a wrong number', (
+    tester,
+  ) async {
     double? returned = 999;
-    await tester.pumpWidget(MaterialApp(
-      home: Builder(
-        builder: (context) => TextButton(
-          onPressed: () async {
-            returned = await Navigator.of(context).push<double>(
-              MaterialPageRoute(builder: (_) => const CalibrationScreen()),
-            );
-          },
-          child: const Text('ölç'),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              returned = await Navigator.of(context).push<double>(
+                MaterialPageRoute(builder: (_) => const CalibrationScreen()),
+              );
+            },
+            child: const Text('ölç'),
+          ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('ölç'));
     await settleRoute(tester);

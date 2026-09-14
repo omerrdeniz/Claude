@@ -3,13 +3,14 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v104):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v105):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
 yerine notanın kendi bitişine kadar kısalıyor. Tutmalı çizilme eşiği 0.30
 saniyeye indi. Şarkıyı istediğin dakikadan başlatabiliyorsun ve ekranın
-üstünde ilerleme çubuğu var. Ayrıntısı "Oynanış kararları"nda.
+üstünde ilerleme çubuğu var. Tutmalı eşiği artık gerçekten saniye, ekran
+boyuna göre kaymıyor. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -390,10 +391,9 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   yarıçaplık açıklık düşüyor. Geriye notanın kendisinden kısa bir güdük
   kalıyordu: "burada bekle" diyen, beklenemeyecek kadar kısa bir şey.
 
-  Eşik: kuyruk **4.2 nota yarıçapından** kısaysa o dokunuş sıradan nota
-  olarak çiziliyor — ne çubuk, ne çizgide durma
-  (`StageGeometry.holdReadsAsBar`, çizerdeki `_Dot.isHold`). Telefonda
-  **0.30 saniyeye** denk geliyor.
+  Eşik: kuyruk **0.30 saniyeden** kısaysa o dokunuş sıradan nota olarak
+  çiziliyor — ne çubuk, ne çizgide durma (`StageGeometry.holdReadsAsBar`,
+  `holdLeastSeconds`, çizerdeki `_Dot.isHold`).
 
   **Eşik v103'te 0.32'den 0.30'a indi**, oyuncunun isteğiyle. Sebebi
   Gnossienne'de çıktı: eşiği geçemeyen 14 notanın **hepsinin** kuyruğu tam
@@ -418,18 +418,33 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   (134'ün yarısı), Passacaglia 69. Diğer on bir parçada tek nota değişmiyor;
   Kanon'un yürüyen bası kasten tutmalı ve öyle kalıyor.
 
-  **Karar piksel cinsinden, ve bu bilerek.** İniş süresi hıza bakmaksızın
-  1.9 saniye (`approachSeconds`), yani kuyruğun ekrandaki boyu doğrudan
-  gerçek saniyeye bağlı: telefonda eşik 0.30 saniyeye denk geliyor. Şarkıyı
-  %40 hıza aldığınızda aynı nota 0.8 saniyelik kuyruk çiziyor ve yine tutmalı
-  görünüyor — çalışma hızında yapının görünmesi doğru olan.
+  **Karar saniye cinsinden — piksel denendi ve yanlış çıktı (v105).**
+  Gerekçe mantıklı görünüyordu: iniş süresi hıza bakmaksızın 1.9 saniye
+  (`approachSeconds`), yani kuyruğun ekrandaki boyu doğrudan gerçek saniyeye
+  bağlı. **Tek bir ekran için** doğru. Nota yarıçapı genişlikten, vuruş
+  çizgisi yüksekliğin %68'inden geliyor, yani aynı kural:
 
-  **Ama ekranın şekli değişince saniye de değişiyor.** Nota yarıçapı geniş
-  ekranda yüksekliğe takılıyor, vuruş çizgisi de yukarı geliyor: telefonu yan
-  çevirince aynı 4.2 yarıçap 0.57 saniye ediyor, yani yatayda daha az nota
-  tutmalı çiziliyor. Oyuncu dik tutuşta oynadığı için henüz sorun değil.
-  Eşiği gerçekten saniyeye bağlamak istenirse `holdReadsAsBar`'ın piksel
-  yerine süre alması gerekir; bu bilinçli olarak yapılmadı.
+  | ekran | eşiğin karşılığı |
+  |---|---|
+  | 390×844 (tam ekran) | 0.298 s |
+  | 390×740 (Safari, araç çubukları açık) | 0.340 s |
+  | 375×667 (SE) | 0.363 s |
+  | 844×390 (yatay) | 0.571 s |
+
+  Oyuncuya "eşik 0.30 saniye" dendi ve oyuncu 0.34 olan bir telefona
+  bakıyordu; Gnossienne'in on dördü tam 0.300 olduğu için pencereye göre bir
+  içeride bir dışarıda kalıyorlardı. Oyuncu da bunu bildirdi: *"0:00.6 — ilk
+  akor, şarkının en başında kuyruk yok."* Elin yetişemeyeceği bir bekleme,
+  müzikle ve elle ilgili bir olgu; pencerenin boyuyla ilgisi yok.
+
+  Artık `holdReadsAsBar(seconds)`. Çizer `approachSeconds`'ı da alıyor ve
+  vuruşu saniyeye çeviriyor. Hız korunuyor: şarkıyı %40 hıza aldığınızda
+  aynı nota 0.8 saniyelik bekleme istiyor ve yine tutmalı görünüyor —
+  çalışma hızında yapının görünmesi doğru olan.
+
+  `test/stage_painter_test.dart` → "a short stay is the same stay on every
+  screen" tam 0.30 saniyelik bir kuyruğu dört ekran boyunda çiziyor; eski
+  piksel kuralına döndürülünce 390×740'ta düşüyor.
 - **Nota bir dikdörtgen ve boyu süresi kadar.** Oyuncu bir Synthesia videosu
   gösterdi: *"kafamda biraz daha buna benzetme fikri vardı."* Oradan üç şey
   alındı, biri bilerek alınmadı.

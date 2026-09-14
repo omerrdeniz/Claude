@@ -15,23 +15,30 @@ Uint8List packed(Map<int, Int16List> notes, {int rate = 22050}) {
     ..add('PFPB'.codeUnits)
     ..addByte(1)
     ..add(Uint8List(4)..buffer.asByteData().setUint32(0, rate, Endian.little))
-    ..add(Uint8List(2)
-      ..buffer.asByteData().setUint16(0, midis.length, Endian.little));
+    ..add(
+      Uint8List(2)
+        ..buffer.asByteData().setUint16(0, midis.length, Endian.little),
+    );
   for (final midi in midis) {
     out.addByte(midi);
-    out.add(Uint8List(4)
-      ..buffer.asByteData().setUint32(0, notes[midi]!.length, Endian.little));
+    out.add(
+      Uint8List(4)
+        ..buffer.asByteData().setUint32(0, notes[midi]!.length, Endian.little),
+    );
   }
   for (final midi in midis) {
     final data = notes[midi]!;
-    out.add(Uint8List.view(data.buffer, data.offsetInBytes, data.lengthInBytes));
+    out.add(
+      Uint8List.view(data.buffer, data.offsetInBytes, data.lengthInBytes),
+    );
   }
   return out.toBytes();
 }
 
 /// A short buzz, loud enough to measure.
-Int16List tone(int samples) =>
-    Int16List.fromList([for (var i = 0; i < samples; i++) (i.isEven ? 8000 : -8000)]);
+Int16List tone(int samples) => Int16List.fromList([
+  for (var i = 0; i < samples; i++) (i.isEven ? 8000 : -8000),
+]);
 
 double rms(Int16List buffer) {
   var sum = 0.0;
@@ -53,10 +60,7 @@ double rmsOf(SynthEngine engine, int midi, {int frames = 44100}) {
 void main() {
   group('parsing', () {
     test('reads back what the packer wrote', () {
-      final bank = SampleBank.parse(packed({
-        60: tone(100),
-        72: tone(50),
-      }));
+      final bank = SampleBank.parse(packed({60: tone(100), 72: tone(50)}));
       expect(bank.sampleRate, 22050);
       expect(bank.midis, [60, 72]);
       expect(bank.samples[0], hasLength(100));
@@ -64,22 +68,24 @@ void main() {
     });
 
     test('refuses something that is not a bank', () {
-      expect(() => SampleBank.parse(Uint8List.fromList('not a bank!!'.codeUnits)),
-          throwsFormatException);
+      expect(
+        () => SampleBank.parse(Uint8List.fromList('not a bank!!'.codeUnits)),
+        throwsFormatException,
+      );
     });
 
     test('refuses a truncated bank rather than reading past the end', () {
       final full = packed({60: tone(100)});
-      expect(() => SampleBank.parse(full.sublist(0, full.length - 40)),
-          throwsFormatException);
+      expect(
+        () => SampleBank.parse(full.sublist(0, full.length - 40)),
+        throwsFormatException,
+      );
     });
 
     test('picks the nearest recording to a pitch', () {
-      final bank = SampleBank.parse(packed({
-        60: tone(10),
-        63: tone(10),
-        66: tone(10),
-      }));
+      final bank = SampleBank.parse(
+        packed({60: tone(10), 63: tone(10), 66: tone(10)}),
+      );
       expect(bank.midis[bank.nearestTo(60)], 60);
       expect(bank.midis[bank.nearestTo(61)], 60);
       expect(bank.midis[bank.nearestTo(62)], 63);
@@ -98,8 +104,11 @@ void main() {
 
     test('an empty bank is not treated as one', () {
       final engine = SynthEngine()..samples = SampleBank.parse(packed({}));
-      expect(engine.isSampled, isFalse,
-          reason: 'an empty bank would leave every note silent');
+      expect(
+        engine.isSampled,
+        isFalse,
+        reason: 'an empty bank would leave every note silent',
+      );
     });
 
     test('a recorded note actually sounds', () {
@@ -137,8 +146,11 @@ void main() {
 
     setUpAll(() {
       final file = File(PianoAudio.samplesAsset);
-      expect(file.existsSync(), isTrue,
-          reason: 'run: dart run tool/fetch_samples.dart');
+      expect(
+        file.existsSync(),
+        isTrue,
+        reason: 'run: dart run tool/fetch_samples.dart',
+      );
       bank = SampleBank.parse(file.readAsBytesSync());
     });
 
@@ -146,8 +158,11 @@ void main() {
       expect(bank.midis.first, lessThanOrEqualTo(21), reason: 'down to A0');
       expect(bank.midis.last, greaterThanOrEqualTo(105), reason: 'up to A7');
       for (var i = 1; i < bank.midis.length; i++) {
-        expect(bank.midis[i] - bank.midis[i - 1], lessThanOrEqualTo(3),
-            reason: 'nothing should be stretched more than a tone and a half');
+        expect(
+          bank.midis[i] - bank.midis[i - 1],
+          lessThanOrEqualTo(3),
+          reason: 'nothing should be stretched more than a tone and a half',
+        );
       }
     });
 
@@ -195,8 +210,11 @@ void main() {
       final synth = SynthEngine();
       double tilt(SynthEngine e) =>
           20 * math.log(rmsOf(e, 94) / rmsOf(e, 60)) / math.ln10;
-      expect(tilt(sampled), lessThan(tilt(synth) - 3),
-          reason: 'the recordings must lean further away from the treble');
+      expect(
+        tilt(sampled),
+        lessThan(tilt(synth) - 3),
+        reason: 'the recordings must lean further away from the treble',
+      );
     });
   });
 }

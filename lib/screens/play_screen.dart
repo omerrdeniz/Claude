@@ -268,6 +268,7 @@ class _PlayScreenState extends State<PlayScreen>
                       chart: _session.chart,
                       beat: _session.beat,
                       windowInBeats: _session.windowInBeats,
+                      approachSeconds: widget.approachSeconds,
                       litHands: Map.of(_litHands),
                       holding: _session.isHolding,
                       heldNotes: _session.heldNotes,

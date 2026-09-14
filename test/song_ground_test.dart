@@ -28,8 +28,11 @@ void main() {
     };
 
     for (final entry in published.entries) {
-      expect(keyOf(songOf(entry.key)).toString(), entry.value,
-          reason: entry.key);
+      expect(
+        keyOf(songOf(entry.key)).toString(),
+        entry.value,
+        reason: entry.key,
+      );
     }
   });
 
@@ -39,25 +42,40 @@ void main() {
     // ground chosen by key has to be safe for all twelve of them.
     for (final song in shippedSongs) {
       final ground = groundOf(song);
-      expect(ground.top.computeLuminance(), closeTo(0.014, 0.004),
-          reason: song.id);
-      expect(ground.bottom.computeLuminance(), lessThan(0.006),
-          reason: song.id);
+      expect(
+        ground.top.computeLuminance(),
+        closeTo(0.014, 0.004),
+        reason: song.id,
+      );
+      expect(
+        ground.bottom.computeLuminance(),
+        lessThan(0.006),
+        reason: song.id,
+      );
       // The notes stay the brightest thing on screen; the pool of light at
       // the line is well below them and still plainly light.
-      expect(ground.glow.computeLuminance(), closeTo(0.22, 0.06),
-          reason: song.id);
-      expect(ground.top.computeLuminance(),
-          lessThan(ground.glow.computeLuminance()),
-          reason: song.id);
+      expect(
+        ground.glow.computeLuminance(),
+        closeTo(0.22, 0.06),
+        reason: song.id,
+      );
+      expect(
+        ground.top.computeLuminance(),
+        lessThan(ground.glow.computeLuminance()),
+        reason: song.id,
+      );
     }
   });
 
   test('pieces in different keys are lit differently', () {
     expect(
-        groundOf(songOf('fur-elise')), isNot(groundOf(songOf('prelude-in-c'))));
-    expect(groundOf(songOf('gnossienne-1')),
-        isNot(groundOf(songOf('nocturne-op9-no2'))));
+      groundOf(songOf('fur-elise')),
+      isNot(groundOf(songOf('prelude-in-c'))),
+    );
+    expect(
+      groundOf(songOf('gnossienne-1')),
+      isNot(groundOf(songOf('nocturne-op9-no2'))),
+    );
     // Same key, same light: the ground is atmosphere, not a name badge.
     expect(keyOf(songOf('prelude-in-c')), keyOf(songOf('entertainer')));
   });
@@ -70,7 +88,12 @@ void main() {
 
   test('a song with no notes falls back rather than failing', () {
     final empty = Song(
-        id: 'empty', title: '', composer: '', bpm: 120, notes: const <Note>[]);
+      id: 'empty',
+      title: '',
+      composer: '',
+      bpm: 120,
+      notes: const <Note>[],
+    );
     expect(keyOf(empty), isNull);
     expect(groundOf(empty), AppTheme.defaultGround);
   });
@@ -119,8 +142,11 @@ void main() {
       // octave has to be plain.
       final low = hsl(60), high = hsl(72);
       expect(low.hue, closeTo(high.hue, 1.0), reason: 'the same note');
-      expect(low.saturation, closeTo(high.saturation, 0.02),
-          reason: 'and so the same colour — only the light may move');
+      expect(
+        low.saturation,
+        closeTo(high.saturation, 0.02),
+        reason: 'and so the same colour — only the light may move',
+      );
       expect(high.value - low.value, greaterThan(0.1));
     });
 
@@ -131,8 +157,11 @@ void main() {
       const aMinor = [69, 71, 72, 74, 76, 77, 79]; // A B C D E F G
       final hues = aMinor.map((m) => hsl(m).hue).toList()..sort();
       final spread = hues.last - hues.first;
-      expect(spread, greaterThan(180),
-          reason: 'a piece should not be one colour');
+      expect(
+        spread,
+        greaterThan(180),
+        reason: 'a piece should not be one colour',
+      );
     });
 
     test('neighbouring steps of a scale are told apart', () {

@@ -26,9 +26,13 @@ void main() {
   group('the catalogue and the scores agree', () {
     test('every song has the score it names', () {
       for (final info in SongLibrary.all) {
-        expect(File(info.asset).existsSync(), isTrue,
-            reason: '${info.id}: no ${info.asset} — run '
-                'tool/build_library.dart');
+        expect(
+          File(info.asset).existsSync(),
+          isTrue,
+          reason:
+              '${info.id}: no ${info.asset} — run '
+              'tool/build_library.dart',
+        );
       }
     });
 
@@ -40,9 +44,13 @@ void main() {
           .map((f) => f.path)
           .where((p) => p.endsWith('.mid'));
       for (final path in present) {
-        expect(claimed, contains(path),
-            reason: '$path is not in the catalogue — a song was removed '
-                'without rebuilding');
+        expect(
+          claimed,
+          contains(path),
+          reason:
+              '$path is not in the catalogue — a song was removed '
+              'without rebuilding',
+        );
       }
     });
 
@@ -70,8 +78,11 @@ void main() {
       expect(excerpt.notes, hasLength(kept.length));
       for (var i = 0; i < kept.length; i++) {
         expect(excerpt.notes[i].midi, kept[i].midi, reason: 'note $i');
-        expect(excerpt.notes[i].beat, closeTo(kept[i].beat - from, 1e-9),
-            reason: 'note $i');
+        expect(
+          excerpt.notes[i].beat,
+          closeTo(kept[i].beat - from, 1e-9),
+          reason: 'note $i',
+        );
       }
       expect(excerpt.notes.first.beat, 0, reason: 'it should start at once');
     });
@@ -95,14 +106,18 @@ void main() {
 
     test('an id is safe to use as a file name and as saved data', () {
       for (final info in SongLibrary.all) {
-        expect(info.id, matches(RegExp(r'^[a-z0-9][a-z0-9-]*$')),
-            reason: '${info.id} would not survive a round trip');
+        expect(
+          info.id,
+          matches(RegExp(r'^[a-z0-9][a-z0-9-]*$')),
+          reason: '${info.id} would not survive a round trip',
+        );
       }
     });
   });
 
-  testWidgets('a song loads through the asset bundle, as the app loads it',
-      (tester) async {
+  testWidgets('a song loads through the asset bundle, as the app loads it', (
+    tester,
+  ) async {
     // The path everything else here sidesteps: rootBundle rather than the
     // file system. If the asset directory ever falls out of pubspec.yaml,
     // every other test still passes and the app opens to a list of songs
@@ -110,8 +125,11 @@ void main() {
     final song = await SongLibrary.load('fur-elise');
     expect(song.title, 'Für Elise');
     expect(song.notes, isNotEmpty);
-    expect(identical(await SongLibrary.load('fur-elise'), song), isTrue,
-        reason: 'a song read twice should be read once');
+    expect(
+      identical(await SongLibrary.load('fur-elise'), song),
+      isTrue,
+      reason: 'a song read twice should be read once',
+    );
     expect(() => SongLibrary.load('nope'), throwsArgumentError);
   });
 
@@ -122,24 +140,32 @@ void main() {
         var previous = -1.0;
         for (final n in song.notes) {
           expect(n.beat, greaterThanOrEqualTo(previous));
-          expect(n.midi, inInclusiveRange(21, 108),
-              reason: 'outside an 88-key piano');
+          expect(
+            n.midi,
+            inInclusiveRange(21, 108),
+            reason: 'outside an 88-key piano',
+          );
           expect(n.duration, greaterThan(0));
           previous = n.beat;
         }
       });
 
       test('gives the player a melody and plays an accompaniment', () {
-        expect(song.melody, isNotEmpty, reason: 'nothing for the player to tap');
+        expect(
+          song.melody,
+          isNotEmpty,
+          reason: 'nothing for the player to tap',
+        );
         expect(song.accompaniment, isNotEmpty, reason: 'no left hand');
       });
 
       test('the accompaniment sits below the melody', () {
-        final melodyAverage = song.melody.map((n) => n.midi).reduce((a, b) => a + b) /
+        final melodyAverage =
+            song.melody.map((n) => n.midi).reduce((a, b) => a + b) /
             song.melody.length;
         final leftAverage =
             song.accompaniment.map((n) => n.midi).reduce((a, b) => a + b) /
-                song.accompaniment.length;
+            song.accompaniment.length;
         expect(leftAverage, lessThan(melodyAverage));
       });
 
@@ -170,10 +196,14 @@ void main() {
         expect(moments, isNotEmpty);
         final secondsPerBeat = 60 / song.bpm;
         for (var i = 1; i < moments.length; i++) {
-          final gap = (moments[i].first.beat - moments[i - 1].first.beat) *
+          final gap =
+              (moments[i].first.beat - moments[i - 1].first.beat) *
               secondsPerBeat;
-          expect(gap, greaterThan(Chart.onsetSeconds),
-              reason: 'two moments ${(gap * 1000).round()} ms apart');
+          expect(
+            gap,
+            greaterThan(Chart.onsetSeconds),
+            reason: 'two moments ${(gap * 1000).round()} ms apart',
+          );
         }
       });
     });
@@ -215,8 +245,11 @@ void main() {
     test('Für Elise is the whole rondo, not just its theme', () {
       final song = shipped('fur-elise');
       // A B A C A with the repeats played out, counted in eighths.
-      expect(song.lengthInBeats / song.beatsPerBar, greaterThan(100),
-          reason: 'bars');
+      expect(
+        song.lengthInBeats / song.beatsPerBar,
+        greaterThan(100),
+        reason: 'bars',
+      );
       expect(song.duration.inSeconds, inInclusiveRange(140, 190));
       expect(song.bpm, 144, reason: 'the edition marks the quarter at 72');
       expect(song.beatsPerBar, 3);
@@ -249,19 +282,26 @@ void main() {
           .chordsOf(song.melody)
           .map((moment) => moment.length)
           .reduce((a, b) => a > b ? a : b);
-      expect(thickest, lessThanOrEqualTo(2),
-          reason: 'the right hand is one violin, not three');
+      expect(
+        thickest,
+        lessThanOrEqualTo(2),
+        reason: 'the right hand is one violin, not three',
+      );
     });
 
     test('the canon opens on its ground bass, alone', () {
       final song = shipped('canon-in-d');
       // Two bars of the ground before any voice enters: D A B F# G D G A.
       expect(
-          song.accompaniment.take(8).map((n) => n.midi),
-          [50, 45, 47, 42, 43, 38, 43, 45],
-          reason: 'the bass everyone knows');
-      expect(song.melody.where((n) => n.beat < 8), isEmpty,
-          reason: 'the violins wait two bars');
+        song.accompaniment.take(8).map((n) => n.midi),
+        [50, 45, 47, 42, 43, 38, 43, 45],
+        reason: 'the bass everyone knows',
+      );
+      expect(
+        song.melody.where((n) => n.beat < 8),
+        isEmpty,
+        reason: 'the violins wait two bars',
+      );
       // And it is the whole piece, not the first page.
       expect(song.duration.inMinutes, greaterThanOrEqualTo(3));
       expect(song.bpm, 55, reason: 'the edition marks the quarter at 55');
@@ -290,10 +330,11 @@ void main() {
 
   test('every note belongs to a hand', () {
     for (final song in shippedSongs) {
-      expect(song.notes.length,
-          song.melody.length + song.accompaniment.length);
-      expect(song.notes.every((n) => n.hand == Hand.right || n.hand == Hand.left),
-          isTrue);
+      expect(song.notes.length, song.melody.length + song.accompaniment.length);
+      expect(
+        song.notes.every((n) => n.hand == Hand.right || n.hand == Hand.left),
+        isTrue,
+      );
     }
   });
 }

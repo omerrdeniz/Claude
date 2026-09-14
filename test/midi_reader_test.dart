@@ -29,10 +29,16 @@ class MidiFileBuilder {
   Uint8List build() {
     final out = <int>[
       ...'MThd'.codeUnits,
-      0, 0, 0, 6,
-      0, format,
-      0, _tracks.length,
-      ticksPerBeat >> 8, ticksPerBeat & 0xFF,
+      0,
+      0,
+      0,
+      6,
+      0,
+      format,
+      0,
+      _tracks.length,
+      ticksPerBeat >> 8,
+      ticksPerBeat & 0xFF,
     ];
     for (final events in _tracks) {
       final body = [...events, 0x00, 0xFF, 0x2F, 0x00]; // end of track
@@ -52,19 +58,33 @@ class MidiFileBuilder {
 List<int> noteOn(int delta, int pitch, {int velocity = 100, int channel = 0}) =>
     [...MidiFileBuilder.varInt(delta), 0x90 | channel, pitch, velocity];
 
-List<int> noteOff(int delta, int pitch, {int channel = 0}) =>
-    [...MidiFileBuilder.varInt(delta), 0x80 | channel, pitch, 0];
+List<int> noteOff(int delta, int pitch, {int channel = 0}) => [
+  ...MidiFileBuilder.varInt(delta),
+  0x80 | channel,
+  pitch,
+  0,
+];
 
 List<int> tempo(int bpm) {
   final micros = (60000000 / bpm).round();
   return [
-    0x00, 0xFF, 0x51, 0x03,
-    (micros >> 16) & 0xFF, (micros >> 8) & 0xFF, micros & 0xFF,
+    0x00,
+    0xFF,
+    0x51,
+    0x03,
+    (micros >> 16) & 0xFF,
+    (micros >> 8) & 0xFF,
+    micros & 0xFF,
   ];
 }
 
-List<int> trackName(String name) =>
-    [0x00, 0xFF, 0x03, name.length, ...name.codeUnits];
+List<int> trackName(String name) => [
+  0x00,
+  0xFF,
+  0x03,
+  name.length,
+  ...name.codeUnits,
+];
 
 /// A single note, one beat long, starting at beat 0.
 Uint8List oneNote({int pitch = 60, int ticksPerBeat = 480}) {
@@ -86,8 +106,11 @@ void main() {
     test('ticks convert to beats regardless of the file resolution', () {
       for (final ticks in [96, 192, 480, 960]) {
         final song = MidiReader.read(oneNote(ticksPerBeat: ticks));
-        expect(song.notes.single.duration, 1.0,
-            reason: 'at $ticks ticks per beat');
+        expect(
+          song.notes.single.duration,
+          1.0,
+          reason: 'at $ticks ticks per beat',
+        );
       }
     });
 
@@ -100,8 +123,12 @@ void main() {
     test('notes struck together share an onset', () {
       final b = MidiFileBuilder();
       b.track([
-        ...noteOn(0, 60), ...noteOn(0, 64), ...noteOn(0, 67),
-        ...noteOff(480, 60), ...noteOff(0, 64), ...noteOff(0, 67),
+        ...noteOn(0, 60),
+        ...noteOn(0, 64),
+        ...noteOn(0, 67),
+        ...noteOff(480, 60),
+        ...noteOff(0, 64),
+        ...noteOff(0, 67),
       ]);
       final song = MidiReader.read(b.build());
       expect(song.notes, hasLength(3));
@@ -184,7 +211,11 @@ void main() {
 
     test('the track name becomes the title', () {
       final b = MidiFileBuilder();
-      b.track([...trackName('Gymnopédie'), ...noteOn(0, 60), ...noteOff(480, 60)]);
+      b.track([
+        ...trackName('Gymnopédie'),
+        ...noteOn(0, 60),
+        ...noteOff(480, 60),
+      ]);
       expect(MidiReader.read(b.build()).title, 'Gymnopédie');
     });
 
@@ -223,9 +254,14 @@ void main() {
     test('a single track is split by pitch', () {
       final b = MidiFileBuilder();
       b.track([
-        ...noteOn(0, 36), ...noteOn(0, 43), ...noteOn(0, 72), ...noteOn(0, 79),
-        ...noteOff(480, 36), ...noteOff(0, 43),
-        ...noteOff(0, 72), ...noteOff(0, 79),
+        ...noteOn(0, 36),
+        ...noteOn(0, 43),
+        ...noteOn(0, 72),
+        ...noteOn(0, 79),
+        ...noteOff(480, 36),
+        ...noteOff(0, 43),
+        ...noteOff(0, 72),
+        ...noteOff(0, 79),
       ]);
       final song = MidiReader.read(b.build());
       expect(song.accompaniment.map((n) => n.midi), [36, 43]);
@@ -244,8 +280,7 @@ void main() {
     test('format 2, whose tracks are separate sequences', () {
       final b = MidiFileBuilder(format: 2);
       b.track([...noteOn(0, 60), ...noteOff(480, 60)]);
-      expect(() => MidiReader.read(b.build()),
-          throwsA(isA<FormatException>()));
+      expect(() => MidiReader.read(b.build()), throwsA(isA<FormatException>()));
     });
 
     test('SMPTE timing, which has no beats to follow', () {
@@ -259,8 +294,7 @@ void main() {
     test('a file with no notes', () {
       final b = MidiFileBuilder();
       b.track(tempo(120));
-      expect(() => MidiReader.read(b.build()),
-          throwsA(isA<FormatException>()));
+      expect(() => MidiReader.read(b.build()), throwsA(isA<FormatException>()));
     });
 
     test('a file that ends mid-event', () {
@@ -275,14 +309,19 @@ void main() {
   test('notes come back sorted by time', () {
     final b = MidiFileBuilder();
     b.track([
-      ...noteOn(0, 60), ...noteOff(240, 60),
-      ...noteOn(0, 64), ...noteOff(240, 64),
-      ...noteOn(0, 67), ...noteOff(240, 67),
+      ...noteOn(0, 60),
+      ...noteOff(240, 60),
+      ...noteOn(0, 64),
+      ...noteOff(240, 64),
+      ...noteOn(0, 67),
+      ...noteOff(240, 67),
     ]);
     final song = MidiReader.read(b.build());
     final beats = song.notes.map((n) => n.beat).toList();
     expect(beats, [...beats]..sort());
-    expect(song.notes.every((n) => n.hand == Hand.right || n.hand == Hand.left),
-        isTrue);
+    expect(
+      song.notes.every((n) => n.hand == Hand.right || n.hand == Hand.left),
+      isTrue,
+    );
   });
 }

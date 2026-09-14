@@ -56,6 +56,7 @@ class StagePainter extends CustomPainter {
     required this.chart,
     required this.beat,
     required this.windowInBeats,
+    this.approachSeconds = 1.9,
     this.litHands = const {},
     this.holding = false,
     this.heldNotes = const {},
@@ -74,6 +75,19 @@ class StagePainter extends CustomPainter {
 
   /// How far ahead the player can see.
   final double windowInBeats;
+
+  /// And how long that is in seconds — the same span as [windowInBeats], in
+  /// the other unit, so the painter can ask how long a tail lasts and not
+  /// only how long it is drawn.
+  ///
+  /// Both, because the two are what the picture is made of: where a note is
+  /// comes from beats, and what is being asked of the hand comes from
+  /// seconds. Deriving one from the other needs the tempo, which is the
+  /// session's business and not the painter's.
+  final double approachSeconds;
+
+  /// How long [beats] of this song last, at the speed it is being played.
+  double _secondsOf(double beats) => beats / windowInBeats * approachSeconds;
 
   /// Hands flashing from a recent hit, mapped to how fresh it is (1 to 0).
   final Map<Hand, double> litHands;
@@ -436,16 +450,16 @@ class StagePainter extends CustomPainter {
               across: member.noteAcross[i],
               midi: note.midi,
               endBeat: endBeat,
-              // Held in the picture only where there is a tail to show for it.
-              // Whether the finger is meant to stay is [Tap.isHold] and belongs
-              // to the sound; whether saying so is worth a bar depends on how
-              // long that bar comes out on this screen, which only the painter
-              // knows. See [StageGeometry.holdReadsAsBar].
+              // Held in the picture only where there is a stay long enough
+              // to be worth asking for. Whether the finger is meant to stay
+              // is [Tap.isHold] and belongs to the sound; whether the bar is
+              // worth drawing depends on how long the tail actually lasts,
+              // which is the tempo and the speed the player chose. See
+              // [StageGeometry.holdReadsAsBar].
               isHold:
                   member.isHold &&
                   StageGeometry.holdReadsAsBar(
-                    (endBeat - member.beat) / windowInBeats * g.hitLineY,
-                    g.noteRadius,
+                    _secondsOf(endBeat - member.beat),
                   ),
               isHeld: heldNotes.contains((member.beat, note.midi)),
               isPlayed: playedNotes.contains((member.beat, note.midi)),

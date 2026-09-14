@@ -27,8 +27,11 @@ void main() {
     test('reject nonsense', () {
       expect(() => noteToMidi('H4'), throwsFormatException);
       expect(() => noteToMidi('C'), throwsFormatException);
-      expect(() => noteToMidi('C10'), throwsFormatException,
-          reason: 'past the top of the MIDI range');
+      expect(
+        () => noteToMidi('C10'),
+        throwsFormatException,
+        reason: 'past the top of the MIDI range',
+      );
     });
   });
 
@@ -70,8 +73,11 @@ void main() {
       // the music being chopped up.
       final repeated = seq('C4:1 C4:1');
       expect(repeated.first.duration, 1.0);
-      expect(repeated.first.endBeat, repeated.last.beat,
-          reason: 'one note runs straight into the next');
+      expect(
+        repeated.first.endBeat,
+        repeated.last.beat,
+        reason: 'one note runs straight into the next',
+      );
     });
 
     test('but can still be shortened on purpose', () {
@@ -96,8 +102,11 @@ void main() {
       expect(() => seq('C4:0'), throwsFormatException);
       expect(() => seq('C4:x'), throwsFormatException);
       expect(() => seq('C4'), throwsFormatException);
-      expect(() => seq('C4:1@2'), throwsFormatException,
-          reason: 'velocity above 1');
+      expect(
+        () => seq('C4:1@2'),
+        throwsFormatException,
+        reason: 'velocity above 1',
+      );
       expect(() => seq('C4:1*0'), throwsFormatException);
     });
   });

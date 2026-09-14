@@ -392,6 +392,61 @@ void main() {
     }
   });
 
+  test('a short stay is the same stay on every screen', () {
+    // The player asked for the cut at three tenths of a second, was given it
+    // on a 390x844 screen, and then could not find the notes: in a browser
+    // the toolbars take a hundred points off the height, the hit line comes
+    // up with them, and the rule — measured in pixels — quietly became a
+    // third of a second instead. Gnossienne's fourteen sit at 0.300 exactly,
+    // so they fell either side of it depending on the window.
+    //
+    // Satie's tempo, a note that rings well past the hold threshold, and the
+    // right hand wanted again three tenths of a second later: a tail of
+    // exactly the shortest length that still counts.
+    final song = Song(
+      id: 'short',
+      title: 'Short',
+      composer: '',
+      bpm: 100,
+      notes: const [
+        Note(beat: 4, midi: 60, duration: 2),
+        Note(beat: 4.5, midi: 67, duration: 2),
+      ],
+    );
+    final chart = Chart.build(song);
+    final tap = chart.taps.firstWhere((t) => t.beat == 4);
+    expect(tap.isHold, isTrue, reason: 'it rings long enough to be held');
+    expect(
+      (tap.drawnEndBeat - tap.beat) / (song.bpm / 60),
+      closeTo(StageGeometry.holdLeastSeconds, 1e-9),
+    );
+
+    for (final size in const [
+      Size(390, 844), // a phone, nothing in the way
+      Size(390, 740), // the same phone in Safari, toolbars showing
+      Size(375, 667), // an SE
+      Size(844, 390), // sideways
+    ]) {
+      final g = StageGeometry(size: size);
+      final recorder = _Recorder();
+      StagePainter(
+        chart: chart,
+        beat: tap.beat,
+        windowInBeats: 1.9 * song.bpm / 60,
+        heldNotes: {(tap.beat, 60)},
+        playedNotes: {(tap.beat, 60)},
+      ).paint(recorder, size);
+
+      final bars = [
+        for (final rect in recorder.rects)
+          if ((rect.width - g.noteWidth * 0.7).abs() < 0.5 &&
+              rect.bottom > g.hitLineY - 2)
+            rect,
+      ];
+      expect(bars, isNotEmpty, reason: 'no bar on a $size screen');
+    }
+  });
+
   test('a held note keeps its bar until the note itself runs out', () {
     // The player: "basılı tutmalı notalar basılı tutsan bile son kısma
     // gelmeden kuyruk kayboluyor." The bar was dropped once it was under two
