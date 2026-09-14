@@ -639,13 +639,60 @@ void main() {
       }
     });
 
-    test('and answered two or three notes at a time', () {
+    test('and answered a movement at a time, never one note', () {
+      // A movement for a single note is a gesture that saves nothing.
       for (final song in shippedSongs) {
+        for (final d in Difficulty.values) {
+          for (final steps
+              in Chart.build(song, difficulty: d).figures.values) {
+            for (final step in steps) {
+              expect(
+                step.taps.length,
+                greaterThanOrEqualTo(2),
+                reason: '${song.title}/${d.name}',
+              );
+            }
+          }
+        }
+      }
+    });
+
+    test('and never asked for the same direction twice running', () {
+      // Asking a hand already travelling left to go left again is asking it
+      // to keep going, and the player said exactly that: *"şu anda
+      // sürüklemeye devam etmem gerekiyor gibi."* Every movement points
+      // somewhere the hand is not already going.
+      for (final song in shippedSongs) {
+        for (final d in Difficulty.values) {
+          for (final steps
+              in Chart.build(song, difficulty: d).figures.values) {
+            for (var i = 1; i < steps.length; i++) {
+              expect(
+                steps[i].direction,
+                isNot(steps[i - 1].direction),
+                reason: '${song.title}/${d.name}: movement $i',
+              );
+            }
+          }
+        }
+      }
+    });
+
+    test('a movement is worth about a second of music', () {
+      // Not a number of notes: three notes is a different length of time in
+      // every passage, and in the Rondo it was a third of a second — three
+      // movements, three directions, inside one second. Seconds, not notes.
+      for (final song in shippedSongs) {
+        final secondsPerBeat = 60 / song.bpm;
         for (final steps in Chart.build(song).figures.values) {
-          for (final step in steps) {
+          for (var i = 0; i < steps.length; i++) {
+            final taps = steps[i].taps;
+            final from = i == 0 ? taps.first.beat : steps[i - 1].taps.last.beat;
+            final seconds = (taps.last.beat - from) * secondsPerBeat;
             expect(
-              step.taps.length,
-              inInclusiveRange(2, Chart.figureStepNotes),
+              seconds,
+              greaterThan(0.3),
+              reason: '${song.title}: movement $i comes too soon after the last',
             );
           }
         }
@@ -669,13 +716,25 @@ void main() {
     test('every step says which way the hand goes', () {
       final chart = Chart.build(shipped('fur-elise'));
       final opening = chart.figures.values.first;
-      // The Rondo turns on two notes and then falls away: up, then down,
-      // then off to the left.
-      expect(opening.map((s) => s.direction).take(3).toList(), [
-        Swipe.up,
-        Swipe.down,
-        Swipe.left,
-      ]);
+      // The Rondo turns on two notes and then falls away. It wanders, but it
+      // ends lower than it began, so the whole of it is one movement left —
+      // one touch and one slide for the eight notes after the first.
+      expect(opening.map((s) => s.direction).toList(), [Swipe.left]);
+      expect(opening.single.taps, hasLength(8));
+    });
+
+    test('and music that stays where it is asks for the other axis', () {
+      // There is no way to point at a passage that turns on itself, so the
+      // hand is asked up or down instead. Both still happen in the library.
+      final directions = <Swipe>{};
+      for (final song in shippedSongs) {
+        for (final d in Difficulty.values) {
+          for (final steps in Chart.build(song, difficulty: d).figures.values) {
+            directions.addAll(steps.map((s) => s.direction));
+          }
+        }
+      }
+      expect(directions, containsAll([Swipe.up, Swipe.down]));
     });
   });
 

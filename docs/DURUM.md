@@ -3,8 +3,10 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v117):** hızlı seriler artık tek tek basmak yerine el
-hareketiyle çalınıyor — ayrıntısı "Figür" bölümünde. Ondan önce: ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v118):** hızlı seriler artık tek tek basmak yerine el
+hareketiyle çalınıyor, ve bir hareket **bir saniyelik müzik** ediyor (3 nota
+değil) — Für Elise'in girişi tek dokunuş + tek kaydırma. Ayrıntısı "Figür"
+bölümünde. Ondan önce: ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -109,7 +111,7 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
 
-## Figür: hareketle çalınan hızlı seriler (v117)
+## Figür: hareketle çalınan hızlı seriler (v117, v118)
 
 Oyuncu Für Elise'i oynarken: *"arka arkaya gelen hızlı notalara sürekli
 basmaya çalışmak oyun zevkini ciddi azaltıyor. Bu seriler başladığında ilk
@@ -131,7 +133,7 @@ soru yanlıştı — v115 turunda "0.208 hızlı değil" diye kapatmıştım.
   koşuda olan notalar dışarıda** (bir notaya iki mekanik fazla).
 - **İlk nota dokunuşla çalınır** — figüre *girilir*, ve oyunun en eski kuralı
   ilk sesi oyuncunun parmağının çıkarmasını istiyor.
-- **Gerisi 2-3'erli adımlar hâlinde**, her adımın bir yönü var
+- **Gerisi adımlar hâlinde**, her adımın bir yönü var
   (`FigureStep.direction`). Yön müzikten geliyor: iki yarım sesten fazla
   tizleşiyorsa sağ, pesleşiyorsa sol; müzik kendi üstünde dönüyorsa (Rondo'nun
   girişi beş vuruş boyunca iki nota arasında gidip geliyor) yukarı/aşağı,
@@ -141,24 +143,53 @@ soru yanlıştı — v115 turunda "0.208 hızlı değil" diye kapatmıştım.
   adım eder, figürün tamamı değil.
 - **Eski fiske reddi buna takılmıyor** ve sebebi ölçülü: süsleme dokunuştan
   63 ms sonra çalmak zorundaydı, kaydırmayı tanımak bundan uzun sürüyordu.
-  Bir figür adımı 2-3 nota × 0.208 s = **0.4-0.6 saniye**; bir el hareketi
-  için bolca yer var.
+  Bir figür adımı ortalama **0.8-1.0 saniye**; bir el hareketi için bolca
+  yer var.
 - **Notalara tek tek basmak hâlâ mümkün** ve aynı puanı veriyor. Toplama
   değil, ekleme.
 
+### Adım nota sayısıyla değil saniyeyle kesiliyor (v118)
+
+İlk sürüm bir hareketi **3 nota** sayıyordu. Oyuncu: *"Bir kere
+sürüklediğimde sonraki notalar çalmalı, şu anda sürüklemeye devam etmem
+gerekiyor gibi."* Haklıydı, ve sebebi ölçüldü: Für Elise'in girişi 9
+onaltılığı **0.83 saniyede** geçiyor, yani 3'erli adımlar ele **bir saniye
+içinde üç ayrı hareket, üç ayrı yön** (yukarı, aşağı, sol) yaptırıyordu. El
+nota saymıyor; ne sıklıkta bir şey yapması istendiği bir **süre**.
+
+- Bir adım artık `figureStepSeconds = 1.0` saniyelik müzik. (Projedeki
+  "vuruş değil saniye" kuralının aynısı: 3 nota her parçada başka bir süre.)
+- **Arka arkaya aynı yönü isteyen adımlar birleştiriliyor.** Sola giden ele
+  "yine sola" demek "sürüklemeye devam et" demektir — yani şikâyetin ta
+  kendisi. Artık her adım elin *gitmediği* bir yönü gösteriyor.
+  `test/chart_test.dart` bunu kilitliyor (kütüphanede 0 tekrar).
+- Sonuç: Für Elise'in girişindeki 9 nota **tek dokunuş + tek sola kaydırma**.
+  Adım sayısı 153 → 111, ortanca adım **0.83 s**.
+
 Kapsam (hamle = dokunuş + hareket):
 
-| parça | figür | adım | nota | hamle |
-|---|---|---|---|---|
-| Halvorsen | 55 | 256 | 772/940 | %49 az |
-| Für Elise | 72 | 153 | 525/924 | %32 az |
-| Entertainer | 92 | 169 | 550/1372 | %21 az |
-| Passacaglia (kolay) | 1 | 32 | 97/405 | %16 az |
-| Passacaglia | 12 | 74 | 214/1971 | %6 az |
-| Kanon, Gnossienne, Prelüd, Neşeye Övgü, Vals, Rising Sun | — | | | değişmez |
+| parça | figür | adım | nota | hamle | ortanca adım |
+|---|---|---|---|---|---|
+| Halvorsen | 55 | 104 | 772/940 | %65 az | 1.00 s |
+| Für Elise | 72 | 111 | 525/924 | %37 az | 0.83 s |
+| Entertainer | 92 | 107 | 550/1372 | %26 az | 0.63 s |
+| Passacaglia (kolay) | 1 | 8 | 97/405 | %22 az | 2.28 s |
+| Passacaglia | 12 | 25 | 214/1971 | %9 az | 1.01 s |
+| Kanon, Gnossienne, Prelüd, Neşeye Övgü, Vals, Rising Sun | — | | | değişmez | |
 
 Ekranda adımın ilk notasının **üstünde** bir ok var (süsleme işareti altta;
 ikisi karışmasın diye). Ok notanın kendi renginde.
+
+### Parmak, içinde nota kalmış figürü yakalar (v118)
+
+`_figureToCatch` haritadaki **ilk açık** figürü veriyordu. Bir figür son
+notası geçene kadar açık kalıyor, bir sonraki de ilk notasından 0.4 saniye
+önce açılıyor — yani ikisi sık sık aynı anda açık. Parmak bitmiş olanı
+alınca doğru yöne kaydırıyor ve **hiçbir şey duymuyor**.
+
+Bu hata koşularda iki kez yapıldı (`_runToCatch`), bu üçüncüsü. Artık:
+içinde çalınmamış nota kalmayan figür atlanıyor, kalanlardan da **en yakını**
+alınıyor.
 
 ## Koşu (hızlı nota birleştirme) düzeltmeleri (v110)
 

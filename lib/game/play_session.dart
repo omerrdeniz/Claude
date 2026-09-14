@@ -847,10 +847,20 @@ class PlaySession {
     return dy > 0 ? Swipe.down : Swipe.up;
   }
 
-  /// The figure a hand coming down now would be catching.
+  /// The figure a hand coming down now would be catching: the one with a note
+  /// still to play, nearest to now.
+  ///
+  /// Not simply the first one open. A figure stays open until its last note
+  /// has gone by, and the next one opens [figureLeadSeconds] before its
+  /// first, so two are often open at once — and taking the older of them
+  /// hands the finger a figure with nothing left in it. The hand then moves,
+  /// correctly, and hears nothing. Runs made this mistake twice; this is the
+  /// third time it has been written down.
   int? _figureToCatch(Hand hand) {
     final window = judge.windowMs / 1000 * beatsPerSecond;
     final now = _judgedBeat;
+    int? best;
+    var bestGap = double.infinity;
     for (final entry in chart.figures.entries) {
       final steps = entry.value;
       final first = steps.first.taps.first;
@@ -858,9 +868,26 @@ class PlaySession {
       // From a little before its first step until its last note has gone by.
       if (now < first.beat - figureLeadSeconds * beatsPerSecond) continue;
       if (now > steps.last.taps.last.beat + window) continue;
-      return entry.key;
+
+      Tap? waiting;
+      for (final step in steps) {
+        for (final tap in step.taps) {
+          if (_isPending(tap)) {
+            waiting = tap;
+            break;
+          }
+        }
+        if (waiting != null) break;
+      }
+      if (waiting == null) continue;
+
+      final gap = (waiting.beat - now).abs();
+      if (gap < bestGap) {
+        best = entry.key;
+        bestGap = gap;
+      }
     }
-    return null;
+    return best;
   }
 
   /// Play the notes of every step the hand has asked for.

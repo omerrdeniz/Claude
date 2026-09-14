@@ -239,7 +239,7 @@ class Tap {
 /// so the hand still has something to do that is not the same as last time.
 enum Swipe { left, right, up, down }
 
-/// Two or three notes of a figure, and the movement that plays them.
+/// The notes of a figure one movement of the hand is worth, and which way.
 ///
 /// See [Chart.figures].
 class FigureStep {
@@ -475,7 +475,11 @@ class Chart {
         }
         if (i - start >= figureLength) {
           final id = nextId++;
-          figures[id] = _cutIntoSteps(line.sublist(start, i), id);
+          figures[id] = _cutIntoSteps(
+            line.sublist(start, i),
+            id,
+            secondsPerBeat,
+          );
         }
         start = i;
       }
@@ -487,10 +491,23 @@ class Chart {
   ///
   /// The first touch is the catch: tapped like any other note, because a
   /// figure has to be *entered* and because the oldest rule in the game says
-  /// the player's finger is what makes the first sound. The rest go two or
-  /// three at a time — three where they can, two at the end, and never one on
-  /// its own, which would be a gesture for a single note and no saving at all.
-  static List<FigureStep> _cutIntoSteps(List<Tap> figure, int id) {
+  /// the player's finger is what makes the first sound. The rest go by the
+  /// clock: [figureStepSeconds] of music to a movement, never one note on its
+  /// own, and never one left behind at the end.
+  ///
+  /// A movement used to be worth three notes whatever they were, and three
+  /// notes is a different amount of time in every passage. Für Elise's
+  /// opening runs nine sixteenths in eight tenths of a second, so the hand
+  /// was asked for three movements — three *different* directions — inside
+  /// one second: *"şu anda sürüklemeye devam etmem gerekiyor gibi."* The
+  /// player is a hand, not a note counter, and how often it is asked to do
+  /// something is a length of time. Seconds, not notes — the same reason the
+  /// timing tolerances are in seconds and not beats.
+  static List<FigureStep> _cutIntoSteps(
+    List<Tap> figure,
+    int id,
+    double secondsPerBeat,
+  ) {
     figure.first.figureId = id;
     figure.first.figureStep = -1;
 
@@ -498,10 +515,18 @@ class Chart {
     final steps = <FigureStep>[];
     var at = 0;
     while (at < rest.length) {
-      var take = figureStepNotes;
       final left = rest.length - at;
-      // Never leave one behind: four left become two and two.
-      if (left <= figureStepNotes + 1) take = left > figureStepNotes ? 2 : left;
+      final opens = rest[at].beat;
+      var take = 1;
+      while (take < left &&
+          (rest[at + take].beat - opens) * secondsPerBeat <=
+              figureStepSeconds) {
+        take += 1;
+      }
+      // Never one on its own: a gesture for a single note is no saving at all.
+      if (take < 2 && left >= 2) take = 2;
+      // And never one left behind: two remaining come along.
+      if (left - take == 1) take = left;
       final notes = rest.sublist(at, at + take);
 
       // Which way the hand goes. Measured from where it was — the note before
@@ -525,14 +550,30 @@ class Chart {
             : Swipe.up;
       }
 
-      for (final tap in notes) {
-        tap.figureId = id;
-        tap.figureStep = steps.length;
-      }
       steps.add(FigureStep(taps: notes, direction: direction));
       at += take;
     }
-    return steps;
+
+    // Two movements the same way are one movement. Asking a hand already
+    // travelling left to go left again is asking it to keep going, which is
+    // the complaint this whole rule exists to answer — so neighbouring steps
+    // that point the same way are joined, and every step now asks for a
+    // direction the hand is not already going in.
+    final merged = <FigureStep>[];
+    for (final step in steps) {
+      if (merged.isNotEmpty && merged.last.direction == step.direction) {
+        merged.last.taps.addAll(step.taps);
+        continue;
+      }
+      merged.add(step);
+    }
+    for (var i = 0; i < merged.length; i++) {
+      for (final tap in merged[i].taps) {
+        tap.figureId = id;
+        tap.figureStep = i;
+      }
+    }
+    return merged;
   }
 
   /// The most two touches of a figure may be apart, in seconds.
@@ -548,8 +589,12 @@ class Chart {
   /// taps. Three is a flourish; four is a figure.
   static const int figureLength = 4;
 
-  /// How many notes one movement of the hand is worth.
-  static const int figureStepNotes = 3;
+  /// How much music one movement of the hand is worth, in seconds.
+  ///
+  /// A second. Für Elise asks for a movement every one and a quarter seconds
+  /// at this length, which is a rhythm a hand can keep; at three notes a
+  /// movement it asked for three inside one second, which it cannot.
+  static const double figureStepSeconds = 1.0;
 
   /// How far a step has to move in pitch before it counts as going somewhere,
   /// in semitones. Under this the music is turning on itself.
