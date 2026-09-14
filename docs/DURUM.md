@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v113):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v114):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -185,6 +185,25 @@ ve bu her 1.09 saniyede bir tekrarlıyor.
 
   **Ders:** bir kısıt eklerken "bu çizim kuralı mı, oynanış kuralı mı" diye
   sor. İkisi karışınca ekrandaki bir incelik sessizce oynanışı kesiyor.
+
+- **Parmak, uzandığı koşuya bağlanır — biten koşuya değil** (`_runToCatch`,
+  v114). Oyuncu düzeltmelerden sonra hâlâ *"bazılarında ilk notada kalıyor"*
+  dedi ve doğru soruyu sordu: *"ilk notaya basmamın zamanlaması ile ilgili
+  olabilir mi?"* Evet, birebir oydu.
+
+  Basma anını taradım: hedef koşunun ilk notasından **0.20 ile 0.08 saniye
+  önce** basınca parmak bir önceki koşuya (id 17) bağlanıyordu, hedefe (18)
+  değil; 0.05 saniye önce basınca doğru olanına. Sebep: bir koşu, parmağın
+  altından kaybolmasın diye son notasından bir yargı penceresi sonrasına
+  kadar yerini koruyor ve bu kuyruk, bir sonraki koşunun hazırlık payıyla
+  **üst üste biniyor**. O aralıkta iki koşu da oyunda ve seçim kuralı
+  *"başlamış olan kazanır"* idi — ki bu bir **çizim** kuralı ("halka gelmekte
+  olan notaları göstermesin") ve yakalama için tam tersi yanlış: bitmiş olanı
+  seçiyor.
+
+  Yakalama artık ayrı bir kural: **parmağa en yakın, içinde çalınacak bir
+  şey kalmış koşu**. Tarama tekrar yapıldı, 0.25 saniye önceden 0.10 saniye
+  sonrasına kadar her basışta beş notanın hepsi çalıyor.
 
   `Chart.dragReach` artık `PlaySession`'dan Chart'a taşındı, çünkü koşuları
   kuran taraf da parmağın erişimini bilmek zorunda.

@@ -1181,6 +1181,38 @@ void main() {
       );
     });
 
+    test('a finger reaching for the next run is not given the last one', () {
+      // Two runs, the second far from the first in pitch. A run keeps its
+      // place a judging window past its last note so it does not vanish from
+      // under a finger, and that tail overlaps the next one's lead — so for
+      // a tenth of a second either way both are in play. A finger going down
+      // for the one coming was being tied to the one just finished, and then
+      // played nothing at all: the note it landed on sounded as an ordinary
+      // tap, and holding did nothing. "Ilk notada kalıyor."
+      final pair = songOf([
+        for (var i = 0; i < 3; i++) note(i * 0.1, 72 + i),
+        for (var i = 0; i < 3; i++) note(0.6 + i * 0.1, 60 + i),
+      ]);
+      final session = sessionFor(pair, difficulty: Difficulty.normal);
+      expect(session.chart.runs, hasLength(2));
+      final later = session.chart.runs.values.firstWhere(
+        (r) => r.first.beat > 0.5,
+      );
+
+      // Down just before the second run, where the second run is.
+      seek(session, 0.55);
+      final drag = session.beginDrag(later.first.across)!;
+      for (var beat = 0.55; beat <= 1.0; beat += 0.02) {
+        session.drag(drag, later.first.across);
+        seek(session, beat);
+      }
+      expect(
+        engine.struck.map((s) => s.$1),
+        containsAll([for (final tap in later) tap.notes.first.midi]),
+        reason: 'the finger was given the run that was already over',
+      );
+    });
+
     test('and a fresh touch catches the next one', () {
       // The other half of it: lifting and pressing again takes the new run,
       // wherever it has got to.

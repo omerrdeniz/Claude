@@ -689,6 +689,58 @@ class PlaySession {
   /// something is too fast to catch — did not help at all.
   static const double dragLeadMs = 900;
 
+  /// The run a finger landing at [across] is reaching for.
+  ///
+  /// **The nearest one with something left in it**, and both halves of that
+  /// were learned the hard way.
+  ///
+  /// *With something left*, because a run keeps its place a judging window
+  /// past its last note so it does not vanish from under a finger still on
+  /// it — and that tail overlaps the next run's lead. A finger going down
+  /// for the one coming was being tied to the one just finished.
+  ///
+  /// *The nearest*, because in that overlap both are in play and the rule for
+  /// drawing — prefer the one already started — is the wrong one here: it
+  /// picks the run that is over. Which run a hand got came down to a tenth of
+  /// a second either way, and the player asked the right question: *"ilk
+  /// notaya basmamın zamanlaması ile ilgili olabilir mi?"* It was.
+  ///
+  /// Nothing is held back for drawing's sake either. A hand that reaches
+  /// slightly early is reaching for the run it can see coming, whether or not
+  /// its bead has come out yet ([Tap.runOpensAt] is about the picture).
+  MapEntry<int, List<Tap>>? _runToCatch(Hand hand, double across) {
+    final lead = dragLeadMs / 1000 * chart.song.bpm / 60;
+    final tail = judge.windowMs / 1000 * beatsPerSecond;
+    final now = _judgedBeat;
+
+    MapEntry<int, List<Tap>>? best;
+    var bestGap = double.infinity;
+    for (final entry in chart.runs.entries) {
+      final run = entry.value;
+      if (run.first.hand != hand) continue;
+      if (now < run.first.beat - lead) continue;
+      if (now > run.last.beat + tail) continue;
+      if (!_hasSomethingLeft(run)) continue;
+
+      final gap = (_beadAcross(run, now) - across).abs();
+      if (gap < bestGap) {
+        best = entry;
+        bestGap = gap;
+      }
+    }
+    return best;
+  }
+
+  /// Whether any of [run] is still there to be played.
+  bool _hasSomethingLeft(List<Tap> run) {
+    final now = _judgedBeat;
+    for (final tap in run) {
+      if (!_isPending(tap)) continue;
+      if (now - tap.beat <= _lateLimitBeats(tap)) return true;
+    }
+    return false;
+  }
+
   /// How late a touch may still be answered, in beats.
   ///
   /// The judging window, everywhere except inside a run. There the notes are
@@ -716,16 +768,12 @@ class PlaySession {
   ///
   /// The bead keeps its place a judging window past the run's last note, so
   /// it does not vanish from under a finger that is still on it.
-  /// The run each hand has in play, whether or not its bead is being shown.
+  /// The run each hand has on the line to be drawn.
   ///
-  /// [shownOnly] is the difference between the two questions. What is *drawn*
-  /// is held back until the hand's previous note has had its moment (see
-  /// [Tap.runOpensAt]), because a ring on the line beside a note that is due
-  /// is unreadable. What a finger going down can *catch* is not held back at
-  /// all: a hand that reaches a little early is reaching for the run it can
-  /// see coming, and refusing it left the player pressing, hearing the first
-  /// note, and then nothing — which is how it was reported.
-  Map<Hand, MapEntry<int, List<Tap>>> _runsInPlay({required bool shownOnly}) {
+  /// What is *drawn* and what can be *caught* are different questions, and
+  /// answering them with one rule is what put the player's finger on the
+  /// wrong run — see [_runToCatch].
+  Map<Hand, MapEntry<int, List<Tap>>> _runsShown() {
     final lead = dragLeadMs / 1000 * chart.song.bpm / 60;
     final tail = judge.windowMs / 1000 * beatsPerSecond;
     final now = _judgedBeat;
@@ -738,7 +786,7 @@ class PlaySession {
     for (final entry in chart.runs.entries) {
       final run = entry.value;
       if (now < run.first.beat - lead) continue;
-      if (shownOnly && now < run.first.runOpensAt) continue;
+      if (now < run.first.runOpensAt) continue;
       if (now > run.last.beat + tail) continue;
 
       final hand = run.first.hand;
@@ -767,7 +815,7 @@ class PlaySession {
     if (chart.runs.isEmpty) return const [];
     final now = _judgedBeat;
     return [
-      for (final entry in _runsInPlay(shownOnly: true).entries)
+      for (final entry in _runsShown().entries)
         () {
           final across = _beadAcross(entry.value.value, now);
           return RunBead(
@@ -814,10 +862,9 @@ class PlaySession {
   int? beginDrag(double across) {
     if (!_running) return null;
     final hand = Chart.handAt(across);
-    // Nothing to catch, nothing to carry: a touch with no run in play is a
-    // tap and only a tap. Whether the bead is being *drawn* yet is a separate
-    // question — see [_runsInPlay].
-    final caught = _runsInPlay(shownOnly: false)[hand];
+    // Nothing to catch, nothing to carry: a touch with no run within reaching
+    // distance is a tap and only a tap.
+    final caught = _runToCatch(hand, across);
     if (caught == null) return null;
 
     final id = _nextDragId++;
