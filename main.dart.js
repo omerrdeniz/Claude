@@ -63391,7 +63391,7 @@ a9=a2.e
 a9===$&&A.a()
 a9=a9[a6]
 b0=a7.gb8()
-b1=a2.gcI()>=a2.as&&(a8-a5)/d2*f>=0.3
+b1=a2.gcI()>=a2.as&&(a8-a5)/d2*f>=0.4
 a0.push(new A.ep(a9,b0,a8,b1,h.n(0,new A.ai(a5,a7.gb8())),g.n(0,new A.ai(a5,a7.gb8()))))}}b2=B.b.eX(a0,new A.a_P())?a:b
 b3=b2>1?B.c.ap(1-(b2-1)/0.16,0,1):B.c.ap(0.35+B.c.ap(b,0,1)*0.65,0,1)
 if(b3<=0.01)continue
@@ -64038,7 +64038,7 @@ return A.S($async$qg,r)},
 T(a){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e=this,d=null,c=A.a5(a).ok.e
 c=A.bJ("Piano Flow",c==null?d:c.a1Y(B.aK,1.2),d)
 s=t.E
-r=A.fQ(A.c([B.Ae,B.vB,A.bJ("v105 \xb7 ab1ea12",B.LW,d)],s),B.a9,B.am,B.T)
+r=A.fQ(A.c([B.Ae,B.vB,A.bJ("v106 \xb7 9ec1330",B.LW,d)],s),B.a9,B.am,B.T)
 q=e.d
 p=q.a
 o=A.amv(p)
