@@ -133,6 +133,23 @@ class _Drag {
   final int runId;
 }
 
+/// A finger on a figure, and the trail it has left.
+///
+/// See [PlaySession.beginFigure].
+class _OnFigure {
+  _OnFigure({required this.figureId, required this.hand});
+
+  final int figureId;
+  final Hand hand;
+
+  /// Where the finger has been lately, newest last, as (beat, across, down).
+  final List<(double, double, double)> trail = [];
+
+  /// The step the last movement armed, if any. A step plays its notes only
+  /// when the hand has asked for it.
+  int? armedStep;
+}
+
 /// The bead a run is currently on: the note due now, sitting on the hit line.
 ///
 /// It is what the finger follows. Without something to follow, a slide is a
@@ -373,6 +390,7 @@ class PlaySession {
     _endFinishedHolds();
     _playAccompaniment();
     _playRuns();
+    _playFigures();
     _playWaitingNotes();
     _earnCrushes();
     _fillMissedNotes();
@@ -763,6 +781,139 @@ class PlaySession {
     final half = (run[tap.runIndex + 1].beat - tap.beat) / 2;
     return half < window ? half : window;
   }
+
+  /// Fingers on a figure.
+  final Map<int, _OnFigure> _figures = {};
+  int _nextFigureId = 1;
+
+  /// A finger came down where a figure is waiting to be caught.
+  ///
+  /// Returns a handle to hand back to [moveFigure] and [endFigure], or null
+  /// if there was no figure there. The touch itself is an ordinary tap and
+  /// plays the figure's first note in the ordinary way — a figure is
+  /// *entered*, and the oldest rule in the game says the player's own finger
+  /// makes the first sound.
+  int? beginFigure(double across, double down) {
+    if (!_running) return null;
+    final hand = Chart.handAt(across);
+    final caught = _figureToCatch(hand);
+    if (caught == null) return null;
+
+    final id = _nextFigureId++;
+    _figures[id] = _OnFigure(figureId: caught, hand: hand)
+      ..trail.add((_beat, across, down));
+    return id;
+  }
+
+  /// The finger moved. A movement far enough in one direction arms the next
+  /// step of the figure, if that is the direction the step asks for.
+  void moveFigure(int id, double across, double down) {
+    final on = _figures[id];
+    if (on == null) return;
+    on.trail.add((_beat, across, down));
+
+    final oldest = _beat - swipeSeconds * beatsPerSecond;
+    on.trail.removeWhere((sample) => sample.$1 < oldest);
+    if (on.trail.length < 2) return;
+
+    final from = on.trail.first;
+    final dx = across - from.$2;
+    final dy = down - from.$3;
+    final swipe = _swipeOf(dx, dy);
+    if (swipe == null) return;
+
+    // The next step still waiting for a hand. Arming reaches forward only:
+    // one movement is worth one step, and never the one just played.
+    final steps = chart.figures[on.figureId]!;
+    for (var i = 0; i < steps.length; i++) {
+      if (!steps[i].taps.any(_isPending)) continue;
+      if (steps[i].direction == swipe) on.armedStep = i;
+      return;
+    }
+  }
+
+  void endFigure(int id) => _figures.remove(id);
+
+  /// Which way a movement of [dx] across and [dy] down counts as, or null
+  /// where it is too small to be a movement at all.
+  ///
+  /// The larger axis wins: a hand sweeping right drifts a little downward and
+  /// should still be read as going right.
+  static Swipe? _swipeOf(double dx, double dy) {
+    if (dx.abs() < swipeDistance && dy.abs() < swipeDistance) return null;
+    if (dx.abs() >= dy.abs()) {
+      return dx > 0 ? Swipe.right : Swipe.left;
+    }
+    return dy > 0 ? Swipe.down : Swipe.up;
+  }
+
+  /// The figure a hand coming down now would be catching.
+  int? _figureToCatch(Hand hand) {
+    final window = judge.windowMs / 1000 * beatsPerSecond;
+    final now = _judgedBeat;
+    for (final entry in chart.figures.entries) {
+      final steps = entry.value;
+      final first = steps.first.taps.first;
+      if (chart.separatesHands && first.hand != hand) continue;
+      // From a little before its first step until its last note has gone by.
+      if (now < first.beat - figureLeadSeconds * beatsPerSecond) continue;
+      if (now > steps.last.taps.last.beat + window) continue;
+      return entry.key;
+    }
+    return null;
+  }
+
+  /// Play the notes of every step the hand has asked for.
+  void _playFigures() {
+    if (_figures.isEmpty) return;
+    for (final on in _figures.values) {
+      final armed = on.armedStep;
+      if (armed == null) continue;
+      final steps = chart.figures[on.figureId]!;
+      for (final tap in steps[armed].taps) {
+        final errorMs = (_judgedBeat - tap.beat) / beatsPerSecond * 1000;
+        if (errorMs < 0) continue; // not due yet
+        if (!_isPending(tap)) continue;
+        if (errorMs > _lateLimitBeats(tap) / beatsPerSecond * 1000) continue;
+
+        _resolve(tap);
+        scoreboard.register(figureVerdict);
+        _sound(tap, 0);
+        onDragNote?.call(
+          TapOutcome(
+            verdict: figureVerdict,
+            hand: tap.hand,
+            errorMs: 0,
+            notes: tap.notes,
+            places: tap.noteAcross,
+            graceMidi: tap.graceMidi,
+            graceAcross: tap.graceAcross,
+            voices: tap.voices,
+          ),
+        );
+      }
+    }
+  }
+
+  /// How far a hand has to move for it to count as a movement, as a fraction
+  /// of the screen.
+  ///
+  /// A figure's step is worth two or three notes and half a second, so there
+  /// is time for a real gesture — this is not the ornament's flick, which had
+  /// sixty-three milliseconds and was given up for that reason.
+  static const double swipeDistance = 0.055;
+
+  /// How long a movement may take and still be one movement, in seconds.
+  static const double swipeSeconds = 0.30;
+
+  /// How long before its first note a figure may be caught, in seconds.
+  static const double figureLeadSeconds = 0.4;
+
+  /// What a note played by a movement is worth.
+  ///
+  /// The same as a run's: the player did play it, and the timing was the
+  /// game's rather than theirs.
+  static const Verdict figureVerdict = Verdict.good;
 
   /// Where each run on screen has got to, for the finger and the eye alike.
   ///
@@ -1205,6 +1356,7 @@ class PlaySession {
     scoreboard.reset();
     _resolved.clear();
     _filled.clear();
+    _figures.clear();
     _skipToStart();
     _running = true;
   }

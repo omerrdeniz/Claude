@@ -558,6 +558,26 @@ class StagePainter extends CustomPainter {
         );
       }
 
+      // The movement each step of a figure asks for, over the note it starts
+      // on. See [Chart.figures].
+      for (final member in group) {
+        final figureId = member.figureId;
+        if (figureId == null || member.figureStep < 0) continue;
+        final step = chart.figures[figureId]![member.figureStep];
+        if (!identical(step.taps.first, member)) continue;
+        final (low, high) = chart.pitchRange;
+        _paintStepArrow(
+          canvas,
+          g,
+          member.noteAcross.first,
+          headOf(dots.first),
+          radius,
+          step.direction,
+          AppTheme.pitchColor(member.notes.first.midi, low: low, high: high),
+          fade,
+        );
+      }
+
       // Half the bar's thickness, as [_paintHoldBar] wants it: the tail comes
       // out about seven tenths of the note's width, narrower than the note so
       // the head still reads as the thing to aim at.
@@ -955,6 +975,56 @@ class StagePainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: 0.75 * fade),
     );
   }
+
+  /// The movement a step of a figure asks for, drawn over the note it begins
+  /// on.
+  ///
+  /// A plain arrowhead and nothing else. It is an instruction to the hand,
+  /// not a thing to aim at, and the screen already has enough shapes that
+  /// mean *touch me*: it sits clear above the note, where the ornament's mark
+  /// sits clear below.
+  void _paintStepArrow(
+    Canvas canvas,
+    StageGeometry g,
+    double across,
+    double progress,
+    double radius,
+    Swipe direction,
+    Color colour,
+    double fade,
+  ) {
+    final note = g.positionAtPosition(across, progress);
+    final at = Offset(note.dx, note.dy - radius * _arrowLift);
+    final size = radius * _arrowSize;
+
+    // Along the way it points, and across it.
+    final (ax, ay) = switch (direction) {
+      Swipe.right => (1.0, 0.0),
+      Swipe.left => (-1.0, 0.0),
+      Swipe.up => (0.0, -1.0),
+      Swipe.down => (0.0, 1.0),
+    };
+
+    final tip = Offset(at.dx + ax * size, at.dy + ay * size);
+    final back = Offset(at.dx - ax * size * 0.5, at.dy - ay * size * 0.5);
+    // The two barbs sit either side of the shaft, which is the other axis.
+    final wing = Offset(ay * size * 0.7, ax * size * 0.7);
+
+    canvas.drawPath(
+      Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(back.dx + wing.dx, back.dy + wing.dy)
+        ..lineTo(back.dx - wing.dx, back.dy - wing.dy)
+        ..close(),
+      Paint()..color = colour.withValues(alpha: 0.9 * fade),
+    );
+  }
+
+  /// How far above its note the arrow sits, in note radii.
+  static const double _arrowLift = 1.9;
+
+  /// And how big it is drawn.
+  static const double _arrowSize = 0.7;
 
   /// The tie from the little note up into the one it leans on.
   ///

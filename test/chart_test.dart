@@ -605,6 +605,80 @@ void main() {
     });
   });
 
+  group('figures, the stretches too relentless to enjoy tapping', () {
+    test('the rondo is built out of them', () {
+      // "Arka arkaya gelen hızlı notalara sürekli basmaya çalışmak oyun
+      // zevkini ciddi azaltıyor" — said of this piece and of the Entertainer,
+      // whose notes are the same fifth of a second apart.
+      final chart = Chart.build(shipped('fur-elise'));
+      expect(chart.figures, isNotEmpty);
+      final inFigures = chart.taps.where((t) => t.figureId != null).length;
+      expect(inFigures, greaterThan(chart.taps.length ~/ 3));
+    });
+
+    test('and the unhurried pieces have none', () {
+      for (final id in ['ode-to-joy', 'gnossienne-1', 'prelude-in-c']) {
+        expect(Chart.build(shipped(id)).figures, isEmpty, reason: id);
+      }
+    });
+
+    test('a figure is entered by tapping its first note', () {
+      for (final song in shippedSongs) {
+        final chart = Chart.build(song);
+        for (final entry in chart.figures.entries) {
+          final caught = chart.taps.where(
+            (t) => t.figureId == entry.key && t.figureStep == -1,
+          );
+          expect(caught, hasLength(1), reason: '${song.title}: one way in');
+          expect(
+            caught.single.beat,
+            lessThan(entry.value.first.taps.first.beat),
+            reason: '${song.title}: and it comes first',
+          );
+        }
+      }
+    });
+
+    test('and answered two or three notes at a time', () {
+      for (final song in shippedSongs) {
+        for (final steps in Chart.build(song).figures.values) {
+          for (final step in steps) {
+            expect(
+              step.taps.length,
+              inInclusiveRange(2, Chart.figureStepNotes),
+            );
+          }
+        }
+      }
+    });
+
+    test('a note is never both a run and a figure', () {
+      // Two mechanics on one note is one too many: a run cannot be tapped at
+      // all and has its own answer.
+      for (final song in shippedSongs) {
+        for (final tap in Chart.build(song).taps) {
+          expect(
+            tap.runId != null && tap.figureId != null,
+            isFalse,
+            reason: '${song.title}: the note at ${tap.beat}',
+          );
+        }
+      }
+    });
+
+    test('every step says which way the hand goes', () {
+      final chart = Chart.build(shipped('fur-elise'));
+      final opening = chart.figures.values.first;
+      // The Rondo turns on two notes and then falls away: up, then down,
+      // then off to the left.
+      expect(opening.map((s) => s.direction).take(3).toList(), [
+        Swipe.up,
+        Swipe.down,
+        Swipe.left,
+      ]);
+    });
+  });
+
   group('what counts as a note to hold', () {
     test('it is a length of time, not a number of beats', () {
       // The same written note, in two pieces at different tempos. A hand

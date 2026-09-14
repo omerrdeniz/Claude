@@ -59,6 +59,9 @@ class _PlayScreenState extends State<PlayScreen>
   /// Which run each finger currently on the screen is sliding through.
   final Map<int, int> _dragByPointer = {};
 
+  /// And which figure each finger is working through.
+  final Map<int, int> _figureByPointer = {};
+
   /// Which ornament each finger on the screen may still flick.
   final Map<int, int> _crushByPointer = {};
 
@@ -151,6 +154,12 @@ class _PlayScreenState extends State<PlayScreen>
     final dragId = _session.beginDrag(across);
     if (dragId != null) _dragByPointer[pointer] = dragId;
 
+    // A figure is entered the same way and answered differently: not by
+    // staying with a bead but by moving the hand the way each step asks.
+    final down = (position.dy / size.height).clamp(0.0, 1.0);
+    final figureId = _session.beginFigure(across, down);
+    if (figureId != null) _figureByPointer[pointer] = figureId;
+
     final outcome = _session.tap(across);
     if (outcome == null) return;
 
@@ -164,6 +173,15 @@ class _PlayScreenState extends State<PlayScreen>
   void _onDrag(int pointer, Offset position, Size size) {
     final across = (position.dx / size.width).clamp(0.0, 1.0);
 
+    final figureId = _figureByPointer[pointer];
+    if (figureId != null) {
+      _session.moveFigure(
+        figureId,
+        across,
+        (position.dy / size.height).clamp(0.0, 1.0),
+      );
+    }
+
     final dragId = _dragByPointer[pointer];
     if (dragId == null) return;
     _session.drag(dragId, across);
@@ -172,6 +190,9 @@ class _PlayScreenState extends State<PlayScreen>
   /// A finger came off the screen. If it was holding a long note, that note
   /// stops here; if it was carrying a run, the run is on its own again.
   void _onTapUp(int pointer) {
+    final figureId = _figureByPointer.remove(pointer);
+    if (figureId != null) _session.endFigure(figureId);
+
     final dragId = _dragByPointer.remove(pointer);
     if (dragId != null) _session.endDrag(dragId);
 
@@ -232,6 +253,7 @@ class _PlayScreenState extends State<PlayScreen>
       _litHands.clear();
       _heldByPointer.clear();
       _dragByPointer.clear();
+      _figureByPointer.clear();
       _sparks.clear();
       _combo = 0;
     });

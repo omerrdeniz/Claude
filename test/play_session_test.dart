@@ -678,6 +678,123 @@ void main() {
     });
   });
 
+  group('a figure is answered by moving the hand', () {
+    // Eight notes a fifth of a second apart in one hand: fast enough that
+    // tapping every one is a chore, slow enough that a hand can gesture.
+    Song relentless() =>
+        songOf([for (var i = 0; i < 8; i++) note(i * 0.4, 72 + i)]);
+
+    (PlaySession, int, List<FigureStep>) caught() {
+      final session = sessionFor(relentless(), difficulty: Difficulty.normal);
+      expect(session.chart.figures, hasLength(1), reason: 'one figure');
+      final steps = session.chart.figures.values.single;
+      seek(session, 0);
+      final id = session.beginFigure(right, 0.5);
+      return (session, id!, steps);
+    }
+
+    /// Move the finger [by] in one direction, in several samples, as a hand
+    /// does.
+    void swipe(PlaySession session, int id, Swipe way) {
+      var x = right, y = 0.5;
+      for (var i = 0; i < 5; i++) {
+        switch (way) {
+          case Swipe.right:
+            x += 0.02;
+          case Swipe.left:
+            x -= 0.02;
+          case Swipe.up:
+            y -= 0.02;
+          case Swipe.down:
+            y += 0.02;
+        }
+        session.moveFigure(id, x, y);
+      }
+    }
+
+    test('there is a figure to catch, and only where one is', () {
+      final session = sessionFor(relentless(), difficulty: Difficulty.normal);
+      seek(session, 0);
+      expect(session.beginFigure(right, 0.5), isNotNull);
+      expect(session.beginFigure(left, 0.5), isNull, reason: 'the other hand');
+    });
+
+    test('the right movement plays the step', () {
+      final (session, id, steps) = caught();
+      swipe(session, id, steps.first.direction);
+      for (var beat = 0.0; beat <= 1.4; beat += 0.02) {
+        seek(session, beat);
+      }
+      expect(
+        engine.struck.map((s) => s.$1),
+        containsAll([for (final t in steps.first.taps) t.notes.first.midi]),
+      );
+    });
+
+    test('the wrong one plays nothing', () {
+      final (session, id, steps) = caught();
+      final wrong = steps.first.direction == Swipe.right
+          ? Swipe.left
+          : Swipe.right;
+      swipe(session, id, wrong);
+      for (var beat = 0.0; beat <= 1.4; beat += 0.02) {
+        seek(session, beat);
+      }
+      for (final tap in steps.first.taps) {
+        expect(
+          engine.struck.map((s) => s.$1),
+          isNot(contains(tap.notes.first.midi)),
+        );
+      }
+    });
+
+    test('and no movement at all plays nothing', () {
+      // The oldest rule in the game: a figure does not play itself.
+      final (session, _, steps) = caught();
+      for (var beat = 0.0; beat <= 1.4; beat += 0.02) {
+        seek(session, beat);
+      }
+      for (final tap in steps.first.taps) {
+        expect(
+          engine.struck.map((s) => s.$1),
+          isNot(contains(tap.notes.first.midi)),
+        );
+      }
+    });
+
+    test('one movement is worth one step, not the whole figure', () {
+      final (session, id, steps) = caught();
+      swipe(session, id, steps.first.direction);
+      for (var beat = 0.0; beat <= 3.2; beat += 0.02) {
+        seek(session, beat);
+      }
+      final heard = engine.struck.map((s) => s.$1).toSet();
+      for (final tap in steps.first.taps) {
+        expect(heard, contains(tap.notes.first.midi));
+      }
+      expect(
+        steps[1].taps.every((t) => heard.contains(t.notes.first.midi)),
+        isFalse,
+        reason: 'the second step was never asked for',
+      );
+    });
+
+    test('lifting the finger ends it', () {
+      final (session, id, steps) = caught();
+      swipe(session, id, steps.first.direction);
+      session.endFigure(id);
+      for (var beat = 0.0; beat <= 1.4; beat += 0.02) {
+        seek(session, beat);
+      }
+      for (final tap in steps.first.taps) {
+        expect(
+          engine.struck.map((s) => s.$1),
+          isNot(contains(tap.notes.first.midi)),
+        );
+      }
+    });
+  });
+
   group('an ornament is crushed into the note it leans on', () {
     // One beat is half a second here. The small note is written a tenth of a
     // beat — fifty milliseconds — before a note that stays.

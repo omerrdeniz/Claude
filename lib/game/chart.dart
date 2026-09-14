@@ -77,6 +77,15 @@ class Tap {
   /// [Chart.runs]. Null for everything else, which is most of the music.
   int? runId;
 
+  /// Which figure this touch belongs to, and which step of it.
+  ///
+  /// A figure is a stretch fast enough that tapping every note of it is a
+  /// chore rather than a pleasure — see [Chart.figures]. Null for everything
+  /// else. [figureStep] is -1 on the touch that catches the figure, which is
+  /// tapped like any other, and the step's index on the rest.
+  int? figureId;
+  int figureStep = -1;
+
   /// Position within [runId]'s run, counting from zero.
   int runIndex = 0;
 
@@ -222,6 +231,24 @@ class Tap {
       'Tap(${beat.toStringAsFixed(2)}, ${hand.name}, ${notes.length} note(s))';
 }
 
+/// Which way the hand is asked to move.
+///
+/// Left and right mean what they do on the screen, which is down and up in
+/// pitch. Up and down mean nothing musically and are used where the music
+/// does not move — a figure that turns on itself, like the Rondo's opening —
+/// so the hand still has something to do that is not the same as last time.
+enum Swipe { left, right, up, down }
+
+/// Two or three notes of a figure, and the movement that plays them.
+///
+/// See [Chart.figures].
+class FigureStep {
+  FigureStep({required this.taps, required this.direction});
+
+  final List<Tap> taps;
+  final Swipe direction;
+}
+
 /// A song laid out for play: what the player touches, and what plays itself.
 class Chart {
   Chart({
@@ -230,9 +257,11 @@ class Chart {
     required List<Tap> taps,
     required List<Note> autoNotes,
     Map<int, List<Tap>> runs = const {},
+    Map<int, List<FigureStep>> figures = const {},
   }) : taps = List.unmodifiable(taps),
        autoNotes = List.unmodifiable(autoNotes),
-       runs = Map.unmodifiable(runs);
+       runs = Map.unmodifiable(runs),
+       figures = Map.unmodifiable(figures);
 
   final Song song;
   final Difficulty difficulty;
@@ -258,6 +287,28 @@ class Chart {
   /// nothing. So a run is entered by tapping its first note and then carried
   /// by keeping the finger down and sliding it; see [PlaySession.drag].
   final Map<int, List<Tap>> runs;
+
+  /// Stretches the hand can answer one note at a time but has no fun doing,
+  /// keyed by id and cut into the steps that play them.
+  ///
+  /// Not the same thing as a [runs]. A run is *impossible* to tap — seventy
+  /// milliseconds a note — and is carried by keeping a finger on a bead. A
+  /// figure is merely relentless: a fifth of a second a note, for pages. The
+  /// player can hit every one of them and said, twice and about two different
+  /// pieces, that doing so is what takes the pleasure out: *"arka arkaya
+  /// gelen hızlı notalara sürekli basmaya çalışmak oyun zevkini ciddi
+  /// azaltıyor."*
+  ///
+  /// The measurement that settles it: the notes that wear the player out in
+  /// the Rondo and in the Entertainer are the same distance apart, a fifth of
+  /// a second, and our run rule had always answered *"a hand can do that"* —
+  /// which is true, and the wrong question. This one asks whether it is worth
+  /// doing.
+  ///
+  /// So: the first note is tapped like any other, and the rest come in steps
+  /// of two or three, each played by moving the hand the way the step says.
+  /// A gesture for every two or three notes instead of a tap for every one.
+  final Map<int, List<FigureStep>> figures;
 
   bool get separatesHands => difficulty.separatesHands;
 
@@ -388,8 +439,121 @@ class Chart {
       taps: taps,
       autoNotes: auto,
       runs: _findRuns(taps, song, difficulty.separatesHands),
+      figures: _findFigures(taps, song, difficulty.separatesHands),
     );
   }
+
+  /// Cut the relentless stretches into figures, and those into steps.
+  ///
+  /// A figure is [figureLength] or more touches of one hand, each within
+  /// [figureGapSeconds] of the last. Notes already in a run are left out:
+  /// a run cannot be tapped at all and has its own answer, and two mechanics
+  /// on one note is one too many.
+  static Map<int, List<FigureStep>> _findFigures(
+    List<Tap> taps,
+    Song song,
+    bool separatesHands,
+  ) {
+    final secondsPerBeat = 60 / song.bpm;
+    final onsetTolerance = onsetToleranceAt(song.bpm);
+    final byHand = <Hand, List<Tap>>{};
+    for (final tap in taps) {
+      if (tap.runId != null) continue;
+      (byHand[separatesHands ? tap.hand : Hand.right] ??= []).add(tap);
+    }
+
+    final figures = <int, List<FigureStep>>{};
+    var nextId = 1;
+    for (final line in byHand.values) {
+      var start = 0;
+      for (var i = 1; i <= line.length; i++) {
+        final gap = i < line.length
+            ? (line[i].beat - line[i - 1].beat) * secondsPerBeat
+            : double.infinity;
+        if (gap > onsetTolerance * secondsPerBeat && gap <= figureGapSeconds) {
+          continue;
+        }
+        if (i - start >= figureLength) {
+          final id = nextId++;
+          figures[id] = _cutIntoSteps(line.sublist(start, i), id);
+        }
+        start = i;
+      }
+    }
+    return figures;
+  }
+
+  /// Divide a figure into the steps a hand answers it in.
+  ///
+  /// The first touch is the catch: tapped like any other note, because a
+  /// figure has to be *entered* and because the oldest rule in the game says
+  /// the player's finger is what makes the first sound. The rest go two or
+  /// three at a time — three where they can, two at the end, and never one on
+  /// its own, which would be a gesture for a single note and no saving at all.
+  static List<FigureStep> _cutIntoSteps(List<Tap> figure, int id) {
+    figure.first.figureId = id;
+    figure.first.figureStep = -1;
+
+    final rest = figure.sublist(1);
+    final steps = <FigureStep>[];
+    var at = 0;
+    while (at < rest.length) {
+      var take = figureStepNotes;
+      final left = rest.length - at;
+      // Never leave one behind: four left become two and two.
+      if (left <= figureStepNotes + 1) take = left > figureStepNotes ? 2 : left;
+      final notes = rest.sublist(at, at + take);
+
+      // Which way the hand goes. Measured from where it was — the note before
+      // the step — to where the step ends, so a step that climbs reads as a
+      // climb however it wanders on the way.
+      final from = rest[at - 1 > -1 ? at - 1 : 0];
+      final before = at == 0 ? figure.first : from;
+      final net = notes.last.notes.first.midi - before.notes.first.midi;
+      final Swipe direction;
+      if (net >= figureTurnSemitones) {
+        direction = Swipe.right;
+      } else if (net <= -figureTurnSemitones) {
+        direction = Swipe.left;
+      } else {
+        // The music stays where it is — the Rondo's opening turns on two
+        // notes for five beats. There is no way to point, so the hand is
+        // asked for the other axis, and for the opposite of last time so it
+        // keeps moving.
+        direction = steps.isNotEmpty && steps.last.direction == Swipe.up
+            ? Swipe.down
+            : Swipe.up;
+      }
+
+      for (final tap in notes) {
+        tap.figureId = id;
+        tap.figureStep = steps.length;
+      }
+      steps.add(FigureStep(taps: notes, direction: direction));
+      at += take;
+    }
+    return steps;
+  }
+
+  /// The most two touches of a figure may be apart, in seconds.
+  ///
+  /// A fifth of a second and a shade over. Not a claim about what a hand
+  /// cannot do — see [runGapSeconds] for that line, which is lower — but
+  /// about where doing it stops being play and starts being work. The number
+  /// comes from the two passages the player named: the Rondo's opening and
+  /// the Entertainer, both a fifth of a second a note.
+  static const double figureGapSeconds = 0.21;
+
+  /// How many notes in a row it takes to be worth a gesture rather than
+  /// taps. Three is a flourish; four is a figure.
+  static const int figureLength = 4;
+
+  /// How many notes one movement of the hand is worth.
+  static const int figureStepNotes = 3;
+
+  /// How far a step has to move in pitch before it counts as going somewhere,
+  /// in semitones. Under this the music is turning on itself.
+  static const int figureTurnSemitones = 2;
 
   /// The most a run's notes may be apart, in seconds.
   ///
