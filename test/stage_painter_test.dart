@@ -408,9 +408,14 @@ void main() {
       title: 'Short',
       composer: '',
       bpm: 100,
-      notes: const [
-        Note(beat: 4, midi: 60, duration: 2),
-        Note(beat: 4.5, midi: 67, duration: 2),
+      notes: [
+        const Note(beat: 4, midi: 60, duration: 2),
+        // Exactly the shortest tail that still counts, whatever that is.
+        Note(
+          beat: 4 + StageGeometry.holdLeastSeconds * 100 / 60,
+          midi: 67,
+          duration: 2,
+        ),
       ],
     );
     final chart = Chart.build(song);

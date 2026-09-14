@@ -3,14 +3,14 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v105):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v106):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
 yerine notanın kendi bitişine kadar kısalıyor. Tutmalı çizilme eşiği 0.30
 saniyeye indi. Şarkıyı istediğin dakikadan başlatabiliyorsun ve ekranın
-üstünde ilerleme çubuğu var. Tutmalı eşiği artık gerçekten saniye, ekran
-boyuna göre kaymıyor. Ayrıntısı "Oynanış kararları"nda.
+üstünde ilerleme çubuğu var. Tutmalı eşiği artık gerçekten saniye
+(ekran boyuna göre kaymıyor) ve 0.40'a ayarlandı. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -391,9 +391,23 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   yarıçaplık açıklık düşüyor. Geriye notanın kendisinden kısa bir güdük
   kalıyordu: "burada bekle" diyen, beklenemeyecek kadar kısa bir şey.
 
-  Eşik: kuyruk **0.30 saniyeden** kısaysa o dokunuş sıradan nota olarak
+  Eşik: kuyruk **0.40 saniyeden** kısaysa o dokunuş sıradan nota olarak
   çiziliyor — ne çubuk, ne çizgide durma (`StageGeometry.holdReadsAsBar`,
   `holdLeastSeconds`, çizerdeki `_Dot.isHold`).
+
+  **Sayı kütüphanenin tamamına bakılarak seçildi (v106).** Bütün kuyruklar
+  sıralanınca: üçte birin altında bir kalabalık, sonra **tam 0.300'de on
+  dört tane** (hepsi Gnossienne), sonra 0.35'e kadar **hiçbir şey**, sonra
+  0.35–0.45 arasında yirmi tane, sonra gerisi. O on dört, oyuncunun isteğiyle
+  0.30'da içeri alındı ve *"bu kuyruklar çok kısa"* diye geri geldi: oyunun
+  gerçekten oynandığı ekranda notanın boyundan az uzun bir çubuk çiziyorlar,
+  yani notanın arkasında bir lüle. 0.40 onların dışında hiçbir şeye mal
+  olmuyor (0.35–0.40 bandı boş) ve en kısa çubuğu 1.05 nota boyundan 1.67'ye
+  çıkarıyor.
+
+  Boşluğu daraltmak denendi ve işe yaramıyor: boşluk 34 piksel, bir sonraki
+  notanın yarıçapı 21 — daraltılınca kuyruk üstteki notaya yapışıyor ve
+  kazanılan 0.25 nota boyu.
 
   **Eşik v103'te 0.32'den 0.30'a indi**, oyuncunun isteğiyle. Sebebi
   Gnossienne'de çıktı: eşiği geçemeyen 14 notanın **hepsinin** kuyruğu tam
@@ -408,15 +422,16 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   (kuyruğu gerçekten kısa olan nota tutmalı çizilmez) duruyor, yalnız
   çizgisi biraz aşağı kaydı.
 
-  **Ses ve yargı hiç değişmiyor:** `Tap.isHold` ve `Tap.sustains` oldukları
-  gibi duruyor. Değişiklik güvenli, çünkü kuyruğu kısa olan nota **tam
+  **Ses ve yargı hiç değişmiyor** — oyuncunun eşiği seçerken koyduğu şart:
+  *"sesleri yine doğru şekilde çalacağız, sadece gösterimde kuyruk
+  olmayacak."* `Tap.isHold` ve `Tap.sustains` oldukları gibi duruyor. Değişiklik güvenli, çünkü kuyruğu kısa olan nota **tam
   olarak** sustain'i olan notadır (el zaten alınıyor) ve o notanın sesi parmak
   kalkınca zaten kesilmiyordu. `test/stage_geometry_test.dart` bunu tüm
   kütüphane üzerinde kilitliyor.
 
-  Kapsam (v103 eşiğiyle): 1568 tutmanın 135'i (%8.6), iki parçada — Prelüd 66
-  (134'ün yarısı), Passacaglia 69. Diğer on bir parçada tek nota değişmiyor;
-  Kanon'un yürüyen bası kasten tutmalı ve öyle kalıyor.
+  Kapsam (0.40 eşiğiyle): 1568 tutmanın 149'u (%9.5), üç parçada — Prelüd 66
+  (134'ün yarısı), Passacaglia 69, Gnossienne 14. Diğer on parçada tek nota
+  değişmiyor; Kanon'un yürüyen bası kasten tutmalı ve öyle kalıyor.
 
   **Karar saniye cinsinden — piksel denendi ve yanlış çıktı (v105).**
   Gerekçe mantıklı görünüyordu: iniş süresi hıza bakmaksızın 1.9 saniye

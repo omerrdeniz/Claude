@@ -216,10 +216,26 @@ class StageGeometry {
 
   /// The shortest stay worth asking for, in seconds.
   ///
-  /// Three tenths of a second, which is the player's own number: Satie's
-  /// first Gnossienne has fourteen touches whose tails are exactly that, and
-  /// looking at them they asked for them kept.
-  static const double holdLeastSeconds = 0.3;
+  /// Four tenths, settled by looking at the whole library rather than at one
+  /// piece. Every tail in it, sorted: a crowd under a third of a second, then
+  /// fourteen at exactly 0.300 — all of them Satie's — then nothing at all
+  /// until 0.35, then twenty between 0.35 and 0.45, then the rest.
+  ///
+  /// Those fourteen were tried at three tenths, at the player's own request,
+  /// and were the ones that came back as *"bu kuyruklar çok kısa"*: on the
+  /// screen the game is actually played on they draw a bar barely longer than
+  /// the note is tall, which is a lump behind the note rather than a line
+  /// leading away from it. Four tenths costs nothing beyond them — the band
+  /// from 0.35 to 0.40 is empty — and takes the shortest bar drawn from a
+  /// tenth over one note tall to two thirds over.
+  ///
+  /// **This is a drawing decision and only a drawing decision.** A touch
+  /// under it keeps [Tap.isHold] and [Tap.sustains], sounds for exactly as
+  /// long as it is written, and goes on ringing when the hand leaves it —
+  /// which it must, because a tail is short only where the same hand is
+  /// wanted elsewhere. `test/stage_geometry_test.dart` holds that over the
+  /// whole library.
+  static const double holdLeastSeconds = 0.4;
 
   /// How much room the bar leaves for the next note, in note radii.
   static const double holdBarClearance = 1.6;

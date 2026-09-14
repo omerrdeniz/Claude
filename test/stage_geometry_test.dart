@@ -398,19 +398,43 @@ void main() {
     });
 
     test('it catches the ones too short to stay on, and spares the rest', () {
-      // Bach's left hand and Handel's: tails well under three tenths of a
-      // second, where "stay here" is an instruction the music leaves no time
-      // to follow.
+      // Bach's left hand and Handel's: tails a tenth of a second and less,
+      // where "stay here" is an instruction the music leaves no time to
+      // follow.
       expect(quiet('prelude-in-c'), isNotEmpty);
       expect(quiet('passacaglia'), isNotEmpty);
-      // Satie's first Gnossienne is where this was first reported, and it is
-      // also where the cut was later moved to. Its fourteen are three tenths
-      // of a second exactly — just inside now, by the player's own call.
-      expect(quiet('gnossienne-1'), isEmpty);
+      // Satie's fourteen, at 0.300 exactly. They were let through at the
+      // player's request and came back as too short to read — see
+      // [StageGeometry.holdLeastSeconds].
+      expect(quiet('gnossienne-1'), hasLength(14));
       // The canon's walking bass is the opposite case: a quarter note at 55
       // that rings for 1.09 seconds with nothing crowding it. It was made a
       // hold on purpose and stays one.
       expect(quiet('canon-in-d'), isEmpty);
+    });
+
+    test('and none of them sounds any different for it', () {
+      // The player, choosing the cut: "sesleri yine doğru şekilde
+      // çalacağız, sadece gösterimde kuyruk olmayacak." That is what this
+      // is, and it holds because a tail is short only where the hand is
+      // wanted elsewhere — and such a note keeps ringing when the finger
+      // leaves it, bar or no bar.
+      for (final song in shippedSongs) {
+        for (final tap in quiet(song.id)) {
+          expect(
+            tap.sustains,
+            isTrue,
+            reason:
+                '${song.id}: the note at beat ${tap.beat} would be cut '
+                'short by letting go',
+          );
+          expect(
+            tap.isHold,
+            isTrue,
+            reason: 'and the sound still treats it as the long note it is',
+          );
+        }
+      }
     });
 
     test('the bar it lets through is longer than it is thick', () {
