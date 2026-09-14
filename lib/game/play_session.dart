@@ -12,6 +12,7 @@ class TapOutcome {
     required this.notes,
     this.places = const [],
     this.graceMidi,
+    this.graceAcross = 0,
     this.voices = 1,
     this.scored = true,
     this.holdId,
@@ -41,6 +42,10 @@ class TapOutcome {
   /// The ornament this touch sounded along with its notes, if any — the
   /// pitch of it, for the screen to light it in.
   final int? graceMidi;
+
+  /// And where that pitch sits across the screen, which is what decides where
+  /// its mark — and so its light — is drawn.
+  final double graceAcross;
 
   /// How many notes sounded together, which is what colours the hit.
   final int voices;
@@ -503,6 +508,7 @@ class PlaySession {
       notes: tapTarget.notes,
       places: tapTarget.noteAcross,
       graceMidi: tapTarget.graceMidi,
+      graceAcross: tapTarget.graceAcross,
       voices: tapTarget.voices,
       holdId: holdId,
       crushId: crushId,
@@ -816,6 +822,7 @@ class PlaySession {
             notes: next.notes,
             places: next.noteAcross,
             graceMidi: next.graceMidi,
+            graceAcross: next.graceAcross,
             voices: next.voices,
           ),
         );
@@ -1007,6 +1014,7 @@ class PlaySession {
       notes: target.notes,
       places: target.noteAcross,
       graceMidi: target.graceMidi,
+      graceAcross: target.graceAcross,
       voices: target.voices,
     );
   }

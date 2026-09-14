@@ -20,6 +20,7 @@ class _Dot {
     required this.isHold,
     required this.isHeld,
     required this.isPlayed,
+    this.clearsOrnament = false,
   });
 
   final double across;
@@ -36,6 +37,10 @@ class _Dot {
   /// The player has already dealt with it, so it ends at the line.
   final bool isPlayed;
 
+  /// Its tail stops at a touch that carries an ornament, whose little note is
+  /// drawn below that touch — so the tail has further to stop short of.
+  final bool clearsOrnament;
+
   _Dot movedTo(double newAcross) => _Dot(
     across: newAcross,
     midi: midi,
@@ -43,6 +48,7 @@ class _Dot {
     isHold: isHold,
     isHeld: isHeld,
     isPlayed: isPlayed,
+    clearsOrnament: clearsOrnament,
   );
 }
 
@@ -238,14 +244,22 @@ class StagePainter extends CustomPainter {
       }
 
       // And the ornament, where the touch carried one. It sounds as the
-      // finger lands, so it bursts with the rest of the touch — from the
-      // middle of it, where its mark was, and at the size that mark was.
-      // Without this the little note was the one thing on screen that
-      // reached the line and simply carried on falling.
+      // finger lands, so it bursts with the rest of the touch — from under
+      // its own mark, by the same rule that put the mark there, and at the
+      // size that mark was. It used to come up from the middle of the touch,
+      // which since the mark moved to one side meant it rose from under a
+      // different note: "efekt diğer notanın altından çıkıyor".
       final graceMidi = spark.graceMidi;
       if (graceMidi != null) {
-        final middle = places.reduce((a, b) => a + b) / places.length;
-        plume(g.xAtPosition(middle), graceMidi, _graceScale);
+        final (place, _) = _gracePlace(
+          places,
+          spark.midis,
+          graceMidi,
+          spark.graceAcross,
+          spark.hand,
+          g,
+        );
+        plume(g.xAtPosition(place), graceMidi, _graceScale);
       }
     }
   }
@@ -463,6 +477,8 @@ class StagePainter extends CustomPainter {
                   ),
               isHeld: heldNotes.contains((member.beat, note.midi)),
               isPlayed: playedNotes.contains((member.beat, note.midi)),
+              clearsOrnament:
+                  member.drawnEndOrnamented && endBeat == member.drawnEndBeat,
             ),
           );
         }
@@ -546,6 +562,9 @@ class StagePainter extends CustomPainter {
             barWidth,
             ink,
             fade,
+            dot.clearsOrnament
+                ? _graceClearance
+                : StageGeometry.holdBarClearance,
           );
         }
         _paintNote(canvas, g, dot.across, head, radius, ink, fade);
@@ -699,6 +718,52 @@ class StagePainter extends CustomPainter {
             : (Chart.rightZoneStart, Chart.rightZoneEnd))
       : (Chart.leftZoneStart, Chart.rightZoneEnd);
 
+  /// Where an ornament's mark goes, and which note it hangs off.
+  ///
+  /// **Outside the chord, never in among it.** A touch can be two or three
+  /// notes, and an ornament belongs to the whole of it: measured across the
+  /// library, of the twenty-four ornamented chords the little note is above
+  /// all of them twenty-two times and below all of them twice, and inside one
+  /// not once. So the chord's own pitch says which side, and the mark hangs
+  /// off the outermost note on that side — which for a single note is that
+  /// note, and for a chord keeps the mark and its tie clear of the others
+  /// instead of threading between them.
+  ///
+  /// One rule, in one place, because two things are drawn from it: the mark
+  /// on its way down, and the light it throws at the line. They were worked
+  /// out separately and the light came up under the wrong note, which is
+  /// exactly how the player reported it.
+  ///
+  /// [places] are where the touch's notes are actually drawn — after the
+  /// chord has been opened out, not where their pitches put them.
+  (double, double) _gracePlace(
+    List<double> places,
+    List<int> midis,
+    int graceMidi,
+    double graceAcross,
+    Hand hand,
+    StageGeometry g,
+  ) {
+    var mean = 0.0;
+    var lower = places.first, upper = places.first;
+    for (var i = 0; i < places.length; i++) {
+      mean += midis[i] / midis.length;
+      if (places[i] < lower) lower = places[i];
+      if (places[i] > upper) upper = places[i];
+    }
+
+    final side = graceMidi < mean ? -1.0 : 1.0;
+    final into = side < 0 ? lower : upper;
+    final apart = (graceAcross - into).abs() * g.size.width;
+    final least = g.noteWidth;
+    final away = (apart > least ? apart : least) / g.size.width;
+
+    // Inside the hand's own stretch of screen, like everything else drawn.
+    final (zoneStart, zoneEnd) = _zoneOf(hand);
+    final edge = g.noteWidth * _graceScale / 2 / g.size.width;
+    return ((into + side * away).clamp(zoneStart + edge, zoneEnd - edge), into);
+  }
+
   List<double> _spreadPlaces(
     List<double> places,
     StageGeometry g,
@@ -824,39 +889,16 @@ class StagePainter extends CustomPainter {
     double graceAcross,
     double fade,
   ) {
-    // Which side the ornament comes from, and which note it hangs off.
-    //
-    // **Outside the chord, never in among it.** A touch can be two or three
-    // notes, and an ornament belongs to the whole of it: measured across the
-    // library, of the twenty-four ornamented chords the little note is above
-    // all of them twenty-two times and below all of them twice, and inside
-    // one not once. So the chord's own pitch says which side, and the mark
-    // hangs off the outermost note on that side — which for a single note is
-    // that note, and for a chord keeps the mark and its tie clear of the
-    // other notes instead of threading between them.
-    var mean = 0.0;
-    var lower = dots.first, upper = dots.first;
-    for (final dot in dots) {
-      mean += dot.midi / dots.length;
-      if (dot.across < lower.across) lower = dot;
-      if (dot.across > upper.across) upper = dot;
-    }
-
-    final side = midi < mean ? -1.0 : 1.0;
-    final into = side < 0 ? lower : upper;
-    final apart = (graceAcross - into.across).abs() * g.size.width;
-    final least = g.noteWidth;
-    final away = (apart > least ? apart : least) / g.size.width;
-
-    // Inside the hand's own stretch of screen, like everything else it draws.
-    final (zoneStart, zoneEnd) = _zoneOf(hand);
-    final edge = g.noteWidth * _graceScale / 2 / g.size.width;
-    final place = (into.across + side * away).clamp(
-      zoneStart + edge,
-      zoneEnd - edge,
+    final (place, anchorAcross) = _gracePlace(
+      [for (final dot in dots) dot.across],
+      [for (final dot in dots) dot.midi],
+      midi,
+      graceAcross,
+      hand,
+      g,
     );
 
-    final anchor = g.positionAtPosition(into.across, progress);
+    final anchor = g.positionAtPosition(anchorAcross, progress);
     final centre = g.positionAtPosition(place, progress);
     final at = Offset(centre.dx, centre.dy + radius * _graceDrop);
 
@@ -932,6 +974,17 @@ class StagePainter extends CustomPainter {
   /// How thick the tie is drawn. A line, not a bar — see [_paintGraceTie].
   static const double _graceTieWidth = 1.8;
 
+  /// How much room a tail has to leave where it stops at an ornamented touch,
+  /// in note radii.
+  ///
+  /// The ordinary clearance leaves room for the note that comes next. An
+  /// ornamented touch has *two* things drawn for it, and the little one hangs
+  /// below the big one — so a tail stopping there at the usual distance ran
+  /// straight through it, which is what the player saw. Far enough to clear
+  /// the mark's own bottom edge ([_graceDrop] plus its half height), and a
+  /// little daylight after that.
+  static const double _graceClearance = _graceDrop + _graceScale + 0.35;
+
   /// And how big it is drawn, as a fraction of a note. Small enough to read
   /// as the little note it is written as, big enough to see at arm's length.
   ///
@@ -1003,6 +1056,7 @@ class StagePainter extends CustomPainter {
     double width,
     Color colour,
     double fade,
+    double clearance,
   ) {
     if (tailProgress >= progress) return;
 
@@ -1013,7 +1067,12 @@ class StagePainter extends CustomPainter {
     final head = g.positionAtPosition(across, progress);
     final tail = g.positionAtPosition(across, tailProgress);
 
-    final top = StageGeometry.holdBarTop(head.dy, tail.dy, radius);
+    final top = StageGeometry.holdBarTop(
+      head.dy,
+      tail.dy,
+      radius,
+      clearance: clearance,
+    );
     if (top == null) return;
 
     final bar = RRect.fromRectAndRadius(

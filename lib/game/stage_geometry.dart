@@ -181,10 +181,18 @@ class StageGeometry {
   ///
   /// [headY] is the bottom of the bar, [tailY] the top it would reach without
   /// the clearance; both grow downwards, so the tail is the smaller number.
-  static double? holdBarTop(double headY, double tailY, double radius) {
+  /// [clearance] is how much room to leave, in note radii — more than the
+  /// usual where what comes next is an ornamented touch, whose little note is
+  /// drawn below it and would otherwise be run through.
+  static double? holdBarTop(
+    double headY,
+    double tailY,
+    double radius, {
+    double clearance = holdBarClearance,
+  }) {
     if (tailY >= headY) return null;
     final span = headY - tailY;
-    final room = radius * holdBarClearance;
+    final room = radius * clearance;
     return tailY + (span < room * 2 ? span / 2 : room);
   }
 

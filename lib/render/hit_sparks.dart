@@ -17,6 +17,7 @@ class Spark {
     required this.hand,
     required this.quality,
     this.graceMidi,
+    this.graceAcross = 0,
   });
 
   /// Where on the hit line it happened, 0 at the left edge and 1 at the right
@@ -41,9 +42,13 @@ class Spark {
 
   /// The ornament the touch carried, if it carried one.
   ///
-  /// Not one of [midis]: it has no place of its own on the line. Its mark is
-  /// drawn in the middle of the touch, so that is where its light comes from.
+  /// Not one of [midis]: the mark for it is not drawn where its pitch falls
+  /// but beside the note it leans into, and the light has to come from under
+  /// the mark rather than from under a note.
   final int? graceMidi;
+
+  /// And where its pitch does fall, which is half of working that out.
+  final double graceAcross;
 
   /// Which hand played it, since each hand has its own half of the screen to
   /// be laid out within.

@@ -150,6 +150,13 @@ class Tap {
   /// with the notes buried in it.
   double drawnEndBeat = 0;
 
+  /// And whether the touch it stops at carries an ornament.
+  ///
+  /// The ornament's mark is drawn *below* its touch — sooner is nearer the
+  /// line — so a tail that stops at that touch runs straight through it. The
+  /// picture has to leave room for the little note as well as the big one.
+  bool drawnEndOrnamented = false;
+
   /// How long this touch has to last to be held rather than struck, in this
   /// song's beats. Set by [Chart.build] from the tempo.
   ///
@@ -503,6 +510,7 @@ class Chart {
           if (line[j].beat < line[i].endBeat) {
             line[i].sustains = true;
             line[i].drawnEndBeat = line[j].beat;
+            line[i].drawnEndOrnamented = line[j].hasGrace;
           }
           break;
         }

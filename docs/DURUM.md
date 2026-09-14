@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v107):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v108):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -11,7 +11,8 @@ yerine notanın kendi bitişine kadar kısalıyor. Tutmalı çizilme eşiği 0.3
 saniyeye indi. Şarkıyı istediğin dakikadan başlatabiliyorsun ve ekranın
 üstünde ilerleme çubuğu var. Tutmalı eşiği artık gerçekten saniye
 (ekran boyuna göre kaymıyor) ve 0.40'a ayarlandı. Süsleme işareti asıl
-notanın sağ veya sol altında ve ona bir bağ yayıyla bağlı. Ayrıntısı "Oynanış kararları"nda.
+notanın sağ veya sol altında, ona bir bağ yayıyla bağlı, ışığını kendi
+altından atıyor ve kuyruklar onun içinden geçmiyor. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -69,6 +70,23 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
 
 - `_graceDrop` 1.5'ten 1.8 yarıçapa çıktı: işaret artık yanda da durduğu için
   daha sıkı bir düşüşte komşu notaya sürtüyordu.
+
+- **Işık da işaretin altından çıkar** (v108). İşaret yana kayınca çizgideki
+  tüy yerinde kalmıştı: dokunuşun ortasından çıkıyordu, yani başka bir
+  notanın altından. Oyuncu bildirdi. Yerleştirme kuralı tek bir yere çekildi
+  (`_gracePlace`) ve hem işaret hem ışık onu kullanıyor; `Spark` ile
+  `TapOutcome` bunun için `graceAcross`'u da taşıyor. **Ders:** aynı yeri iki
+  ayrı yerde hesaplarsan ikisi ayrılır — burada tam olarak bu oldu.
+
+- **Kuyruk işaretin içinden geçmez** (v108). Oyuncu: *"bazı basılı tutmalı
+  notalar ilk notanın üstüne denk gelebiliyor."* Sebep aritmetikle
+  kesin: kuyruk bir sonraki dokunuşta 1.6 yarıçap boşluk bırakarak duruyordu,
+  işaret ise o dokunuşun 1.25–2.35 yarıçap altında — yani kuyruğun ucu
+  işaretin tam içine giriyordu. Süslemeli bir dokunuşta biten kuyruk artık
+  `_graceClearance` (2.7 yarıçap) bırakıyor, yani işaretin alt kenarını da
+  temizliyor. Hangi kuyruğun süslemeli bir dokunuşta bittiğini nota
+  listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
+  eskisi gibi.
 
 ## Bir yere bakmak için: başlangıç noktası ve saat
 
