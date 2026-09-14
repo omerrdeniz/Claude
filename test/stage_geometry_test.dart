@@ -251,9 +251,12 @@ void main() {
 
   group('a held note\'s bar stops short of what comes next', () {
     const radius = 20.0;
+    // What the painter works out and hands over: the room to leave, in
+    // pixels. Here, the plain note-radius floor.
+    const room = radius * StageGeometry.holdBarClearance;
     // Screen coordinates grow downwards: the head is below the tail.
     double? top(double headY, double tailY) =>
-        StageGeometry.holdBarTop(headY, tailY, radius);
+        StageGeometry.holdBarTop(headY, tailY, room);
 
     test('it does not reach the end of the note', () {
       final drawn = top(500, 100)!;
@@ -262,10 +265,7 @@ void main() {
         greaterThan(100),
         reason: 'the bar has to leave room for the next note',
       );
-      expect(
-        drawn,
-        closeTo(100 + radius * StageGeometry.holdBarClearance, 1e-9),
-      );
+      expect(drawn, closeTo(100 + room, 1e-9));
     });
 
     test('and the room it leaves clears a whole note', () {
@@ -314,7 +314,6 @@ void main() {
       // Far from the end the clearance is whole; near it, never more than
       // half of what is left. A fixed gap is a bar that stops short, and the
       // last of a held note is exactly where the player is looking.
-      const room = radius * StageGeometry.holdBarClearance;
       expect(500 - top(500, 100)!, closeTo(400 - room, 1e-9));
       expect(500 - top(500, 480)!, closeTo(10, 1e-9));
     });
@@ -322,6 +321,7 @@ void main() {
 
   group('a tail too short to be worth calling a hold', () {
     const radius = 20.0;
+    const room = radius * StageGeometry.holdBarClearance;
     bool reads(double seconds) => StageGeometry.holdReadsAsBar(seconds);
 
     test('a long tail is a hold', () {
@@ -354,7 +354,7 @@ void main() {
       // nothing.
       for (var length = 1.0; length < 300; length += 0.5) {
         expect(
-          StageGeometry.holdBarTop(length, 0, radius),
+          StageGeometry.holdBarTop(length, 0, room),
           isNotNull,
           reason: 'a bar $length long still has something to say',
         );

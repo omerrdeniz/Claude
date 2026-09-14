@@ -594,6 +594,54 @@ void main() {
     expect(marks(pressed: true), isEmpty, reason: 'answered, beat or no beat');
   });
 
+  test('a tail leaves the hand time to come off and land again', () {
+    // The player: "kuyruğun sonu ile bir sonraki notanın başlangıcı arasında
+    // biraz daha fazla süre olmalı, çünkü parmağı kaldır ve tekrar bas için
+    // bir süre geçiyor." The gap used to be a distance on the screen and
+    // nothing else, which on a tall window came to a tenth of a second.
+    const g = StageGeometry(size: phone);
+    const window = 4.0;
+    final song = Song(
+      id: 'lift',
+      title: 'Lift',
+      composer: '',
+      bpm: 100,
+      notes: const [
+        Note(beat: 0, midi: 60, duration: 8),
+        Note(beat: 4, midi: 67, duration: 1),
+      ],
+    );
+    final chart = Chart.build(song);
+    final held = chart.taps.firstWhere((t) => t.beat == 0);
+    expect(held.drawnEndBeat, 4);
+
+    final recorder = _Recorder();
+    StagePainter(
+      chart: chart,
+      beat: 0,
+      windowInBeats: window,
+      approachSeconds: 1.9,
+      heldNotes: {(0.0, 60)},
+      playedNotes: {(0.0, 60)},
+    ).paint(recorder, phone);
+
+    final bar = [
+      for (final rect in recorder.rects)
+        if ((rect.width - g.noteWidth * 0.7).abs() < 0.5 &&
+            rect.bottom > g.hitLineY - 2)
+          rect,
+    ].first;
+
+    // Where the next note is, and where the bar stops short of it.
+    final next = g.yAt(StageGeometry.progressFor(4, window));
+    final lift = StageGeometry.holdBarLiftSeconds / 1.9 * g.hitLineY;
+    expect(
+      bar.top - next,
+      greaterThanOrEqualTo(lift - 0.01),
+      reason: 'a hand cannot leave one note and arrive at the next in no time',
+    );
+  });
+
   test('a tail stops clear of the little note it runs up to', () {
     // A hold's tail stops where the hand is next wanted. Where that next
     // touch carries an ornament there are *two* things drawn for it and the
@@ -1010,6 +1058,45 @@ void main() {
     // The little note sounds *before* the chord, and sooner is nearer the
     // line — so it is drawn below the heads it belongs to.
     expect(mark.center.dy, greaterThan(head.dy));
+  });
+
+  test('a run\'s bead is a note\'s shape, not a circle', () {
+    // It stands where a note would and asks for the same finger, so it
+    // should not be the one round thing left on a screen of upright bars.
+    const g = StageGeometry(size: phone);
+    final recorder = _Recorder();
+    StagePainter(
+      chart: Chart.build(shipped('canon-in-d')),
+      beat: 0,
+      windowInBeats: 4,
+      runBeads: const [
+        RunBead(runId: 1, hand: Hand.right, across: 0.75, tracked: false),
+      ],
+    ).paint(recorder, phone);
+
+    final beads = [
+      for (final rect in recorder.rects)
+        if ((rect.center.dy - g.hitLineY).abs() < 0.5 &&
+            (rect.width - g.noteWidth * 1.15).abs() < 0.5)
+          rect,
+    ];
+    expect(beads, isNotEmpty, reason: 'drawn as a note is drawn');
+    expect(
+      beads.first.height,
+      closeTo(g.noteRadius * 2 * 1.15, 0.01),
+      reason: 'and as tall as a note, a little over',
+    );
+    // And nothing round where it stands. (The line has a glow of its own at
+    // the centre of the screen, which is not the bead's business.)
+    expect(
+      recorder.circles.where(
+        (c) =>
+            (c.dy - g.hitLineY).abs() < 0.5 &&
+            (c.dx - g.xAtPosition(0.75)).abs() < g.noteWidth,
+      ),
+      isEmpty,
+      reason: 'the bead used to be a ring',
+    );
   });
 
   group('the bar lines', () {

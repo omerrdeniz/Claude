@@ -582,9 +582,7 @@ class StagePainter extends CustomPainter {
             barWidth,
             ink,
             fade,
-            dot.clearsOrnament
-                ? _graceClearance
-                : StageGeometry.holdBarClearance,
+            _clearanceFor(g, dot.clearsOrnament),
           );
         }
         _paintNote(canvas, g, dot.across, head, radius, ink, fade);
@@ -604,47 +602,52 @@ class StagePainter extends CustomPainter {
   void _paintRunBeads(Canvas canvas, StageGeometry g) {
     for (final bead in runBeads) {
       final centre = Offset(g.xAtPosition(bead.across), g.hitLineY);
-      final radius = g.noteRadius * 1.15;
+      // A note's shape, a little larger — it stands where a note would and
+      // asks for the same finger, so it should not be the one round thing
+      // left on a screen of upright bars.
+      final body = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: centre,
+          width: g.noteWidth * _beadScale,
+          height: g.noteRadius * 2 * _beadScale,
+        ),
+        Radius.circular(g.noteWidth * _beadScale / 2),
+      );
 
-      // A disc of the floor behind it, so the ring reads as a ring and not
-      // as one more note. A run's beads touch each other; an outline drawn
-      // straight over them disappears into the crowd, which is no use for
-      // the one thing on screen that is asking to be touched.
-      canvas.drawCircle(
-        centre,
-        radius,
+      // A patch of the floor behind it, so the outline reads as an outline
+      // and not as one more note. A run's beads touch each other; a line
+      // drawn straight over them disappears into the crowd, which is no use
+      // for the one thing on screen that is asking to be touched.
+      canvas.drawRRect(
+        body,
         Paint()..color = const Color(0xFF08080F).withValues(alpha: 0.75),
       );
 
       if (bead.tracked) {
         // A finger is on it: light it up, so the hand can feel it is on the
         // rails without looking away from the notes coming down.
+        final glow = g.noteRadius * 2.5;
         canvas.drawCircle(
           centre,
-          radius * 2.2,
+          glow,
           Paint()
-            ..shader =
-                RadialGradient(
-                  colors: [
-                    AppTheme.accentSoft.withValues(alpha: 0.45),
-                    AppTheme.accentSoft.withValues(alpha: 0.0),
-                  ],
-                ).createShader(
-                  Rect.fromCircle(center: centre, radius: radius * 2.2),
-                ),
+            ..shader = RadialGradient(
+              colors: [
+                AppTheme.accentSoft.withValues(alpha: 0.45),
+                AppTheme.accentSoft.withValues(alpha: 0.0),
+              ],
+            ).createShader(Rect.fromCircle(center: centre, radius: glow)),
         );
-        canvas.drawCircle(
-          centre,
-          radius,
+        canvas.drawRRect(
+          body,
           Paint()..color = Colors.white.withValues(alpha: 0.85),
         );
       }
 
-      // Hollow when nobody is on it — a ring on the line saying "here, put a
-      // finger here" rather than a note pretending to have been played.
-      canvas.drawCircle(
-        centre,
-        radius,
+      // Hollow when nobody is on it — an outline on the line saying "here,
+      // put a finger here" rather than a note pretending to have been played.
+      canvas.drawRRect(
+        body,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = bead.tracked ? 3.0 : 2.4
@@ -654,6 +657,9 @@ class StagePainter extends CustomPainter {
       );
     }
   }
+
+  /// How much bigger than a note the bead is drawn.
+  static const double _beadScale = 1.15;
 
   /// The thread through a run: a line joining notes that arrive faster than a
   /// finger can answer one at a time.
@@ -1063,6 +1069,22 @@ class StagePainter extends CustomPainter {
     canvas.restore();
   }
 
+  /// How much room a tail leaves at its far end, in pixels.
+  ///
+  /// The larger of two things that are not the same kind of thing: a hand
+  /// needs [StageGeometry.holdBarLiftSeconds] to come off one note and land
+  /// on the next, and the picture needs enough daylight that the bar does not
+  /// run into whatever is drawn there. An ornamented touch needs more of the
+  /// second, because its little note hangs below it.
+  double _clearanceFor(StageGeometry g, bool clearsOrnament) {
+    final lift =
+        StageGeometry.holdBarLiftSeconds / approachSeconds * g.hitLineY;
+    final room =
+        g.noteRadius *
+        (clearsOrnament ? _graceClearance : StageGeometry.holdBarClearance);
+    return lift > room ? lift : room;
+  }
+
   /// The body of a note that has to be held down, drawn as a bar as long as
   /// the note lasts — and no wider than the note, so the two read as one
   /// thing rather than a head on a post.
@@ -1087,12 +1109,7 @@ class StagePainter extends CustomPainter {
     final head = g.positionAtPosition(across, progress);
     final tail = g.positionAtPosition(across, tailProgress);
 
-    final top = StageGeometry.holdBarTop(
-      head.dy,
-      tail.dy,
-      radius,
-      clearance: clearance,
-    );
+    final top = StageGeometry.holdBarTop(head.dy, tail.dy, clearance);
     if (top == null) return;
 
     final bar = RRect.fromRectAndRadius(

@@ -181,20 +181,28 @@ class StageGeometry {
   ///
   /// [headY] is the bottom of the bar, [tailY] the top it would reach without
   /// the clearance; both grow downwards, so the tail is the smaller number.
-  /// [clearance] is how much room to leave, in note radii — more than the
-  /// usual where what comes next is an ornamented touch, whose little note is
-  /// drawn below it and would otherwise be run through.
-  static double? holdBarTop(
-    double headY,
-    double tailY,
-    double radius, {
-    double clearance = holdBarClearance,
-  }) {
+  /// [clearance] is how much room to leave, in pixels — the painter works it
+  /// out, because it is the larger of a distance and a length of time and
+  /// only the painter knows how those convert.
+  static double? holdBarTop(double headY, double tailY, double clearance) {
     if (tailY >= headY) return null;
     final span = headY - tailY;
-    final room = radius * clearance;
-    return tailY + (span < room * 2 ? span / 2 : room);
+    return tailY + (span < clearance * 2 ? span / 2 : clearance);
   }
+
+  /// How long a hand needs to come off one note and land on the next, in
+  /// seconds.
+  ///
+  /// The bar says *stay here*, and it used to say it right up to the moment
+  /// the next note was due — which is an instruction no hand can follow: the
+  /// finger has to leave early enough to arrive. The player asked for the
+  /// gap: *"parmağı kaldır ve tekrar bas için bir süre geçiyor."*
+  ///
+  /// In seconds and not in note radii, because it is a fact about the hand.
+  /// [holdBarClearance] stays as a floor underneath it so the bar never runs
+  /// into the next note on a screen where this comes to very little. The
+  /// sound is untouched: the note rings its written length either way.
+  static const double holdBarLiftSeconds = 0.16;
 
   /// Whether a tail lasting [seconds] is worth drawing as a hold at all.
   ///
@@ -245,7 +253,9 @@ class StageGeometry {
   /// whole library.
   static const double holdLeastSeconds = 0.4;
 
-  /// How much room the bar leaves for the next note, in note radii.
+  /// The least room the bar leaves for the next note, in note radii — a
+  /// floor under [holdBarLiftSeconds], which is usually the larger of the
+  /// two.
   static const double holdBarClearance = 1.6;
 
   /// Half the bar's thickness, in note radii.

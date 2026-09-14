@@ -806,6 +806,40 @@ void main() {
     });
   });
 
+  group('a run\'s bead waits its turn', () {
+    // The shape the player found in the canon: an ordinary note, then three
+    // notes too fast to tap, then an ordinary note again — a second apart,
+    // over and over.
+    Song embedded() => songOf([
+      note(0, 72),
+      note(1, 74), // an ordinary note, a fifth of a second clear of the run
+      note(1.4, 76),
+      note(1.5, 77),
+      note(1.6, 79),
+      note(2.4, 74),
+    ]);
+
+    test('the run is there to be followed', () {
+      final session = sessionFor(embedded(), difficulty: Difficulty.normal);
+      expect(session.chart.runs, hasLength(1));
+    });
+
+    test('but its bead is not on the line while a note is', () {
+      // Nine hundred milliseconds of lead put a ring under every note
+      // between the runs: "birleştirme olmayan notalarda da çizgi üzerinde
+      // boş yuvarlak çıkıyor".
+      final session = sessionFor(embedded(), difficulty: Difficulty.normal);
+      seek(session, 1.0); // the ordinary note before the run is due now
+      expect(session.runBeads, isEmpty);
+    });
+
+    test('and it is out in time to be got hold of', () {
+      final session = sessionFor(embedded(), difficulty: Difficulty.normal);
+      seek(session, 1.3);
+      expect(session.runBeads, hasLength(1));
+    });
+  });
+
   group('a hand that presses before its note', () {
     // The left hand a beat behind the right, as Satie writes it: the melody
     // on one, the bass on two.
@@ -1200,12 +1234,39 @@ void main() {
       expect(session.scoreboard.counts[Verdict.miss], greaterThan(0));
     });
 
+    test('joining late loses what is gone, it does not cram it in', () {
+      // The player, on the canon: the first two notes of a run sounded
+      // almost together and then it waited. A run's notes are a seventh of a
+      // second apart and the judging window is a fifth of one, so a finger
+      // landing a little late used to be handed every note it had missed, all
+      // in the same frame.
+      // Down a hair past half way from note four to note five: too late for
+      // four, in good time for five.
+      final (session, drag) = joined(atBeat: 1.15);
+      session.drag(drag, placesOf(session)[5]);
+      for (var beat = 1.15; beat <= 1.45; beat += 0.02) {
+        seek(session, beat);
+      }
+      final heard = engine.struck.map((s) => s.$1).toList();
+      expect(
+        heard,
+        isNot(contains(76)),
+        reason: 'note four was gone by the time the finger arrived',
+      );
+      expect(heard, contains(77), reason: 'and note five is still to come');
+    });
+
     test('a run can be joined halfway through', () {
       // Missing the opening note used to cost the whole passage, with no way
       // back in.
       final (session, drag) = joined(atBeat: 1.0);
       session.drag(drag, placesOf(session)[5]);
-      seek(session, 1.4);
+      // Frame by frame, as the screen drives it. A run's notes are closer
+      // together than the judging window is wide, so what is playable turns
+      // over several times inside one jump of the clock.
+      for (var beat = 1.0; beat <= 1.4; beat += 0.02) {
+        seek(session, beat);
+      }
       expect(
         engine.struck.map((s) => s.$1),
         [76, 77],

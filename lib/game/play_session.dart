@@ -686,6 +686,29 @@ class PlaySession {
   /// something is too fast to catch — did not help at all.
   static const double dragLeadMs = 900;
 
+  /// How late a touch may still be answered, in beats.
+  ///
+  /// The judging window, everywhere except inside a run. There the notes are
+  /// closer together than the window is wide, so a note answered near the end
+  /// of it does not arrive late — it arrives *on top of the next one*. The
+  /// player heard exactly that: a finger landing a tenth of a second after a
+  /// run began sounded its first two notes sixteen milliseconds apart where
+  /// the music has a hundred and thirty-six between them, and then waited.
+  ///
+  /// Half way to the next note is the line. Past it the note belongs to the
+  /// run you did not catch, and the run carries on from where it has got to,
+  /// in time — which is the whole promise of a run: it plays the music, not
+  /// whatever is left of it all at once.
+  double _lateLimitBeats(Tap tap) {
+    final window = judge.windowMs / 1000 * beatsPerSecond;
+    final runId = tap.runId;
+    if (runId == null) return window;
+    final run = chart.runs[runId]!;
+    if (tap.runIndex + 1 >= run.length) return window;
+    final half = (run[tap.runIndex + 1].beat - tap.beat) / 2;
+    return half < window ? half : window;
+  }
+
   /// Where each run on screen has got to, for the finger and the eye alike.
   ///
   /// The bead keeps its place a judging window past the run's last note, so
@@ -703,7 +726,11 @@ class PlaySession {
     final chosen = <Hand, MapEntry<int, List<Tap>>>{};
     for (final entry in chart.runs.entries) {
       final run = entry.value;
-      if (now < run.first.beat - lead) continue;
+      // As much warning as the lead allows, but never so much that the bead
+      // is out while the hand still owes an ordinary note — see
+      // [Tap.runOpensAt].
+      final opens = run.first.beat - lead;
+      if (now < opens || now < run.first.runOpensAt) continue;
       if (now > run.last.beat + tail) continue;
 
       final hand = run.first.hand;
@@ -818,8 +845,12 @@ class PlaySession {
         if (errorMs < 0) break; // not due yet
         index++;
 
-        // Gone: already played, or expired while nobody was on it.
-        if (!_isPending(next) || errorMs > judge.windowMs) continue;
+        // Gone: already played, or expired while nobody was on it — and
+        // inside a run "expired" comes sooner than the judging window, or
+        // joining late would dump every missed note at once. See
+        // [_lateLimitBeats].
+        final limitMs = _lateLimitBeats(next) / beatsPerSecond * 1000;
+        if (!_isPending(next) || errorMs > limitMs) continue;
         // The finger has drifted off the bead. The note is left to expire,
         // which is how a run tells you that you have lost it.
         if ((next.across - drag.across).abs() > dragReach) continue;
@@ -931,6 +962,9 @@ class PlaySession {
 
       final distance = (tap.beat - now).abs();
       if (distance > windowBeats) continue;
+      // Inside a run the next note comes round sooner than the window is
+      // wide, and a note answered past that is not late — it is gone.
+      if (now - tap.beat > _lateLimitBeats(tap)) continue;
 
       final gap = (tap.across - across).abs();
       final closerInTime = distance < bestDistance - simultaneous;

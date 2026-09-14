@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v109):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v110):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -107,6 +107,44 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   temizliyor. Hangi kuyruğun süslemeli bir dokunuşta bittiğini nota
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
+
+## Koşu (hızlı nota birleştirme) düzeltmeleri (v110)
+
+Oyuncu Kanon'un 2:27 civarını bildirdi. Şekil şu: sol el bir notayı tutuyor,
+sağ el bir nota, sonra 0.136 s arayla üç nota (koşu), sonra bir nota daha —
+ve bu her 1.09 saniyede bir tekrarlıyor.
+
+- **Geç katılan koşu artık kaçırdığını içeri tıkmıyor** (`_lateLimitBeats`).
+  Simülasyonla ölçüldü: parmak 0.11 s geç inince koşunun ilk iki notası
+  **16 ms arayla** çalıyordu (müzikte 136 ms var), sonra bekleme geliyordu;
+  0.21 s geç inince ilk nota hiç çalmıyordu. Sebep: koşunun notaları yargı
+  penceresinden (200 ms) daha sık, yani pencere koşunun içinde yanlış ölçü.
+  Artık bir koşu notasının son kullanma anı **bir sonraki notaya yarı yol**.
+  Ötesi kaçmıştır; koşu kaldığı yerden zamanında devam eder. Bu, çarpma
+  süslemesindeki "iki ses asla bir çarpmadan yakın çalmaz" kuralının aynısı.
+
+- **Boncuk sırasını bekliyor** (`Tap.runOpensAt`). 900 ms'lik hazırlık payı
+  bu şekilde her notanın altına boş bir halka koyuyordu: *"birleştirme
+  olmayan notalarda da çizgi üzerinde boş yuvarlak çıkıyor."* Boncuk artık
+  elin bir önceki dokunuşu ile koşunun ilk notasının **tam ortasından** önce
+  çıkmıyor, yani sıradan bir nota çizgideyken boncuk ekranda olmuyor.
+
+- **Boncuk yuvarlak değil, nota şeklinde.** Notanın durduğu yerde duruyor ve
+  aynı parmağı istiyor; ekranda dik çubuklardan başka yuvarlak bir şey
+  kalmasının anlamı yoktu.
+
+## Basılı tutmada elin kalkma payı (v110)
+
+Oyuncu: *"kuyruğun sonu ile bir sonraki notanın başlangıcı arasında biraz
+daha fazla süre olmalı, çünkü parmağı kaldır ve tekrar bas için bir süre
+geçiyor."*
+
+Boşluk artık **saniye** cinsinden: `StageGeometry.holdBarLiftSeconds` =
+0.16 s. Eski boşluk yalnızca piksel cinsindendi (1.6 nota yarıçapı) ve
+telefonda 0.13 saniyeye denk geliyordu. Piksel ölçüsü bir taban olarak
+duruyor, yani dar bir ekranda kuyruk yine de üstteki notaya girmiyor —
+`_clearanceFor` ikisinin büyüğünü alıyor. **Ses değişmiyor**, nota yazıldığı
+kadar çınlıyor.
 
 ## Bir yere bakmak için: başlangıç noktası ve saat
 

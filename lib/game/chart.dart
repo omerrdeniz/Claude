@@ -80,6 +80,18 @@ class Tap {
   /// Position within [runId]'s run, counting from zero.
   int runIndex = 0;
 
+  /// The earliest beat this run may put its bead on the line. Meaningful on
+  /// the first touch of a run and ignored everywhere else.
+  ///
+  /// A bead wants as much warning as it can get — see
+  /// [PlaySession.dragLeadMs] — but not so much that it is sitting on the
+  /// line while the hand still has an ordinary note to play there. The canon
+  /// has three-note runs a second apart, and a nine-hundred-millisecond lead
+  /// put a ring under every note between them: *"birleştirme olmayan
+  /// notalarda da çizgi üzerinde boş yuvarlak çıkıyor."* So it never comes
+  /// out before the hand's previous touch has had its moment.
+  double runOpensAt = 0;
+
   /// How many notes sound together in this hand at this moment.
   ///
   /// Counted in notes rather than touches on purpose: a three-note chord is a
@@ -449,6 +461,11 @@ class Chart {
             run[j].runId = id;
             run[j].runIndex = j;
           }
+          // Half way back to whatever this hand was last asked for, so the
+          // bead is never on the line at the same moment as an ordinary note.
+          run.first.runOpensAt = start == 0
+              ? double.negativeInfinity
+              : (line[start - 1].beat + run.first.beat) / 2;
           runs[id] = List.unmodifiable(run);
         }
         start = i;
