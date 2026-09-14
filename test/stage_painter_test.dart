@@ -1060,49 +1060,6 @@ void main() {
     expect(mark.center.dy, greaterThan(head.dy));
   });
 
-  test('a note that pushes against the beat is ringed', () {
-    // Nothing on screen ever said where in the bar a note falls, so one that
-    // jumps the beat looked exactly like one that lands on it — which is most
-    // of what a piece like the Entertainer is.
-    const g = StageGeometry(size: phone);
-    final song = Song(
-      id: 'push',
-      title: 'Push',
-      composer: '',
-      bpm: 120,
-      notes: const [
-        // Off the beat, still sounding when the next one comes, and nothing
-        // struck on it.
-        Note(beat: 0.5, midi: 72, duration: 0.75),
-        // Squarely on the beat.
-        Note(beat: 2, midi: 74, duration: 0.5),
-      ],
-    );
-    final chart = Chart.build(song);
-    expect(chart.taps.where((t) => t.syncopated), hasLength(1));
-
-    List<Rect> ringsAt(double beat) {
-      final recorder = _Recorder();
-      StagePainter(
-        chart: chart,
-        beat: beat,
-        windowInBeats: 4,
-      ).paint(recorder, phone);
-      return [
-        for (var i = 0; i < recorder.rects.length; i++)
-          if (recorder.rectStyles[i] == PaintingStyle.stroke &&
-              (recorder.rects[i].height -
-                          (g.noteRadius * 2 + g.noteRadius * 0.52))
-                      .abs() <
-                  0.5)
-            recorder.rects[i],
-      ];
-    }
-
-    expect(ringsAt(0.5), hasLength(1), reason: 'the one off the beat');
-    expect(ringsAt(2), isEmpty, reason: 'and nothing round the one on it');
-  });
-
   test('a run\'s bead is a note\'s shape, not a circle', () {
     // It stands where a note would and asks for the same finger, so it
     // should not be the one round thing left on a screen of upright bars.

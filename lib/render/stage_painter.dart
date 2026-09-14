@@ -21,7 +21,6 @@ class _Dot {
     required this.isHeld,
     required this.isPlayed,
     this.clearsOrnament = false,
-    this.syncopated = false,
   });
 
   final double across;
@@ -42,9 +41,6 @@ class _Dot {
   /// drawn below that touch — so the tail has further to stop short of.
   final bool clearsOrnament;
 
-  /// It pushes against the beat — see [Tap.syncopated].
-  final bool syncopated;
-
   _Dot movedTo(double newAcross) => _Dot(
     across: newAcross,
     midi: midi,
@@ -53,7 +49,6 @@ class _Dot {
     isHeld: isHeld,
     isPlayed: isPlayed,
     clearsOrnament: clearsOrnament,
-    syncopated: syncopated,
   );
 }
 
@@ -501,7 +496,6 @@ class StagePainter extends CustomPainter {
               isPlayed: playedNotes.contains((member.beat, note.midi)),
               clearsOrnament:
                   member.drawnEndOrnamented && endBeat == member.drawnEndBeat,
-              syncopated: member.syncopated,
             ),
           );
         }
@@ -591,16 +585,7 @@ class StagePainter extends CustomPainter {
             _clearanceFor(g, dot.clearsOrnament),
           );
         }
-        _paintNote(
-          canvas,
-          g,
-          dot.across,
-          head,
-          radius,
-          ink,
-          fade,
-          dot.syncopated,
-        );
+        _paintNote(canvas, g, dot.across, head, radius, ink, fade);
       }
     }
 
@@ -1012,9 +997,6 @@ class StagePainter extends CustomPainter {
   /// next door.
   static const double _graceDrop = 1.8;
 
-  /// How far outside an accented note its ring sits, in note radii.
-  static const double _accentGap = 0.26;
-
   /// How thick the tie is drawn. A line, not a bar — see [_paintGraceTie].
   static const double _graceTieWidth = 1.8;
 
@@ -1051,11 +1033,6 @@ class StagePainter extends CustomPainter {
   /// three of every hundred gaps inside a chord used to be stretched to clear
   /// a disc; a bar this wide leaves a quarter of them at the distance the
   /// music actually has.
-  /// [accented] marks a note that pushes against the beat — see
-  /// [Tap.syncopated]. Nothing on screen has ever said where in the bar a
-  /// note falls, so one that jumps the beat looked exactly like one that
-  /// lands on it. It is drawn with a ring around it: the note is unchanged,
-  /// and something extra is set around it.
   void _paintNote(
     Canvas canvas,
     StageGeometry g,
@@ -1064,7 +1041,6 @@ class StagePainter extends CustomPainter {
     double radius,
     Color colour,
     double fade,
-    bool accented,
   ) {
     final centre = g.positionAtPosition(across, progress);
     final width = g.noteWidth;
@@ -1089,16 +1065,6 @@ class StagePainter extends CustomPainter {
     canvas.drawRRect(body, brush.body);
     // A bright rim reads as a hard edge at any size.
     canvas.drawRRect(body, brush.rim);
-
-    if (accented) {
-      canvas.drawRRect(
-        body.inflate(radius * _accentGap),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.6
-          ..color = Colors.white.withValues(alpha: 0.8 * fade),
-      );
-    }
 
     canvas.restore();
   }
