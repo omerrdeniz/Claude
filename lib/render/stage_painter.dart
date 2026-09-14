@@ -506,19 +506,18 @@ class StagePainter extends CustomPainter {
       // progress, not the head's: the head of an ornamented note stops at
       // the line because the finger stays on it, and the mark is not being
       // held.
-      final ornament = [
-        for (final m in group)
-          if (m.graceMidi != null) m.graceMidi!,
-      ];
+      final ornament = group.where((m) => m.hasGrace).firstOrNull;
       final answered = progress > 1 && dots.every((dot) => dot.isPlayed);
-      if (ornament.isNotEmpty && !answered) {
+      if (ornament != null && !answered) {
         _paintGrace(
           canvas,
           g,
           dots,
+          tap.hand,
           headOf(dots.first),
           radius,
-          ornament.reduce((a, b) => a < b ? a : b),
+          ornament.graceMidi!,
+          ornament.graceAcross,
           fade,
         );
       }
@@ -693,6 +692,13 @@ class StagePainter extends CustomPainter {
   ///
   /// Notes and the sparks they leave have to come out in the same places, and
   /// the only way to be sure of that is for both to go through here.
+  /// The stretch of screen a hand is drawn within.
+  (double, double) _zoneOf(Hand hand) => chart.separatesHands
+      ? (hand == Hand.left
+            ? (Chart.leftZoneStart, Chart.leftZoneEnd)
+            : (Chart.rightZoneStart, Chart.rightZoneEnd))
+      : (Chart.leftZoneStart, Chart.rightZoneEnd);
+
   List<double> _spreadPlaces(
     List<double> places,
     StageGeometry g,
@@ -701,11 +707,7 @@ class StagePainter extends CustomPainter {
   ) {
     if (places.length < 2 || g.size.width <= 0) return places;
 
-    final (zoneStart, zoneEnd) = chart.separatesHands
-        ? (hand == Hand.left
-              ? (Chart.leftZoneStart, Chart.leftZoneEnd)
-              : (Chart.rightZoneStart, Chart.rightZoneEnd))
-        : (Chart.leftZoneStart, Chart.rightZoneEnd);
+    final (zoneStart, zoneEnd) = _zoneOf(hand);
 
     return StageGeometry.spreadChord(
       [...places]..sort(),
@@ -777,8 +779,8 @@ class StagePainter extends CustomPainter {
     );
   }
 
-  /// The mark on a touch that carries an ornament: the small note itself,
-  /// drawn under the one it leans into.
+  /// The mark on a touch that carries an ornament: the little note itself,
+  /// set down and to one side of the note it leans into, and tied to it.
   ///
   /// **One per touch, not one per note.** An earlier drawing put a head
   /// beside each ornamented note, and on the eighteen chords that carry one
@@ -786,36 +788,83 @@ class StagePainter extends CustomPainter {
   /// called it exactly that. An ornament belongs to the hand, and a hand gets
   /// one mark however many notes it is holding.
   ///
-  /// **Under, because that is when.** The ornament sounds *before* the note
-  /// it leans on, and sooner is nearer the line, which is downwards.
+  /// **Down, because that is when.** The ornament sounds *before* the note it
+  /// leans on, and sooner is nearer the line, which is downwards.
   ///
-  /// It carries no direction any more. It used to be an arrow, back when the
-  /// gesture was a flick; now the ornament is earned by staying on the note,
-  /// and there is nothing to point at. What the mark has to say is only
-  /// *this one has a little note in it* — so it is drawn as one: the same
-  /// capsule the notes are, smaller, in the little note's own pitch colour.
-  /// It is a note, and it should look like the note it is rather than like a
-  /// badge stuck to the chord.
+  /// **And to the side the key is on.** Straight down said nothing about
+  /// which way the hand moves, and the hand is the point: the player has to
+  /// go from the little note to the big one. So the mark sits left of it or
+  /// right of it, as the two keys sit on a piano.
+  ///
+  /// Its own pitch would be truer still and was tried first — the measurement
+  /// is why it is not used as it stands. An acciaccatura leans into the note
+  /// beside it, so the two are a semitone or a tone apart, which on this
+  /// screen is a few pixels: across the library the middle ornament sits 5.6
+  /// pixels from its note and 96 of Satie's hundred are within one note
+  /// width, some of them exactly on top of it. A truthful offset nobody can
+  /// see is a worse drawing than a legible one. So the *side* is the pitch's,
+  /// always, and the *distance* is the pitch's too wherever that is far
+  /// enough to see — with a floor of one note width, which is what makes it
+  /// read as down-and-left or down-and-right rather than as down.
+  ///
+  /// The mark is not something to aim at, which is what makes that fair: the
+  /// finger goes on the big note, and this only says a little one leans into
+  /// it from that side.
+  ///
+  /// Where the touch is a chord the mark hangs off its outer note rather than
+  /// its nearest — see the comment in the body.
   void _paintGrace(
     Canvas canvas,
     StageGeometry g,
     List<_Dot> dots,
+    Hand hand,
     double progress,
     double radius,
     int midi,
+    double graceAcross,
     double fade,
   ) {
-    var low = dots.first.across, high = dots.first.across;
+    // Which side the ornament comes from, and which note it hangs off.
+    //
+    // **Outside the chord, never in among it.** A touch can be two or three
+    // notes, and an ornament belongs to the whole of it: measured across the
+    // library, of the twenty-four ornamented chords the little note is above
+    // all of them twenty-two times and below all of them twice, and inside
+    // one not once. So the chord's own pitch says which side, and the mark
+    // hangs off the outermost note on that side — which for a single note is
+    // that note, and for a chord keeps the mark and its tie clear of the
+    // other notes instead of threading between them.
+    var mean = 0.0;
+    var lower = dots.first, upper = dots.first;
     for (final dot in dots) {
-      if (dot.across < low) low = dot.across;
-      if (dot.across > high) high = dot.across;
+      mean += dot.midi / dots.length;
+      if (dot.across < lower.across) lower = dot;
+      if (dot.across > upper.across) upper = dot;
     }
-    final centre = g.positionAtPosition((low + high) / 2, progress);
+
+    final side = midi < mean ? -1.0 : 1.0;
+    final into = side < 0 ? lower : upper;
+    final apart = (graceAcross - into.across).abs() * g.size.width;
+    final least = g.noteWidth;
+    final away = (apart > least ? apart : least) / g.size.width;
+
+    // Inside the hand's own stretch of screen, like everything else it draws.
+    final (zoneStart, zoneEnd) = _zoneOf(hand);
+    final edge = g.noteWidth * _graceScale / 2 / g.size.width;
+    final place = (into.across + side * away).clamp(
+      zoneStart + edge,
+      zoneEnd - edge,
+    );
+
+    final anchor = g.positionAtPosition(into.across, progress);
+    final centre = g.positionAtPosition(place, progress);
     final at = Offset(centre.dx, centre.dy + radius * _graceDrop);
 
     // Its own pitch, like every other note on the screen.
     final (lowest, highest) = chart.pitchRange;
     final colour = AppTheme.pitchColor(midi, low: lowest, high: highest);
+
+    _paintGraceTie(canvas, at, anchor, colour, fade);
 
     final body = RRect.fromRectAndRadius(
       Rect.fromCenter(
@@ -839,8 +888,49 @@ class StagePainter extends CustomPainter {
     );
   }
 
-  /// How far under the notes the little one sits, in note radii.
-  static const double _graceDrop = 1.5;
+  /// The tie from the little note up into the one it leans on.
+  ///
+  /// **Not the chord band, and deliberately nothing like it.** The band is a
+  /// straight, thick, filled bar joining notes that sound *together*; this
+  /// joins two that sound one after the other, and if they looked alike the
+  /// screen would be saying the same thing about two opposite instructions.
+  /// So: a thin curved stroke, open rather than filled, running diagonally
+  /// rather than level — which is also exactly what an acciaccatura is
+  /// written with on paper. The slur is the notation for this mechanic and
+  /// for nothing else in the piece.
+  ///
+  /// It leaves the little note straight up and bends into the big one, so the
+  /// eye is taken along the way the hand has to go.
+  void _paintGraceTie(
+    Canvas canvas,
+    Offset from,
+    Offset to,
+    Color colour,
+    double fade,
+  ) {
+    final path = Path()
+      ..moveTo(from.dx, from.dy)
+      ..quadraticBezierTo(from.dx, to.dy, to.dx, to.dy);
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _graceTieWidth
+        ..strokeCap = StrokeCap.round
+        ..color = colour.withValues(alpha: 0.75 * fade),
+    );
+  }
+
+  /// How far under its note the little one sits, in note radii.
+  ///
+  /// Clear of it rather than touching: the mark is now beside the note as
+  /// well as below it, so at a tighter drop it would graze whatever is drawn
+  /// next door.
+  static const double _graceDrop = 1.8;
+
+  /// How thick the tie is drawn. A line, not a bar — see [_paintGraceTie].
+  static const double _graceTieWidth = 1.8;
 
   /// And how big it is drawn, as a fraction of a note. Small enough to read
   /// as the little note it is written as, big enough to see at arm's length.

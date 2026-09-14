@@ -3,14 +3,15 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v106):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v107):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
 yerine notanın kendi bitişine kadar kısalıyor. Tutmalı çizilme eşiği 0.30
 saniyeye indi. Şarkıyı istediğin dakikadan başlatabiliyorsun ve ekranın
 üstünde ilerleme çubuğu var. Tutmalı eşiği artık gerçekten saniye
-(ekran boyuna göre kaymıyor) ve 0.40'a ayarlandı. Ayrıntısı "Oynanış kararları"nda.
+(ekran boyuna göre kaymıyor) ve 0.40'a ayarlandı. Süsleme işareti asıl
+notanın sağ veya sol altında ve ona bir bağ yayıyla bağlı. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -30,6 +31,44 @@ Dal: **`main`**, ve tek dal o. Bir dönem her oturum kendi dalını açtı ve
 proje hiç `main`'e girmedi (`main` boş bir "Initial commit"ten ibaretti);
 geriye birbirinin içinde duran dört dal kaldı. Hepsi `main`'de toplandı,
 gerisi silindi.
+
+## Süsleme işaretinin yeri ve bağı (v107)
+
+Oyuncu: *"buradaki notaların birbirine bağlandığını göstermemiz lazım, ama
+daha önce birbirine bağladığımız notalardakinden farklı bir gösterim olmalı,
+bu mekaniğe özgü olmalı. Bir de ilk notanın aşağıda olması iyi ama piyanoda
+ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
+
+- **Bağ bir eğri, akor bandı ise düz bir çubuk.** İkisi zıt iki şey söylüyor:
+  bant *aynı anda* çalan notaları birleştiriyor, bu ise *arka arkaya* çalan
+  ikisini. Aynı görünselerdi ekran iki zıt talimat için aynı şeyi söylerdi.
+  Bağ ince, içi boş, köşeli değil eğri ve çapraz (`_paintGraceTie`,
+  `_graceTieWidth`). Kâğıtta acciaccatura zaten bu işaretle — bir bağ
+  yayıyla — yazılıyor, yani bu mekaniğe *gerçekten* özgü.
+
+- **İşaret aşağıda ve yanda.** Düz aşağı, elin hangi yöne gideceğini
+  söylemiyordu; oysa oyuncunun yapacağı iş tam olarak o. Artık küçük nota
+  asıl notanın solunda veya sağında, piyanodaki gibi.
+
+- **Yön perdenin, mesafe perdenin — ama bir tabanla.** Süsleme notası
+  asıl notasına bir-iki yarım ses uzakta olduğu için ekranda gerçek fark
+  birkaç piksel: kütüphanede ortanca 5.6 piksel, Satie'nin yüz süslemesinin
+  96'sı bir nota genişliğinden yakın, bazıları tam üstünde. Görülemeyen
+  doğru bir mesafe, okunabilir bir yalandan daha kötü bir çizim. O yüzden
+  **yön her zaman perdenin**, mesafe de perdenin — ama en az bir nota
+  genişliği. İşaret dokunulacak bir şey değil (parmak asıl notaya gidiyor),
+  bunu adil kılan da bu.
+
+- **Akorda dışarıda durur, araya girmez.** Oyuncu sordu: *"ikinci nota 2'li
+  veya 3'lü bir akor da olabiliyor, böyle konumlandırmak doğru olur mu?"*
+  Ölçüldü: 140 süslemenin 116'sı tek notalı, 24'ü akorlu; akorluların 22'sinde
+  küçük nota akorun tamamının üstünde, 2'sinde altında, **hiçbirinde içinde
+  değil.** Yani işaret akorun kendi perdesine göre bir yana geçiyor ve o
+  yandaki **en dıştaki** notaya asılıyor — tek notada o notanın kendisi,
+  akorda ise işaret ve bağı diğer notaların arasından geçmiyor.
+
+- `_graceDrop` 1.5'ten 1.8 yarıçapa çıktı: işaret artık yanda da durduğu için
+  daha sıkı bir düşüşte komşu notaya sürtüyordu.
 
 ## Bir yere bakmak için: başlangıç noktası ve saat
 
@@ -108,7 +147,8 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
     - **çizginin altındaki çarpma ışığı** — her tüy kendi notasının renginde
       (`Spark.midis`, yerini zaten taşıyordu),
     - **süsleme işareti** — küçük notanın kendi rengi, ve daire değil
-      notaların kapsül şeklinin küçüğü (`_graceScale`),
+      notaların kapsül şeklinin küçüğü (`_graceScale`); yeri ve bağı için
+      aşağıdaki "Süsleme işaretinin yeri ve bağı",
     - **akoru birleştiren bant** — bir uçtaki notanın renginden öbür uçtakinin
       rengine geçen bir geçiş. Rengi oyuncu seçti; seçenekler soluk gri ve
       eski hâliydi. Bandın uçları zaten o iki notanın altında duruyor, yani
