@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v114):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v115):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -107,6 +107,51 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   temizliyor. Hangi kuyruğun süslemeli bir dokunuşta bittiğini nota
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
+
+## Senkop: vuruşa karşı iten notalar (v115)
+
+Oyuncu Entertainer için *"çok hızlı, onda da birleştirme olsa"* dedi. Ölçüm
+bunu **çürüttü** ve daha iyi bir yere götürdü.
+
+**Entertainer hızlı değil, dinmiyor.** En hızlı aralığı 0.208 s — Für
+Elise'in sıradan akan notalarıyla birebir aynı (biri 72 bpm'de onaltılık,
+diğeri 144'te sekizlik). Saniyeye bakan hiçbir eşik ikisini ayıramaz.
+Eşiği 0.209'a çekmek Entertainer'a 105 koşu verirken Für Elise'i 3'ten
+140'a, Halvorsen'i 0'dan 73'e çıkarıyor. 0.18 ve 0.192 de denendi: Entertainer'a
+hiç dokunmuyorlar (parçada 0.191'lik **tek bir** aralık var, gerisi 0.208),
+buna karşılık Passacaglia'nın kolay düzenlemesini 98 notalık tek bir koşuya
+çeviriyorlar.
+
+Parçayı zorlaştıran şey aralık değil **yoğunluk**: 1372 dokunuş (kütüphanenin
+en fazlası) ve **133 saniye** boyunca yarım saniyelik bir nefes bile yok.
+
+**Onun yerine senkop işaretlendi** (`Tap.syncopated`, `Chart._markSyncopated`).
+Tanım: nota vuruşun *arasında* başlıyor, bir sonraki vuruşun üstünden geçecek
+kadar sürüyor, ve o vuruşta o seste hiçbir şey çalınmıyor — yani vurgu
+beklenmedik yere düşüyor ve vuruş işaretsiz geçiyor.
+
+Sayılar: **Entertainer 77 (%6)**, Passacaglia 22, Kanon 7, **diğer hepsi 0** —
+Für Elise, Gnossienne, Prelüd, Neşeye Övgü dahil. Ragtime'ı ragtime yapan şey
+bu, ve ölçüm onu kütüphanede tek başına ayırıyor.
+
+**Tanım iki kez yanlış kuruldu, ikisi de ölçümle yakalandı:**
+
+1. *Sadece bu ele bak* dendiğinde Prelüd'ün sol eli 66 kez senkoplu çıktı —
+   üstteki figürün altında tutulan bir bas notası. Çözüm sanılan şey "müziğin
+   tamamına bak" idi;
+2. ama o zaman Entertainer 90'dan 8'e düştü, çünkü ragtime'da nabzı **sol el
+   tutuyor**, sağ el ona karşı itiyor. Yani el el bakmak doğruydu.
+
+Gerçek ayırt edici **uzunluk**: senkop, nabzın üstünden geçen **kısa** bir
+notadır. Bach'ın bası 1.75 vuruş uzunluğunda — sürdürülen bir ses, itme
+değil. `tap.duration > 1` elemesi ikisini ayırıyor. (Bu eşik bilerek vuruş
+cinsinden: karşılaştırma **nabzın kendisiyle** yapılıyor, elin
+yapabileceğiyle değil.)
+
+**Yalnızca çizim kullanıyor.** Çalan, puanlanan, elden istenen hiçbir şey
+değişmiyor. Ekranda senkoplu notanın etrafına ince bir halka çiziliyor
+(`_accentGap`). Geri almak: `_markSyncopated` çağrısını ve `_paintNote`
+içindeki halkayı kaldırmak.
 
 ## Koşu (hızlı nota birleştirme) düzeltmeleri (v110)
 

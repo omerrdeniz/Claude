@@ -150,6 +150,13 @@ class Tap {
   /// Long enough that the finger is expected to stay down.
   bool get isHold => duration >= holdFrom;
 
+  /// Whether this touch starts off the beat and holds across the next one,
+  /// with nothing struck on that beat — see [Chart._markSyncopated].
+  ///
+  /// A drawing matter and nothing else: it changes how the note is marked,
+  /// not what it sounds, scores or asks for.
+  bool syncopated = false;
+
   /// Whether this hand is asked for something else before this touch ends.
   ///
   /// Set by [Chart.build]. A hand has one finger here, so where a held note
@@ -365,6 +372,7 @@ class Chart {
       tap.holdFrom = holdFrom;
     }
     _markSustained(taps, difficulty.separatesHands);
+    _markSyncopated(taps, onsetTolerance, difficulty.separatesHands);
 
     // Tell every touch how many fingers its hand needs at that moment.
     for (var i = 0; i < taps.length;) {
@@ -626,6 +634,77 @@ class Chart {
           }
           break;
         }
+      }
+    }
+  }
+
+  /// Mark the touches that push against the beat.
+  ///
+  /// **What syncopation is.** There is a pulse — the beat you would tap a
+  /// foot to. A note is syncopated when it starts *between* two beats and is
+  /// still sounding when the next one arrives, with nothing struck on that
+  /// beat: the accent lands where the ear is not expecting one, and the beat
+  /// itself passes unmarked.
+  ///
+  /// **Why the game should say so.** Nothing on screen has ever said where in
+  /// the bar a note falls, so a note that jumps the beat looks exactly like
+  /// one that lands on it. The difference is most of what a piece like the
+  /// Entertainer *is* — and measured across the library it is the one thing
+  /// that tells ragtime from everything else here: 28% of the Entertainer's
+  /// beats are jumped this way, against 4% in the canon and **none at all**
+  /// in Für Elise, the Gnossienne, the prelude or the Ode. A stream of fast
+  /// notes is not this: there the note starts again on every beat.
+  ///
+  /// Only the drawing uses it. What sounds, what scores and what is asked of
+  /// the hand are untouched.
+  static void _markSyncopated(
+    List<Tap> taps,
+    double onsetTolerance,
+    bool separatesHands,
+  ) {
+    // Hand by hand, and that took two goes. Asked of the music as a whole —
+    // is *anything* struck on this beat — ragtime comes out with almost none,
+    // because the left hand is keeping the beat the right hand pushes
+    // against, which is the whole arrangement. The push is felt in the voice
+    // that makes it.
+    final byHand = <Hand, List<Tap>>{};
+    for (final tap in taps) {
+      (byHand[separatesHands ? tap.hand : Hand.right] ??= []).add(tap);
+    }
+
+    for (final line in byHand.values) {
+      final struck = <int>{};
+      for (final tap in line) {
+        final nearest = tap.beat.roundToDouble();
+        if ((tap.beat - nearest).abs() <= onsetTolerance) {
+          struck.add(nearest.toInt());
+        }
+      }
+
+      for (final tap in line) {
+        final within = tap.beat - tap.beat.floorToDouble();
+        // On the beat, or as near as makes no odds: not this.
+        if (within <= onsetTolerance || within >= 1 - onsetTolerance) continue;
+
+        // **Shorter than the beat it crosses**, and that is the other half of
+        // it. A syncopation is a short note straddling the pulse. Without
+        // this the prelude's left hand came out syncopated sixty-six times:
+        // a bass note a beat and three quarters long, held under the figure
+        // above it. That is a sustained voice, not a push — and the length is
+        // the only thing that tells the two apart.
+        //
+        // In beats and not in seconds, unusually for this game: the
+        // comparison *is* against the pulse. It is a fact about the music
+        // rather than about a hand.
+        if (tap.duration > 1) continue;
+
+        final beat = tap.beat.floor() + 1;
+        // It has to still be sounding when that beat comes round.
+        if (tap.endBeat <= beat + onsetTolerance) continue;
+        // And that beat has to pass unmarked in this voice, or there is
+        // nothing to push against.
+        if (struck.contains(beat)) continue;
+        tap.syncopated = true;
       }
     }
   }

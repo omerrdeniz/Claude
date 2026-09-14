@@ -605,6 +605,50 @@ void main() {
     });
   });
 
+  group('notes that push against the beat', () {
+    List<Tap> syncopated(String id) =>
+        Chart.build(shipped(id)).taps.where((t) => t.syncopated).toList();
+
+    test('ragtime is built out of them', () {
+      // The one thing that tells the Entertainer from everything else here.
+      final marked = syncopated('entertainer');
+      expect(marked, hasLength(greaterThan(50)));
+      for (final tap in marked) {
+        final within = tap.beat - tap.beat.floorToDouble();
+        expect(within, greaterThan(0.01), reason: 'it starts off the beat');
+        expect(
+          tap.endBeat,
+          greaterThan(tap.beat.floorToDouble() + 1),
+          reason: 'and holds across the next one',
+        );
+      }
+    });
+
+    test('a piece that lands on the beat has none', () {
+      expect(syncopated('ode-to-joy'), isEmpty);
+      expect(syncopated('fur-elise'), isEmpty);
+    });
+
+    test('a stream of fast notes is not syncopation', () {
+      // The prelude runs sixteenths off the beat all day, but every beat is
+      // struck: the notes start again on each one. Nothing is pushing.
+      expect(syncopated('prelude-in-c'), isEmpty);
+    });
+
+    test('and neither is a bass note held under the figure', () {
+      // The first thing this got wrong. Bach's left hand holds a note a beat
+      // and three quarters long across the beats above it — a sustained
+      // voice, not a push, and only its length tells them apart.
+      final held = Chart.build(
+        shipped('prelude-in-c'),
+      ).taps.where((t) => t.hand == Hand.left && t.duration > 1);
+      expect(held, isNotEmpty, reason: 'the prelude is full of them');
+      for (final tap in held) {
+        expect(tap.syncopated, isFalse);
+      }
+    });
+  });
+
   group('what counts as a note to hold', () {
     test('it is a length of time, not a number of beats', () {
       // The same written note, in two pieces at different tempos. A hand
