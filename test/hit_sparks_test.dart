@@ -3,13 +3,8 @@ import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/render/hit_sparks.dart';
 
 void main() {
-  Spark hit({double across = 0.5}) => Spark(
-    places: [across],
-    midis: const [60],
-    hand: Hand.right,
-    voices: 1,
-    quality: 1,
-  );
+  Spark hit({double across = 0.5}) =>
+      Spark(places: [across], midis: const [60], hand: Hand.right, quality: 1);
 
   test('a spark burns out on its own', () {
     final field = SparkField(lifeMs: 100);

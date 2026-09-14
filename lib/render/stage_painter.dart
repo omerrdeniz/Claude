@@ -182,9 +182,11 @@ class StagePainter extends CustomPainter {
         final place = places[i];
         // Each plume in its own note's colour: the light is what happened to
         // *that* note, so it is that note that should be recognisable in it.
-        final colour = i < spark.midis.length
-            ? AppTheme.pitchColor(spark.midis[i], low: low, high: high)
-            : AppTheme.chordColor(spark.voices);
+        final colour = AppTheme.pitchColor(
+          spark.midis[i],
+          low: low,
+          high: high,
+        );
         final x = g.xAtPosition(place);
         final shaft = Rect.fromLTRB(x - half, y, x + half, y + reach);
         canvas.drawRRect(
@@ -453,7 +455,6 @@ class StagePainter extends CustomPainter {
           : (0.35 + progress.clamp(0.0, 1.0) * 0.65).clamp(0.0, 1.0);
       if (fade <= 0.01) continue;
 
-      final colour = AppTheme.chordColor(tap.voices);
       final radius = g.noteRadius;
       dots = _spreadChord(dots, g, radius, tap.hand);
 
@@ -463,7 +464,7 @@ class StagePainter extends CustomPainter {
       );
 
       if (dots.length > 1) {
-        _paintChordBand(canvas, g, dots, headOf(dots.first), colour, fade);
+        _paintChordBand(canvas, g, dots, headOf(dots.first), fade);
       }
 
       // One mark for the whole touch, before the notes so they sit on top of
@@ -493,8 +494,6 @@ class StagePainter extends CustomPainter {
         // falling, which is how the screen says which is which.
         if (dot.isPlayed && head > 1) continue;
         // Each note in its own colour: which note it is, and how high.
-        // The band behind a chord keeps the old one, which is the other half
-        // of what the player has to read — see [_paintChordBand].
         final (low, high) = chart.pitchRange;
         final ink = AppTheme.pitchColor(dot.midi, low: low, high: high);
         if (dot.isHold) {
@@ -682,24 +681,35 @@ class StagePainter extends CustomPainter {
   /// Without it, notes side by side read as separate notes and the player
   /// answers them one at a time. The band says: these belong together, and
   /// whether they take one finger or three, they sound at once.
+  ///
+  /// It runs from the outermost note of the chord to the other, so it is
+  /// drawn in *their* colours: one end the colour of the note it touches,
+  /// the other end the colour of the note at the far end. Nothing has to be
+  /// learned to read it. It used to be one flat colour standing for how many
+  /// notes the chord had, which was the last thing on screen still coloured
+  /// by something other than pitch — and with the notes themselves now told
+  /// apart by colour, the count is there to be seen in them.
   void _paintChordBand(
     Canvas canvas,
     StageGeometry g,
     List<_Dot> dots,
     double progress,
-    Color colour,
     double fade,
   ) {
-    var lowest = 1.0;
-    var highest = 0.0;
+    var lowest = dots.first;
+    var highest = dots.first;
     for (final dot in dots) {
-      if (dot.across < lowest) lowest = dot.across;
-      if (dot.across > highest) highest = dot.across;
+      if (dot.across < lowest.across) lowest = dot;
+      if (dot.across > highest.across) highest = dot;
     }
 
-    final left = g.positionAtPosition(lowest, progress);
-    final right = g.positionAtPosition(highest, progress);
+    final left = g.positionAtPosition(lowest.across, progress);
+    final right = g.positionAtPosition(highest.across, progress);
     final thickness = g.noteWidth * 0.7;
+
+    final (low, high) = chart.pitchRange;
+    final from = AppTheme.pitchColor(lowest.midi, low: low, high: high);
+    final to = AppTheme.pitchColor(highest.midi, low: low, high: high);
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -716,9 +726,11 @@ class StagePainter extends CustomPainter {
           left,
           right,
           [
-            colour.withValues(alpha: 0.30 * fade),
-            colour.withValues(alpha: 0.46 * fade),
-            colour.withValues(alpha: 0.30 * fade),
+            from.withValues(alpha: 0.30 * fade),
+            // Brighter in the middle, as it always was: the band is behind
+            // the notes, and its ends are under them.
+            Color.lerp(from, to, 0.5)!.withValues(alpha: 0.46 * fade),
+            to.withValues(alpha: 0.30 * fade),
           ],
           const [0.0, 0.5, 1.0],
         ),

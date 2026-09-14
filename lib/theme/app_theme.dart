@@ -22,21 +22,18 @@ abstract final class AppTheme {
     glow: accent,
   );
 
-  /// How many fingers a moment needs, as colour.
+  /// The four house colours, which the beams are lit in.
   ///
-  /// This is the one thing the player has to read ahead of time, and reading
-  /// it from the count of dots is too slow at speed. One colour per chord
-  /// size, shared by every note in that chord, says "one finger" or "three
-  /// fingers" at a glance and before the hand has to be there.
+  /// They used to say how many fingers a moment needed — one colour per chord
+  /// size, on every note of that chord. Nothing is coloured that way any
+  /// more: a note is coloured by its pitch, and the band behind a chord by
+  /// the notes at its ends, so the count is read off the notes themselves.
   static const List<Color> chordColors = [
-    Color(0xFF9B6BFF), // one finger — violet
-    Color(0xFFFFC048), // two — amber
-    Color(0xFF3FA9FF), // three — blue
-    Color(0xFF3DD68C), // four or more — green
+    Color(0xFF9B6BFF), // violet
+    Color(0xFFFFC048), // amber
+    Color(0xFF3FA9FF), // blue
+    Color(0xFF3DD68C), // green
   ];
-
-  static Color chordColor(int fingers) =>
-      chordColors[(fingers - 1).clamp(0, chordColors.length - 1)];
 
   /// A note's own colour: which note it is as hue, how high it is as light.
   ///

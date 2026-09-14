@@ -178,24 +178,6 @@ void main() {
     expect(() => paintFrame(song, 7.6), returnsNormally);
   });
 
-  test('each chord size has its own colour', () {
-    // Colour says how many fingers a moment needs; two sizes sharing one
-    // colour would make that unreadable.
-    final colours = [
-      for (var n = 1; n <= 4; n++) AppTheme.chordColor(n).toARGB32(),
-    ];
-    expect(colours.toSet(), hasLength(4));
-  });
-
-  test('bigger chords than the palette still get a colour', () {
-    expect(AppTheme.chordColor(9), AppTheme.chordColor(4));
-    expect(
-      AppTheme.chordColor(0),
-      AppTheme.chordColor(1),
-      reason: 'never off the end of the palette',
-    );
-  });
-
   test('notes stay clear of each other on a short screen', () {
     const landscape = StageGeometry(size: phoneLandscape);
     // A note must not be so large that consecutive ones overlap vertically.
@@ -377,7 +359,6 @@ void main() {
           places: tap.noteAcross,
           midis: [for (final note in tap.notes) note.midi],
           hand: tap.hand,
-          voices: tap.voices,
           quality: 1,
         )..age = 0.2,
       ],
@@ -404,6 +385,87 @@ void main() {
         reason: 'a spark at $plume has no note above it',
       );
     }
+  });
+
+  test('a chord band runs between the colours of the notes it joins', () async {
+    // The band used to be one flat colour standing for how many notes the
+    // chord had. Every note on screen is coloured by its pitch now, so the
+    // band is too: its left end the colour of the note on the left, its
+    // right end the colour of the note on the right.
+    //
+    // Two notes far apart in one hand, so the chart puts them at the ends of
+    // the zone and nothing is drawn between them but the band.
+    const lower = 60, upper = 64;
+    final song = Song(
+      id: 'band',
+      title: 'Band',
+      composer: '',
+      bpm: 120,
+      notes: const [
+        Note(beat: 0, midi: lower, duration: 0.5),
+        Note(beat: 0, midi: upper, duration: 0.5),
+      ],
+    );
+
+    const g = StageGeometry(size: phone);
+    const window = 4.0;
+    // Half way down, where the band is clear of the hit line's own glow.
+    const progress = 0.5;
+    final picture = paintFrame(song, -window * (1 - progress), window: window);
+    final image = await picture.toImage(
+      phone.width.toInt(),
+      phone.height.toInt(),
+    );
+    final pixels = (await image.toByteData(
+      format: ui.ImageByteFormat.rawRgba,
+    ))!;
+
+    final chart = Chart.build(song);
+    final tap = chart.taps.single;
+    final left = g.xAtPosition(tap.noteAcross.reduce((a, b) => a < b ? a : b));
+    final right = g.xAtPosition(tap.noteAcross.reduce((a, b) => a > b ? a : b));
+    final y = g.yAt(progress).round();
+
+    /// The hue of the band a quarter and three quarters of the way along.
+    double hueAt(double x) {
+      final at = (y * phone.width.toInt() + x.round()) * 4;
+      return HSVColor.fromColor(
+        Color.fromARGB(
+          255,
+          pixels.getUint8(at),
+          pixels.getUint8(at + 1),
+          pixels.getUint8(at + 2),
+        ),
+      ).hue;
+    }
+
+    final (low, high) = chart.pitchRange;
+    double wanted(int midi) =>
+        HSVColor.fromColor(AppTheme.pitchColor(midi, low: low, high: high)).hue;
+
+    // A hue is a circle, so nearness has to wrap: 350° and 10° are close.
+    double apart(double a, double b) {
+      final gap = (a - b).abs() % 360;
+      return gap > 180 ? 360 - gap : gap;
+    }
+
+    final nearLower = hueAt(left + (right - left) * 0.25);
+    final nearUpper = hueAt(left + (right - left) * 0.75);
+
+    // Along the band it becomes less like one note and more like the other.
+    // Read as a shift rather than as two absolute colours: the band is laid
+    // over the ground at a third of full strength, so what a pixel is worth
+    // is how it compares with the other end, not what it is on its own.
+    expect(
+      apart(nearLower, wanted(lower)),
+      lessThan(apart(nearUpper, wanted(lower))),
+      reason: 'the end by the low note should be the more like it',
+    );
+    expect(
+      apart(nearUpper, wanted(upper)),
+      lessThan(apart(nearLower, wanted(upper))),
+      reason: 'and the far end the more like the other note',
+    );
   });
 
   test('an ornament is marked in its own note\'s colour, under the chord', () {
@@ -592,30 +654,22 @@ void main() {
             places: [0.70, 0.74],
             midis: [67, 71],
             hand: Hand.right,
-            voices: 2,
             quality: 1,
           )..age = 0.03,
           Spark(
             places: [0.28, 0.29, 0.30],
             midis: [48, 52, 55],
             hand: Hand.left,
-            voices: 3,
             quality: 0.9,
           )..age = 0.20,
           Spark(
             places: [0.20, 0.26, 0.33],
             midis: [45, 50, 54],
             hand: Hand.left,
-            voices: 3,
             quality: 0.8,
           )..age = 0.45,
-          Spark(
-            places: [0.86],
-            midis: [76],
-            hand: Hand.right,
-            voices: 1,
-            quality: 0.6,
-          )..age = 0.75,
+          Spark(places: [0.86], midis: [76], hand: Hand.right, quality: 0.6)
+            ..age = 0.75,
         ],
       ),
       'zor-parmaklama': await savePng(

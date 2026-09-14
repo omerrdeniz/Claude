@@ -3,9 +3,10 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v93):** çarpma süslemesi (acciaccatura) mekaniği eklendi;
-notalar perdesine göre renklenmeye başladı; akorlar kendi aralık oranlarıyla
-çiziliyor. Ayrıntısı "Oynanış kararları"nda.
+**Son güncelleme (v100):** ekrandaki her şey artık perdeye göre renkleniyor —
+notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
+Akor büyüklüğünü renkle söyleyen son yer de kalktı. Ayrıntısı "Oynanış
+kararları"nda.
 
 ## Proje
 
@@ -59,9 +60,29 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
     koyu kırmızı hâlâ kırmızıdır. Dört oktavdaki *do*: `#852525`, `#A42E2E`,
     `#C33737`, `#E23F3F` — ton 0°, doygunluk %72, değişen yalnız parlaklık
     (%52'den %89'a).
-  - **Akor büyüklüğü** artık notaların arkasındaki **bandın** rengi: sarı
-    ikili, mavi üçlü, yeşil dörtlü. Bant yoksa tek nota demektir. Bilgi
-    kaybolmadı, yer değiştirdi.
+  - **Akor büyüklüğü renkle söylenmiyor, sayılıyor.** Bir ara bandın rengine
+    taşınmıştı (sarı ikili, mavi üçlü, yeşil dörtlü); v100'de o da kalktı.
+    Notalar birbirinden renkle ayrıldığı için kaç tane olduğu zaten
+    görünüyor, ve ekranda perdeden başka bir şeyi anlatan tek renk kalmak
+    kafa karıştırıyordu. `AppTheme.chordColor` bu yüzden silindi; dört ev
+    rengi (`AppTheme.chordColors` listesi) yalnızca huzmeleri boyamak için
+    duruyor.
+
+  - **Renk kuralı ekranın tamamında geçerli.** Oyuncu üç yeri tek tek
+    bildirdi, üçü de eski akor rengiyle kalmıştı:
+
+    - **çizginin altındaki çarpma ışığı** — her tüy kendi notasının renginde
+      (`Spark.midis`, yerini zaten taşıyordu),
+    - **süsleme işareti** — küçük notanın kendi rengi, ve daire değil
+      notaların kapsül şeklinin küçüğü (`_graceScale`),
+    - **akoru birleştiren bant** — bir uçtaki notanın renginden öbür uçtakinin
+      rengine geçen bir geçiş. Rengi oyuncu seçti; seçenekler soluk gri ve
+      eski hâliydi. Bandın uçları zaten o iki notanın altında duruyor, yani
+      öğrenilecek bir şey kalmıyor.
+
+    Süslemenin fırçaları notalarınkinden ayrı tutuldu: `_Brushes` tek boyut
+    önbellekliyor ve boyut değişince önbelleği atıyor, yani ondan ikinci bir
+    boyut istemek her karede bütün fırçaları yeniden kurardı.
 
   **Beşliler çemberi denendi ve geri alındı — tekrar önermeyin.** İlk öneri
   oydu (oyunun zemini de o çemberi kullanıyor, tutarlı olurdu). Ama render
@@ -84,8 +105,8 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   düşüp kayboluyordu — Für Elise yeşil zeminde yeşil notalardı. Ton duruyor
   ama artık bir ipucu kadar; renk notaların işi.
 - **Akorun her notası ayrı çizilir.** Tek parmakla basılsa bile üç nota üç
-  daire olarak görünür (`Tap.noteAcross`), arkalarında onları birleştiren bir
-  şerit/bant vardır.
+  ayrı nota olarak görünür (`Tap.noteAcross`), arkalarında onları birleştiren
+  bir bant vardır.
 - **Normal zorlukta hiçbir nota oyuncudan alınmaz.** Oyuncu "şarkının benim
   çalmadığım kısımları var" dedi; yalnızca Kolay modda seyreltme yapılır
   (yarım vuruşta bir moment kalır, gerisi `autoNotes`'a gider).

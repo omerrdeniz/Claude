@@ -15,7 +15,6 @@ class Spark {
     required this.places,
     required this.midis,
     required this.hand,
-    required this.voices,
     required this.quality,
   });
 
@@ -42,9 +41,6 @@ class Spark {
   /// Which hand played it, since each hand has its own half of the screen to
   /// be laid out within.
   final Hand hand;
-
-  /// How many notes sounded together, which is what colours it.
-  final int voices;
 
   /// How well timed the touch was, 1 for dead on and 0 at the edge of the
   /// window. A clean hit throws more light than a scraped one.

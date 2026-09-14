@@ -103,7 +103,6 @@ class _PlayScreenState extends State<PlayScreen>
           places: tap.noteAcross,
           midis: [for (final note in tap.notes) note.midi],
           hand: tap.hand,
-          voices: tap.voices,
           quality: 1,
         ),
       ),
@@ -199,7 +198,6 @@ class _PlayScreenState extends State<PlayScreen>
             places: outcome.places,
             midis: [for (final note in outcome.notes) note.midi],
             hand: outcome.hand,
-            voices: outcome.voices,
             quality: quality,
           ),
         );
