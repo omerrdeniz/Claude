@@ -493,17 +493,73 @@ void main() {
       }
     });
 
+    test('a run takes in the note on each side of it', () {
+      // The canon's semiquaver variations are built as one ordinary note,
+      // three too fast to tap, one ordinary note, over and over. Read
+      // strictly that asks the hand to tap, then slide, then tap again every
+      // quarter of a second, and the player said it cannot be done at speed.
+      final song = shipped('canon-in-d');
+      final bps = song.bpm / 60;
+      final chart = Chart.build(song);
+      final run = chart.runs.values.firstWhere(
+        (r) => r.first.beat / bps > 148 && r.first.beat / bps < 149,
+      );
+      expect(run, hasLength(5), reason: 'three, with a shoulder either side');
+
+      // The shoulders are the neighbours, not notes invented for the run.
+      final taps = chart.taps.where((t) => t.hand == run.first.hand).toList();
+      final before = taps[taps.indexOf(run.first) - 1];
+      expect(
+        (run.first.beat - before.beat) / bps,
+        greaterThan(0.15),
+        reason: 'the note before the run is an ordinary one',
+      );
+    });
+
+    test('but it never reaches past the note beside it', () {
+      // One on each side and no further: widening the run gap itself was
+      // tried and sent back, because carrying the thread over every breath
+      // turned ten bars of the canon into two runs of eighty and a hundred.
+      final chart = Chart.build(shipped('canon-in-d'));
+      final longest = chart.runs.values
+          .map((r) => r.length)
+          .reduce((a, b) => a > b ? a : b);
+      expect(longest, lessThan(20), reason: 'not one run to a page');
+    });
+
     test('every run is in time order and long enough to be one', () {
       for (final song in shippedSongs) {
         final secondsPerBeat = 60 / song.bpm;
         for (final run in Chart.build(song).runs.values) {
           expect(run.length, greaterThanOrEqualTo(Chart.runLength));
-          for (var i = 1; i < run.length; i++) {
-            final gap = (run[i].beat - run[i - 1].beat) * secondsPerBeat;
+          final gaps = [
+            for (var i = 1; i < run.length; i++)
+              (run[i].beat - run[i - 1].beat) * secondsPerBeat,
+          ];
+          // Inside, a run is at a pace nobody can tap one at a time. A run
+          // also takes in the note on each side of it, so the first and last
+          // gaps — and only those — may be wider, and only as far as
+          // [Chart.runShoulderSpacings] of the run's own closest spacing.
+          final wide = [
+            for (var i = 0; i < gaps.length; i++)
+              if (gaps[i] > Chart.runGapSeconds + 1e-9) i,
+          ];
+          for (final i in wide) {
             expect(
-              gap,
-              lessThanOrEqualTo(Chart.runGapSeconds + 1e-9),
+              i == 0 || i == gaps.length - 1,
+              isTrue,
               reason: '${song.title}: a run reaching over a real gap',
+            );
+          }
+          final pace = [
+            for (final gap in gaps)
+              if (gap <= Chart.runGapSeconds + 1e-9) gap,
+          ].reduce((a, b) => a < b ? a : b);
+          for (final i in wide) {
+            expect(
+              gaps[i],
+              lessThanOrEqualTo(pace * Chart.runShoulderSpacings + 1e-9),
+              reason: '${song.title}: a shoulder reaching too far',
             );
           }
           for (var i = 1; i < run.length; i++) {

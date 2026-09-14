@@ -403,6 +403,14 @@ class Chart {
   /// notes are a flourish; three are a run.
   static const int runLength = 3;
 
+  /// How far out a run reaches for the note on either side of it, as a
+  /// multiple of its own closest spacing. See [_widen].
+  ///
+  /// Twice. The canon's runs are a seventh of a second between notes and the
+  /// ordinary notes either side are two sevenths away — the next thing the
+  /// hand does, not the next phrase.
+  static const double runShoulderSpacings = 2.0;
+
   /// A run ends where its notes stop being close together — there is no
   /// second, wider threshold that carries one over a breath.
   ///
@@ -438,6 +446,10 @@ class Chart {
     final runs = <int, List<Tap>>{};
     var nextId = 1;
     for (final line in byHand.values) {
+      // Found first, extended second, and only then handed out ids: a run's
+      // shoulders (see [_widen]) depend on what is next to it, and that is
+      // not known while the runs are still being found.
+      final found = <(int, int)>[]; // half-open [start, end)
       var start = 0;
       // Whether anything in the chain so far was fast enough to make it a
       // run. Until something is, a wide gap is just a wide gap.
@@ -454,25 +466,78 @@ class Chart {
           continue;
         }
 
-        if (running && i - start >= runLength) {
-          final run = line.sublist(start, i);
-          final id = nextId++;
-          for (var j = 0; j < run.length; j++) {
-            run[j].runId = id;
-            run[j].runIndex = j;
-          }
-          // Half way back to whatever this hand was last asked for, so the
-          // bead is never on the line at the same moment as an ordinary note.
-          run.first.runOpensAt = start == 0
-              ? double.negativeInfinity
-              : (line[start - 1].beat + run.first.beat) / 2;
-          runs[id] = List.unmodifiable(run);
-        }
+        if (running && i - start >= runLength) found.add((start, i));
         start = i;
         running = false;
       }
+
+      for (final (from, to) in _widen(found, line, secondsPerBeat)) {
+        final run = line.sublist(from, to);
+        final id = nextId++;
+        for (var j = 0; j < run.length; j++) {
+          run[j].runId = id;
+          run[j].runIndex = j;
+        }
+        // Half way back to whatever this hand was last asked for, so the
+        // bead is never on the line at the same moment as an ordinary note.
+        run.first.runOpensAt = from == 0
+            ? double.negativeInfinity
+            : (line[from - 1].beat + run.first.beat) / 2;
+        runs[id] = List.unmodifiable(run);
+      }
     }
     return runs;
+  }
+
+  /// Take in the note on each side of a run, where the music leaves it close
+  /// enough to be part of the same gesture.
+  ///
+  /// The canon's semiquaver variations are built as *one ordinary note,
+  /// three too fast to tap, one ordinary note*, over and over about a second
+  /// apart. Read strictly, that asks the hand to tap, then put a finger down
+  /// and slide, then tap again, every quarter of a second — and the player
+  /// said plainly it cannot be done at speed. The shoulders are what make it
+  /// one movement instead of three.
+  ///
+  /// **This is a step back towards something that was once rejected**, and
+  /// deliberately a small one. Widening [runGapSeconds] itself was tried and
+  /// sent back: the canon breathes every fourth note, and carrying the thread
+  /// across every breath turned ten bars into two runs of seventy-nine and a
+  /// hundred and twelve notes. So this takes *one* note on each side and only
+  /// where it is within [runShoulderSpacings] of the run's own spacing —
+  /// close enough to be the same gesture, and never a chain.
+  static List<(int, int)> _widen(
+    List<(int, int)> found,
+    List<Tap> line,
+    double secondsPerBeat,
+  ) {
+    final out = <(int, int)>[];
+    // Where the previous run ended, so two runs never claim the same note.
+    var taken = 0;
+    for (var r = 0; r < found.length; r++) {
+      var (from, to) = found[r];
+      // The run's own pace: the closest its notes come, which is what makes
+      // it a run in the first place.
+      var pace = double.infinity;
+      for (var i = from + 1; i < to; i++) {
+        final gap = (line[i].beat - line[i - 1].beat) * secondsPerBeat;
+        if (gap < pace) pace = gap;
+      }
+      final reach = pace * runShoulderSpacings;
+
+      if (from - 1 >= taken &&
+          (line[from].beat - line[from - 1].beat) * secondsPerBeat <= reach) {
+        from -= 1;
+      }
+      final nextFrom = r + 1 < found.length ? found[r + 1].$1 : line.length;
+      if (to < nextFrom &&
+          (line[to].beat - line[to - 1].beat) * secondsPerBeat <= reach) {
+        to += 1;
+      }
+      taken = to;
+      out.add((from, to));
+    }
+    return out;
   }
 
   /// Fold each ornament into the touch it decorates.

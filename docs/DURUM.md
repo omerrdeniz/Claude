@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v110):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v111):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -128,6 +128,22 @@ ve bu her 1.09 saniyede bir tekrarlıyor.
   olmayan notalarda da çizgi üzerinde boş yuvarlak çıkıyor."* Boncuk artık
   elin bir önceki dokunuşu ile koşunun ilk notasının **tam ortasından** önce
   çıkmıyor, yani sıradan bir nota çizgideyken boncuk ekranda olmuyor.
+
+- **Koşu, iki yanındaki notayı da içine alıyor** (`Chart._widen`,
+  `runShoulderSpacings` = 2, v111). Oyuncunun üçüncü tespiti buydu: *"burada
+  bas çek, basılı tut çek, tekrar bas çek yapmak normal hızda çok zor."*
+  Haklı — parçanın şekli her çeyrek saniyede bir mod değiştirmeyi istiyordu.
+  Artık koşu, kendi en sık aralığının iki katı içindeki komşu notayı bir
+  soldan bir sağdan alıyor; Kanon'daki üçlüler beşliye dönüyor ve bütün grup
+  tek bir kaydırma oluyor.
+
+  **Bu, daha önce reddedilen bir şeye doğru atılmış bir adım** ve bilerek
+  küçük tutuldu. `runGapSeconds`'ı büyütmek denenmiş ve geri yollanmıştı:
+  Kanon her dördüncü notada nefes alıyor ve ipliği her nefesin içinden
+  geçirmek on ölçüyü 79 ve 112 notalık iki koşuya çeviriyordu. Bu yüzden
+  **her yandan bir tek nota**, zincir yok, ve yalnız koşunun kendi
+  temposuyla ölçülen mesafede. Kanon'da en uzun koşu 11 notada kaldı; koşu
+  sayısı 31 olarak aynı. Oyuncu seçti, DURUM'a aykırılığı söylendi.
 
 - **Boncuk yuvarlak değil, nota şeklinde.** Notanın durduğu yerde duruyor ve
   aynı parmağı istiyor; ekranda dik çubuklardan başka yuvarlak bir şey
