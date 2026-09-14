@@ -403,6 +403,19 @@ class Chart {
   /// notes are a flourish; three are a run.
   static const int runLength = 3;
 
+  /// How far from the note it is playing a finger may be and still be
+  /// following a run, as a fraction of the screen's width.
+  ///
+  /// About a finger's width either side on a phone. Generous on purpose: the
+  /// skill being asked for is staying with a passage, not hitting a target.
+  /// It is also what stops a parked finger from collecting a whole run — the
+  /// beads of a real run travel most of the hand's zone, so a hand that does
+  /// not travel with them falls off.
+  ///
+  /// It lives here rather than with the session that enforces it because the
+  /// chart has to build runs a finger can actually follow: see [_widen].
+  static const double dragReach = 0.15;
+
   /// How far out a run reaches for the note on either side of it, as a
   /// multiple of its own closest spacing. See [_widen].
   ///
@@ -525,13 +538,23 @@ class Chart {
       }
       final reach = pace * runShoulderSpacings;
 
+      // Near enough in time to be the same gesture, and near enough across
+      // the screen that the hand can hold both. A shoulder further off than
+      // [dragReach] is one the finger cannot be on and reach the run from:
+      // the player pressed it, heard it, held still, and the rest of the run
+      // said nothing.
+      bool holdable(int shoulder, int body) =>
+          (line[shoulder].across - line[body].across).abs() <= dragReach;
+
       if (from - 1 >= taken &&
-          (line[from].beat - line[from - 1].beat) * secondsPerBeat <= reach) {
+          (line[from].beat - line[from - 1].beat) * secondsPerBeat <= reach &&
+          holdable(from - 1, from)) {
         from -= 1;
       }
       final nextFrom = r + 1 < found.length ? found[r + 1].$1 : line.length;
       if (to < nextFrom &&
-          (line[to].beat - line[to - 1].beat) * secondsPerBeat <= reach) {
+          (line[to].beat - line[to - 1].beat) * secondsPerBeat <= reach &&
+          holdable(to, to - 1)) {
         to += 1;
       }
       taken = to;

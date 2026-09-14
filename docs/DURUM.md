@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v112):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v113):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -166,8 +166,28 @@ ve bu her 1.09 saniyede bir tekrarlıyor.
   en az 0.25 s. Yani parmağı kaldırıp tekrar basmak için o kadar süre var —
   ki bu, aynı bölümde iki sıradan nota arasındaki süreyle aynı.
 
-  Yan etki: `beginDrag` artık elinde boncuk yokken **null** dönüyor. Boncuksuz
-  dokunuş sadece bir dokunuştur.
+  Yan etki: `beginDrag` artık ele ait **oynanan bir koşu yokken** null
+  dönüyor. Koşusuz dokunuş sadece bir dokunuştur.
+
+- **İki gerileme, ikisi de yukarıdaki iki değişiklikten** (v113). Oyuncu:
+  *"bazılarında basıyorum ilk nota duyuluyor ama basılı tutmama rağmen
+  diğer notalar duyulmuyor."* İki ayrı sebebi vardı:
+
+  1. **Omuz, koşunun gövdesinden uzakta olabiliyordu.** Kanon'da bir grubun
+     komşusu bir oktav aşağıdaydı (`[61, 73, 74, 76, 73]`): omuz ile gövde
+     arası 0.160, `dragReach` ise 0.15. Yani omza basıp duran parmak gövdeye
+     yetişemiyordu — ilk nota (dokunuş) duyuluyor, gerisi susuyordu. `_widen`
+     artık yalnız **elin birlikte tutabileceği** komşuyu alıyor.
+  2. **Boncuk çıkmadan basınca sürükleme hiç doğmuyordu.** "Çizilen" ile
+     "yakalanabilen" aynı şey sayılmıştı; oysa `runOpensAt` bir *çizim*
+     kuralı. Artık ikisi ayrı (`_runsInPlay(shownOnly:)`): biraz erken uzanan
+     el, gelmekte olan koşuyu yine yakalıyor.
+
+  **Ders:** bir kısıt eklerken "bu çizim kuralı mı, oynanış kuralı mı" diye
+  sor. İkisi karışınca ekrandaki bir incelik sessizce oynanışı kesiyor.
+
+  `Chart.dragReach` artık `PlaySession`'dan Chart'a taşındı, çünkü koşuları
+  kuran taraf da parmağın erişimini bilmek zorunda.
 
 - **Boncuk yuvarlak değil, nota şeklinde.** Notanın durduğu yerde duruyor ve
   aynı parmağı istiyor; ekranda dik çubuklardan başka yuvarlak bir şey

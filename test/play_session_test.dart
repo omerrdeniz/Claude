@@ -833,6 +833,26 @@ void main() {
       expect(session.runBeads, isEmpty);
     });
 
+    test('but a finger a shade early still catches the run', () {
+      // The bead is held back so it is not on the line beside a note that is
+      // due. What a finger can *catch* is not held back with it: a hand that
+      // reaches early is reaching for the run it can see coming. Refusing it
+      // left the player pressing, hearing the first note, and then nothing.
+      final session = sessionFor(embedded(), difficulty: Difficulty.normal);
+      seek(session, 1.1); // before the bead comes out
+      expect(session.runBeads, isEmpty);
+
+      final places = [for (final t in session.chart.taps) t.across];
+      final drag = session.beginDrag(places[2]);
+      expect(drag, isNotNull, reason: 'there is a run to be reaching for');
+
+      for (var beat = 1.1; beat <= 1.7; beat += 0.02) {
+        session.drag(drag!, places[2]);
+        seek(session, beat);
+      }
+      expect(engine.struck.map((s) => s.$1), containsAll([76, 77, 79]));
+    });
+
     test('and it is out in time to be got hold of', () {
       final session = sessionFor(embedded(), difficulty: Difficulty.normal);
       seek(session, 1.3);

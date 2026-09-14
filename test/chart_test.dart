@@ -516,6 +516,39 @@ void main() {
       );
     });
 
+    test('and only one the hand can hold along with the run', () {
+      // A shoulder is played by the finger that is on the run, so it has to
+      // be within that finger's reach of it. The canon had a group whose
+      // neighbour is an octave below: the player pressed it, heard it, held
+      // still, and the rest of the run said nothing.
+      //
+      // A shoulder is the gap the run itself could not have made — anything
+      // wider than [Chart.runGapSeconds], which only the two ends can be.
+      for (final song in shippedSongs) {
+        final secondsPerBeat = 60 / song.bpm;
+        for (final run in Chart.build(song).runs.values) {
+          double gapAfter(int i) =>
+              (run[i + 1].beat - run[i].beat) * secondsPerBeat;
+
+          if (gapAfter(0) > Chart.runGapSeconds) {
+            expect(
+              (run[1].across - run.first.across).abs(),
+              lessThanOrEqualTo(Chart.dragReach + 1e-9),
+              reason: '${song.title}: a shoulder out of reach of its own run',
+            );
+          }
+          final last = run.length - 1;
+          if (gapAfter(last - 1) > Chart.runGapSeconds) {
+            expect(
+              (run[last].across - run[last - 1].across).abs(),
+              lessThanOrEqualTo(Chart.dragReach + 1e-9),
+              reason: '${song.title}: a shoulder out of reach of its own run',
+            );
+          }
+        }
+      }
+    });
+
     test('but it never reaches past the note beside it', () {
       // One on each side and no further: widening the run gap itself was
       // tried and sent back, because carrying the thread over every breath

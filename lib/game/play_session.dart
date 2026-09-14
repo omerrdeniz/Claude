@@ -672,16 +672,6 @@ class PlaySession {
   final Map<int, _Drag> _drags = {};
   int _nextDragId = 1;
 
-  /// How far from the note it is playing a finger may be and still be
-  /// following the run, as a fraction of the screen's width.
-  ///
-  /// About a finger's width either side on a phone. Generous on purpose: the
-  /// skill being asked for is staying with a passage, not hitting a target.
-  /// It is also what stops a parked finger from collecting a whole run —
-  /// the beads of a real run travel most of the hand's zone, so a hand that
-  /// does not travel with them falls off.
-  static const double dragReach = 0.15;
-
   /// Told when a run plays a note under a finger, so the screen can react.
   void Function(TapOutcome outcome)? onDragNote;
 
@@ -726,24 +716,29 @@ class PlaySession {
   ///
   /// The bead keeps its place a judging window past the run's last note, so
   /// it does not vanish from under a finger that is still on it.
-  List<RunBead> get runBeads {
-    if (chart.runs.isEmpty) return const [];
+  /// The run each hand has in play, whether or not its bead is being shown.
+  ///
+  /// [shownOnly] is the difference between the two questions. What is *drawn*
+  /// is held back until the hand's previous note has had its moment (see
+  /// [Tap.runOpensAt]), because a ring on the line beside a note that is due
+  /// is unreadable. What a finger going down can *catch* is not held back at
+  /// all: a hand that reaches a little early is reaching for the run it can
+  /// see coming, and refusing it left the player pressing, hearing the first
+  /// note, and then nothing — which is how it was reported.
+  Map<Hand, MapEntry<int, List<Tap>>> _runsInPlay({required bool shownOnly}) {
     final lead = dragLeadMs / 1000 * chart.song.bpm / 60;
     final tail = judge.windowMs / 1000 * beatsPerSecond;
     final now = _judgedBeat;
 
-    // One bead to a hand, never two. The canon's runs overlap once the lead
-    // is counted — the next one's ring was appearing before the current one
-    // had finished, so two hollow circles sat on the line and a finger going
-    // down could be given the wrong one.
+    // One to a hand, never two. The canon's runs overlap once the lead is
+    // counted — the next one's ring was appearing before the current one had
+    // finished, so two rings sat on the line and a finger going down could be
+    // given the wrong one.
     final chosen = <Hand, MapEntry<int, List<Tap>>>{};
     for (final entry in chart.runs.entries) {
       final run = entry.value;
-      // As much warning as the lead allows, but never so much that the bead
-      // is out while the hand still owes an ordinary note — see
-      // [Tap.runOpensAt].
-      final opens = run.first.beat - lead;
-      if (now < opens || now < run.first.runOpensAt) continue;
+      if (now < run.first.beat - lead) continue;
+      if (shownOnly && now < run.first.runOpensAt) continue;
       if (now > run.last.beat + tail) continue;
 
       final hand = run.first.hand;
@@ -765,9 +760,14 @@ class PlaySession {
         chosen[hand] = entry;
       }
     }
+    return chosen;
+  }
 
+  List<RunBead> get runBeads {
+    if (chart.runs.isEmpty) return const [];
+    final now = _judgedBeat;
     return [
-      for (final entry in chosen.entries)
+      for (final entry in _runsInPlay(shownOnly: true).entries)
         () {
           final across = _beadAcross(entry.value.value, now);
           return RunBead(
@@ -777,7 +777,7 @@ class PlaySession {
             tracked: _drags.values.any(
               (drag) =>
                   drag.hand == entry.key &&
-                  (drag.across - across).abs() <= dragReach,
+                  (drag.across - across).abs() <= Chart.dragReach,
             ),
           );
         }(),
@@ -810,17 +810,18 @@ class PlaySession {
   /// Nor is entry aimed: anywhere in the hand will do. There is nothing to
   /// protect by making it hard — following a run only ever adds notes you
   /// could otherwise not play, and the skill the mechanic is about is
-  /// *staying* with the bead, which [dragReach] still asks for.
+  /// *staying* with the bead, which [Chart.dragReach] still asks for.
   int? beginDrag(double across) {
     if (!_running) return null;
     final hand = Chart.handAt(across);
-    // Nothing to catch, nothing to carry: a touch with no run on the line is
-    // a tap and only a tap.
-    final bead = runBeads.where((b) => b.hand == hand).firstOrNull;
-    if (bead == null) return null;
+    // Nothing to catch, nothing to carry: a touch with no run in play is a
+    // tap and only a tap. Whether the bead is being *drawn* yet is a separate
+    // question — see [_runsInPlay].
+    final caught = _runsInPlay(shownOnly: false)[hand];
+    if (caught == null) return null;
 
     final id = _nextDragId++;
-    _drags[id] = _Drag(hand: hand, across: across, runId: bead.runId);
+    _drags[id] = _Drag(hand: hand, across: across, runId: caught.key);
     return id;
   }
 
@@ -873,7 +874,7 @@ class PlaySession {
         if (!_isPending(next) || errorMs > limitMs) continue;
         // The finger has drifted off the bead. The note is left to expire,
         // which is how a run tells you that you have lost it.
-        if ((next.across - drag.across).abs() > dragReach) continue;
+        if ((next.across - drag.across).abs() > Chart.dragReach) continue;
 
         final verdict = judge.verdictFor(errorMs);
         _resolve(next);
