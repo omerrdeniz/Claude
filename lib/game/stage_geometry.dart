@@ -155,8 +155,7 @@ class StageGeometry {
     return out;
   }
 
-  /// The top of a held note's bar, or null when there is nothing worth
-  /// drawing.
+  /// The top of a held note's bar, or null when the note has run out.
   ///
   /// The bar stops short of where the note actually ends, by enough to clear
   /// whatever is struck next. The note itself lasts exactly as long as it is
@@ -164,13 +163,29 @@ class StageGeometry {
   /// note above them and a hand full of held notes read as one long ladder.
   /// This is a gap in the picture only.
   ///
+  /// **The gap gives way as the bar runs out.** A fixed one is the difference
+  /// between a gap and a bar that ends early, and the last of a held note is
+  /// exactly where the player is looking: the bar is what says *keep your
+  /// finger down*, so it has to reach the moment it stops being true. Near
+  /// the end the clearance is never more than half of what is left, so the
+  /// bar shrinks to nothing at the note's own end rather than stopping short
+  /// of it.
+  ///
+  /// There is no shortest bar here. There used to be — a bar under two note
+  /// widths long was dropped — and on a note being held that is a third of a
+  /// second of the hold with no bar for it: the tail vanished while it was
+  /// still sixty pixels long and the player was still holding, which is
+  /// exactly how it was reported. Whether a touch is worth drawing as a hold
+  /// at all is [holdReadsAsBar], asked once of the whole tail; asking it
+  /// again of the stub that is left says something else entirely.
+  ///
   /// [headY] is the bottom of the bar, [tailY] the top it would reach without
   /// the clearance; both grow downwards, so the tail is the smaller number.
   static double? holdBarTop(double headY, double tailY, double radius) {
     if (tailY >= headY) return null;
-    final clearance = radius * holdBarClearance;
-    final top = tailY + clearance > headY ? headY : tailY + clearance;
-    return headY - top < radius * holdBarLeast ? null : top;
+    final span = headY - tailY;
+    final room = radius * holdBarClearance;
+    return tailY + (span < room * 2 ? span / 2 : room);
   }
 
   /// Whether a tail reaching [length] pixels behind its head is worth drawing
@@ -199,7 +214,11 @@ class StageGeometry {
   /// Half the bar's thickness, in note radii.
   static const double holdBarWidth = 0.72;
 
-  /// The shortest bar worth drawing, in note radii.
+  /// The shortest bar a touch can be *given*, in note radii — part of what
+  /// [holdReadsAsBar] asks of a tail before the touch is drawn as a hold at
+  /// all. Not a floor on the bar as it shrinks: a bar that is running out is
+  /// telling the player how much of the hold is left, and there is no length
+  /// at which that stops being worth saying.
   ///
   /// Twice the bar's own thickness. It used to be half of it — a bar wider
   /// than it was long, which is a lump behind the note rather than a line

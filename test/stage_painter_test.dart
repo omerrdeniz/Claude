@@ -392,6 +392,60 @@ void main() {
     }
   });
 
+  test('a held note keeps its bar until the note itself runs out', () {
+    // The player: "basılı tutmalı notalar basılı tutsan bile son kısma
+    // gelmeden kuyruk kayboluyor." The bar was dropped once it was under two
+    // of its own widths long, so on a note being held it vanished a third of
+    // a second early — still sixty pixels of tail, gone in one frame, with
+    // the finger still down.
+    const g = StageGeometry(size: phone);
+    const window = 4.0;
+    final song = Song(
+      id: 'hold',
+      title: 'Hold',
+      composer: '',
+      bpm: 120,
+      notes: const [Note(beat: 4, midi: 60, duration: 4)],
+    );
+    final chart = Chart.build(song);
+    final tap = chart.taps.single;
+    expect(tap.isHold, isTrue);
+
+    /// How long the bar is with [left] beats of the note still to hold.
+    double? barWith(double left) {
+      final recorder = _Recorder();
+      StagePainter(
+        chart: chart,
+        beat: tap.drawnEndBeat - left,
+        windowInBeats: window,
+        heldNotes: {(tap.beat, 60)},
+        playedNotes: {(tap.beat, 60)},
+      ).paint(recorder, phone);
+      // The bar is narrower than the note it hangs from, and it reaches down
+      // to the line the note is waiting on.
+      final bars = [
+        for (final rect in recorder.rects)
+          if ((rect.width - g.noteWidth * 0.7).abs() < 0.5 &&
+              rect.bottom > g.hitLineY - 2)
+            rect.height,
+      ];
+      return bars.isEmpty ? null : bars.first;
+    }
+
+    // A third of a second left to hold is where it used to disappear.
+    expect(barWith(0.6), isNotNull);
+    expect(barWith(0.25), isNotNull);
+    // And it shortens the whole way down rather than stopping short.
+    var last = double.infinity;
+    for (var left = 1.4; left > 0.02; left -= 0.02) {
+      final drawn = barWith(left);
+      expect(drawn, isNotNull, reason: 'no bar with $left beats still to hold');
+      expect(drawn!, lessThan(last));
+      last = drawn;
+    }
+    expect(last, lessThan(g.noteRadius));
+  });
+
   test('an answered ornament stops at the line instead of sliding past', () {
     // The little note sounds when the finger lands, so its mark ends at the
     // line with everything else the touch answered. It used to carry on down

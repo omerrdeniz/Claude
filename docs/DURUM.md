@@ -3,10 +3,12 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v101):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v102):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
-artık çizgide patlıyor. Ayrıntısı "Oynanış kararları"nda.
+artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
+yerine notanın kendi bitişine kadar kısalıyor. Ayrıntısı "Oynanış
+kararları"nda.
 
 ## Proje
 
@@ -330,6 +332,24 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   uzunluğu kadar sürer — ses odur — ama uç uca çizilince çubuklar üstteki
   notanın arkasına giriyor ve bir el dolusu tutma tek bir merdiven gibi
   okunuyordu. Bu yalnızca resimdeki bir boşluk; sesle ilgisi yok.
+
+  **Ama o boşluk sona doğru yol veriyor** (v102). Oyuncu bildirdi: *"basılı
+  tutmalı notalar basılı tutsan bile son kısma gelmeden kuyruk kayboluyor."*
+  İki ayrı sebep vardı ve büyüğü şuydu: `holdBarTop` kendi kalınlığının iki
+  katından kısa **kalan** çubuğu hiç çizmiyordu. Bu kural aslında "bu dokunuş
+  tutmalı çizilmeye değer mi" sorusunun kuralı ve o soru zaten bir kere,
+  kuyruğun tamamına bakılarak soruluyor (`holdReadsAsBar`, `_Dot.isHold`).
+  Her karede bir daha sorulunca, tutmayı hak etmiş bir notanın çubuğu
+  **tutulurken** ölçülüp atılıyordu. Telefonda ölçüldü: çubuk, tutmanın
+  **0.33 saniyesi kalmışken ve hâlâ 66 piksel uzunken** tek karede yok
+  oluyordu. O kural `holdBarTop`'tan kalktı; nerede tutmalı çizileceğine
+  karar veren `holdReadsAsBar` olduğu gibi duruyor.
+
+  İkinci sebep 1.6 yarıçaplık sabit açıklıktı: sabit olduğu için çubuk,
+  kalan süre açıklıktan kısaldığı anda sıfıra iniyordu. Artık açıklık sona
+  doğru **kalanın yarısından fazla olamıyor**, yani çubuk notanın kendi
+  bitişinde sıfırlanıyor. Uzunken açıklık tam, yani merdiven sorunu geri
+  gelmiyor.
 
   **Kuyruğu kısa kalan nota hiç tutmalı çizilmez.** Oyuncu bildirdi: *"bazı
   basılı tutmalı notalar görsel olarak çok kısa olmuş ve basılı tutmalı gibi

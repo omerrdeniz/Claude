@@ -16,13 +16,20 @@ void main() {
 
   test('pitch maps evenly across the screen', () {
     final places = [for (var i = 0; i <= 10; i++) g.xAtPosition(i / 10)];
-    expect(places, orderedEquals([...places]..sort()),
-        reason: 'higher pitches must sit further right');
+    expect(
+      places,
+      orderedEquals([...places]..sort()),
+      reason: 'higher pitches must sit further right',
+    );
     final gaps = [
-      for (var i = 1; i < places.length; i++) places[i] - places[i - 1]
+      for (var i = 1; i < places.length; i++) places[i] - places[i - 1],
     ];
     for (final gap in gaps) {
-      expect(gap, closeTo(gaps.first, 0.01), reason: 'no jumps between pitches');
+      expect(
+        gap,
+        closeTo(gaps.first, 0.01),
+        reason: 'no jumps between pitches',
+      );
     }
   });
 
@@ -45,8 +52,10 @@ void main() {
     // Nothing drifts sideways on the way down: where a note will land is
     // readable from the moment it appears.
     for (final progress in [0.0, 0.3, 0.7, 1.0, 1.2]) {
-      expect(g.positionAtPosition(0.25, progress).dx,
-          closeTo(g.xAtPosition(0.25), 0.001));
+      expect(
+        g.positionAtPosition(0.25, progress).dx,
+        closeTo(g.xAtPosition(0.25), 0.001),
+      );
     }
   });
 
@@ -58,8 +67,10 @@ void main() {
 
   test('the layout is symmetric about the centre', () {
     for (final across in [0.0, 0.25, 0.5]) {
-      expect(g.xAtPosition(across) + g.xAtPosition(1 - across),
-          closeTo(size.width, 0.01));
+      expect(
+        g.xAtPosition(across) + g.xAtPosition(1 - across),
+        closeTo(size.width, 0.01),
+      );
     }
   });
 
@@ -68,7 +79,7 @@ void main() {
     // would quietly shift where the beat appears to fall.
     final steps = [for (var i = 0; i <= 10; i++) g.yAt(i / 10)];
     final deltas = [
-      for (var i = 1; i < steps.length; i++) steps[i] - steps[i - 1]
+      for (var i = 1; i < steps.length; i++) steps[i] - steps[i - 1],
     ];
     for (final delta in deltas) {
       expect(delta, closeTo(deltas.first, 0.001));
@@ -96,10 +107,12 @@ void main() {
       const Size(844, 390),
     ]) {
       final any = StageGeometry(size: screen);
-      final zone =
-          (Chart.rightZoneEnd - Chart.rightZoneStart) * screen.width;
-      expect(any.noteRadius * 2 * 3, lessThanOrEqualTo(zone),
-          reason: 'three notes do not fit in one hand at $screen');
+      final zone = (Chart.rightZoneEnd - Chart.rightZoneStart) * screen.width;
+      expect(
+        any.noteRadius * 2 * 3,
+        lessThanOrEqualTo(zone),
+        reason: 'three notes do not fit in one hand at $screen',
+      );
     }
   });
 
@@ -140,9 +153,12 @@ void main() {
     test('so its bar can only shorten once it has arrived', () {
       const g = StageGeometry(size: Size(390, 844));
       double barLength(double progress, double tailProgress) {
-        final head = g.yAt(StageGeometry.headProgressFor(progress, isHold: true));
+        final head = g.yAt(
+          StageGeometry.headProgressFor(progress, isHold: true),
+        );
         return head - g.yAt(tailProgress);
       }
+
       // Head on the line, tail closing in: shorter every time.
       final lengths = [
         barLength(1.0, 0.4),
@@ -159,8 +175,12 @@ void main() {
 
   group('a chord is opened out so its notes can be counted', () {
     List<double> spread(List<double> places, {double gap = 0.12}) =>
-        StageGeometry.spreadChord(places,
-            minGap: gap, zoneStart: 0.58, zoneEnd: 0.91);
+        StageGeometry.spreadChord(
+          places,
+          minGap: gap,
+          zoneStart: 0.58,
+          zoneEnd: 0.91,
+        );
 
     test('notes on top of each other are pushed apart', () {
       final out = spread([0.60, 0.62, 0.64]);
@@ -193,9 +213,7 @@ void main() {
       final out = spread([0.60, 0.61, 0.62, 0.63, 0.64]);
       expect(out.first, closeTo(0.58, 1e-9));
       expect(out.last, closeTo(0.91, 1e-9));
-      final steps = [
-        for (var i = 1; i < out.length; i++) out[i] - out[i - 1]
-      ];
+      final steps = [for (var i = 1; i < out.length; i++) out[i] - out[i - 1]];
       for (final step in steps) {
         expect(step, closeTo(steps.first, 1e-9), reason: 'evenly, not piled');
       }
@@ -206,13 +224,23 @@ void main() {
       // mesafelerine göre konumlandıralım". The Gnossienne opens on
       // C4-F4-C5 — five semitones then seven — and both gaps used to come
       // out at the minimum, so a third looked like a fifth.
-      final out = StageGeometry.spreadChord([0.60, 0.65, 0.72],
-          minGap: 0.12, zoneStart: 0.55, zoneEnd: 0.95);
+      final out = StageGeometry.spreadChord(
+        [0.60, 0.65, 0.72],
+        minGap: 0.12,
+        zoneStart: 0.55,
+        zoneEnd: 0.95,
+      );
       final first = out[1] - out[0], second = out[2] - out[1];
-      expect(second / first, closeTo(0.07 / 0.05, 0.02),
-          reason: 'five to seven, as it is written');
-      expect(first, greaterThanOrEqualTo(0.12 - 1e-9),
-          reason: 'and the closest pair still clears');
+      expect(
+        second / first,
+        closeTo(0.07 / 0.05, 0.02),
+        reason: 'five to seven, as it is written',
+      );
+      expect(
+        first,
+        greaterThanOrEqualTo(0.12 - 1e-9),
+        reason: 'and the closest pair still clears',
+      );
     });
 
     test('a single note is left alone', () {
@@ -229,15 +257,24 @@ void main() {
 
     test('it does not reach the end of the note', () {
       final drawn = top(500, 100)!;
-      expect(drawn, greaterThan(100),
-          reason: 'the bar has to leave room for the next note');
-      expect(drawn, closeTo(100 + radius * StageGeometry.holdBarClearance, 1e-9));
+      expect(
+        drawn,
+        greaterThan(100),
+        reason: 'the bar has to leave room for the next note',
+      );
+      expect(
+        drawn,
+        closeTo(100 + radius * StageGeometry.holdBarClearance, 1e-9),
+      );
     });
 
     test('and the room it leaves clears a whole note', () {
       // Whatever is struck next sits at the tail with its own radius.
-      expect(top(500, 100)! - 100, greaterThan(radius * 2 * 0.7),
-          reason: 'daylight, not just a touch');
+      expect(
+        top(500, 100)! - 100,
+        greaterThan(radius * 2 * 0.7),
+        reason: 'daylight, not just a touch',
+      );
     });
 
     test('a long note still gets most of its length', () {
@@ -245,10 +282,41 @@ void main() {
       expect(length, greaterThan(400 * 0.85));
     });
 
-    test('nothing is drawn once there is no bar left', () {
+    test('nothing is drawn once the note has run out', () {
       expect(top(500, 500), isNull, reason: 'the tail has caught the head');
       expect(top(500, 501), isNull, reason: 'and gone past it');
-      expect(top(500, 490), isNull, reason: 'a stub, not a bar');
+    });
+
+    test('and it shrinks all the way there instead of vanishing early', () {
+      // The player: "basılı tutmalı notalar basılı tutsan bile son kısma
+      // gelmeden kuyruk kayboluyor." The bar used to be dropped once it was
+      // under two of its own widths long, which on a note being held is a
+      // third of a second of hold with no bar for it — sixty pixels of tail
+      // gone in a single frame with the finger still down.
+      double lengthWith(double left) => 500 - top(500, 500 - left)!;
+
+      var last = double.infinity;
+      for (var left = 400.0; left > 0; left -= 1) {
+        final drawn = lengthWith(left);
+        expect(drawn, greaterThan(0), reason: 'still $left to hold');
+        expect(drawn, lessThan(last), reason: 'and always shorter than before');
+        expect(
+          drawn,
+          lessThanOrEqualTo(left),
+          reason: 'never more than is left',
+        );
+        last = drawn;
+      }
+      expect(last, lessThan(radius), reason: 'and gone by the end');
+    });
+
+    test('the gap it leaves gives way rather than eating the last of it', () {
+      // Far from the end the clearance is whole; near it, never more than
+      // half of what is left. A fixed gap is a bar that stops short, and the
+      // last of a held note is exactly where the player is looking.
+      const room = radius * StageGeometry.holdBarClearance;
+      expect(500 - top(500, 100)!, closeTo(400 - room, 1e-9));
+      expect(500 - top(500, 480)!, closeTo(10, 1e-9));
     });
   });
 
@@ -261,19 +329,26 @@ void main() {
     });
 
     test('a short one is just a note', () {
-      expect(reads(radius), isFalse,
-          reason: 'a tail no longer than the note is wide says nothing');
+      expect(
+        reads(radius),
+        isFalse,
+        reason: 'a tail no longer than the note is wide says nothing',
+      );
       expect(reads(0), isFalse);
     });
 
-    test('the cut is exactly where the bar stops being drawn', () {
-      // One rule, asked two ways: if this says a hold, the bar has something
-      // to draw, and if it says no, there was never a bar to lose. Drifting
-      // apart would leave notes that stop at the line with nothing behind
-      // them, which is the very thing being fixed.
-      for (var length = 0.0; length < 300; length += 0.5) {
-        expect(reads(length), StageGeometry.holdBarTop(length, 0, radius) != null,
-            reason: 'disagreed about a tail $length long');
+    test('the cut is made once, of the whole tail', () {
+      // And only there. It used to be asked again of whatever was left of
+      // the bar, every frame, so a touch that qualified as a hold lost its
+      // bar part way through being held. What a touch is drawn as is settled
+      // by the tail it has; after that the bar is free to run down to
+      // nothing.
+      for (var length = 1.0; length < 300; length += 0.5) {
+        expect(
+          StageGeometry.holdBarTop(length, 0, radius),
+          isNotNull,
+          reason: 'a bar $length long still has something to say',
+        );
       }
     });
 
@@ -286,10 +361,14 @@ void main() {
       final song = shipped(id);
       final chart = Chart.build(song);
       return chart.taps
-          .where((t) =>
-              t.isHold &&
-              !StageGeometry.holdReadsAsBar(
-                  tailPixels(t, song.bpm), g.noteRadius))
+          .where(
+            (t) =>
+                t.isHold &&
+                !StageGeometry.holdReadsAsBar(
+                  tailPixels(t, song.bpm),
+                  g.noteRadius,
+                ),
+          )
           .toList();
     }
 
@@ -301,9 +380,13 @@ void main() {
       // note sounds differently for it.
       for (final info in [for (final s in shippedSongs) s]) {
         for (final tap in quiet(info.id)) {
-          expect(tap.sustains, isTrue,
-              reason: '${info.id}: a note at beat ${tap.beat} would lose its '
-                  'bar without the hand being called away');
+          expect(
+            tap.sustains,
+            isTrue,
+            reason:
+                '${info.id}: a note at beat ${tap.beat} would lose its '
+                'bar without the hand being called away',
+          );
         }
       }
     });
@@ -318,11 +401,15 @@ void main() {
     });
 
     test('the bar it lets through is longer than it is thick', () {
-      final least = (StageGeometry.holdBarClearance + StageGeometry.holdBarLeast) *
+      final least =
+          (StageGeometry.holdBarClearance + StageGeometry.holdBarLeast) *
           radius;
       final bar = least - StageGeometry.holdBarClearance * radius;
-      expect(bar, greaterThan(radius * StageGeometry.holdBarWidth * 2),
-          reason: 'a bar, not a lump under the note');
+      expect(
+        bar,
+        greaterThan(radius * StageGeometry.holdBarWidth * 2),
+        reason: 'a bar, not a lump under the note',
+      );
     });
   });
 }
