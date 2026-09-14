@@ -18,6 +18,7 @@ class Spark {
     required this.quality,
     this.graceMidi,
     this.graceAcross = 0,
+    this.graceLead = 0,
   });
 
   /// Where on the hit line it happened, 0 at the left edge and 1 at the right
@@ -49,6 +50,20 @@ class Spark {
 
   /// And where its pitch does fall, which is half of working that out.
   final double graceAcross;
+
+  /// How far ahead of the rest of the touch it sounded, as a fraction of a
+  /// spark's life.
+  ///
+  /// One touch, two moments: the little note goes first and the rest follow a
+  /// breath after. Lit together they said the hand had done one thing, where
+  /// the ear plainly heard two. So the ornament's light is that much further
+  /// through its own life from the start — it opens and goes out ahead of the
+  /// others, which is the order they happened in.
+  ///
+  /// A fraction rather than milliseconds because that is the only clock a
+  /// spark keeps: [age] is a fraction too, and how long that is in real time
+  /// is [SparkField.lifeMs]'s business.
+  final double graceLead;
 
   /// Which hand played it, since each hand has its own half of the screen to
   /// be laid out within.

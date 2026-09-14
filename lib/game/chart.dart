@@ -105,6 +105,13 @@ class Tap {
       ? null
       : grace.map((note) => note.midi).reduce((a, b) => a < b ? a : b);
 
+  /// How far in front of this touch its ornament lands, in beats.
+  ///
+  /// One touch sounds both, the little note first — see
+  /// [PlaySession._sound]. So the two do not happen at the same instant, and
+  /// the screen should not say they did.
+  double get graceLeadBeats => grace.isEmpty ? 0 : beat - grace.first.beat;
+
   /// Where the ornament sits across the screen, as [across] does.
   double graceAcross = 0;
 

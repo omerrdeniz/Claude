@@ -172,35 +172,40 @@ class StagePainter extends CustomPainter {
 
     for (final spark in sparks) {
       if (spark.places.isEmpty) continue;
-      final life = spark.age.clamp(0.0, 1.0);
-      final open = 1 - (1 - life) * (1 - life); // quick out, slow settle
-      // Bright for most of its life and then away quickly, rather than
-      // dimming from the first frame. A hit has to be *seen*, and three
-      // hundred milliseconds of steadily fading light is three hundred
-      // milliseconds of nearly nothing.
-      final burn = 1 - life * life * life;
       final strength = 0.7 + spark.quality * 0.3;
       final (low, high) = chart.pitchRange;
       // Laid out exactly as the notes were, or a chord's light stands beside
       // the notes it came from.
       final places = _spreadPlaces(spark.places, g, radius, spark.hand);
 
-      // The plume: a shaft driven down through the line, bright where it
-      // leaves the note and fading out along its length.
-      //
-      // A linear gradient down the shaft, not a radial one over an oval: a
-      // radial gradient spreads the same light over an area and what reaches
-      // the eye is a faint smudge. This keeps all of it at the line, where
-      // the hit was.
-      final reach = radius * (1.2 + open * 3.6);
-      final half = radius * (1.0 - open * 0.45);
-      // The core: white, bigger than a note, and gone in a breath. This is
-      // the part the eye reads as the hit itself.
-      final flash = (1 - life * 1.8).clamp(0.0, 1.0);
-
       // Each plume in its own note's colour: the light is what happened to
       // *that* note, so it is that note that should be recognisable in it.
-      void plume(double x, int midi, double scale) {
+      //
+      // [life] is how far through its own life this plume is, which is not
+      // the same for all of them: an ornament sounds before the notes it
+      // leans into, so its light is further along from the start.
+      void plume(double x, int midi, double scale, double life) {
+        if (life >= 1) return;
+        final open = 1 - (1 - life) * (1 - life); // quick out, slow settle
+        // Bright for most of its life and then away quickly, rather than
+        // dimming from the first frame. A hit has to be *seen*, and three
+        // hundred milliseconds of steadily fading light is three hundred
+        // milliseconds of nearly nothing.
+        final burn = 1 - life * life * life;
+
+        // The plume: a shaft driven down through the line, bright where it
+        // leaves the note and fading out along its length.
+        //
+        // A linear gradient down the shaft, not a radial one over an oval: a
+        // radial gradient spreads the same light over an area and what
+        // reaches the eye is a faint smudge. This keeps all of it at the
+        // line, where the hit was.
+        final reach = radius * (1.2 + open * 3.6);
+        final half = radius * (1.0 - open * 0.45);
+        // The core: white, bigger than a note, and gone in a breath. This is
+        // the part the eye reads as the hit itself.
+        final flash = (1 - life * 1.8).clamp(0.0, 1.0);
+
         final colour = AppTheme.pitchColor(midi, low: low, high: high);
         final width = half * scale;
         final length = reach * scale;
@@ -239,16 +244,23 @@ class StagePainter extends CustomPainter {
         }
       }
 
+      final life = spark.age.clamp(0.0, 1.0);
       for (var i = 0; i < places.length; i++) {
-        plume(g.xAtPosition(places[i]), spark.midis[i], 1);
+        plume(g.xAtPosition(places[i]), spark.midis[i], 1, life);
       }
 
-      // And the ornament, where the touch carried one. It sounds as the
-      // finger lands, so it bursts with the rest of the touch — from under
-      // its own mark, by the same rule that put the mark there, and at the
-      // size that mark was. It used to come up from the middle of the touch,
-      // which since the mark moved to one side meant it rose from under a
+      // And the ornament, where the touch carried one. From under its own
+      // mark, by the same rule that put the mark there, and at the size that
+      // mark was. It used to come up from the middle of the touch, which
+      // since the mark moved to one side meant it rose from under a
       // different note: "efekt diğer notanın altından çıkıyor".
+      //
+      // And *before* the rest of it. One touch sounds both, the little note
+      // first, so lighting them together said the hand had done one thing
+      // where the ear plainly heard two — "gerçekte o notaya daha önce
+      // basıyoruz". Its light is that much further through its life from the
+      // start, which makes it open and go out ahead of the others without
+      // holding anything back from the player's own touch.
       final graceMidi = spark.graceMidi;
       if (graceMidi != null) {
         final (place, _) = _gracePlace(
@@ -259,7 +271,12 @@ class StagePainter extends CustomPainter {
           spark.hand,
           g,
         );
-        plume(g.xAtPosition(place), graceMidi, _graceScale);
+        plume(
+          g.xAtPosition(place),
+          graceMidi,
+          _graceScale,
+          (life + spark.graceLead).clamp(0.0, 1.0),
+        );
       }
     }
   }
@@ -514,16 +531,19 @@ class StagePainter extends CustomPainter {
       // it. A chord is several notes and one hand: the instruction is to the
       // hand.
       //
-      // Only until the touch is answered. The little note sounds when the
-      // finger lands, and a hit ends at the line in a burst of light — so
-      // its mark has to end there too. It used to go on sliding down past
-      // the line while the notes it belonged to stopped dead, which is what
-      // the player saw as the ornament not bursting. The touch's own
-      // progress, not the head's: the head of an ornamented note stops at
-      // the line because the finger stays on it, and the mark is not being
-      // held.
+      // Only until the touch is answered, and *answered* is the whole of it:
+      // the moment the finger lands, whether or not the beat has come. The
+      // mark is an instruction — there is a little note in this one — and a
+      // touch that has been dealt with has no instruction left. It used to
+      // wait for the beat as well, and a hand a few milliseconds early left
+      // the mark sliding on down past the line looking unplayed while the
+      // notes sounded correctly, which is exactly how the player found it.
+      //
+      // A pressed note goes on falling to the line because it is still
+      // travelling and the screen says where things are. The mark is not
+      // that: it says what to do.
       final ornament = group.where((m) => m.hasGrace).firstOrNull;
-      final answered = progress > 1 && dots.every((dot) => dot.isPlayed);
+      final answered = dots.every((dot) => dot.isPlayed);
       if (ornament != null && !answered) {
         _paintGrace(
           canvas,

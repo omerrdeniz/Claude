@@ -201,6 +201,7 @@ class _PlayScreenState extends State<PlayScreen>
             midis: [for (final note in outcome.notes) note.midi],
             graceMidi: outcome.graceMidi,
             graceAcross: outcome.graceAcross,
+            graceLead: outcome.graceLeadMs / _sparks.lifeMs,
             hand: outcome.hand,
             quality: quality,
           ),

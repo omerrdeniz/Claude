@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v108):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v109):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -12,7 +12,8 @@ saniyeye indi. Şarkıyı istediğin dakikadan başlatabiliyorsun ve ekranın
 üstünde ilerleme çubuğu var. Tutmalı eşiği artık gerçekten saniye
 (ekran boyuna göre kaymıyor) ve 0.40'a ayarlandı. Süsleme işareti asıl
 notanın sağ veya sol altında, ona bir bağ yayıyla bağlı, ışığını kendi
-altından atıyor ve kuyruklar onun içinden geçmiyor. Ayrıntısı "Oynanış kararları"nda.
+altından ve diğerlerinden önce atıyor, kuyruklar onun içinden geçmiyor, ve
+erken basınca da parmakla birlikte bitiyor. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -77,6 +78,25 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   (`_gracePlace`) ve hem işaret hem ışık onu kullanıyor; `Spark` ile
   `TapOutcome` bunun için `graceAcross`'u da taşıyor. **Ders:** aynı yeri iki
   ayrı yerde hesaplarsan ikisi ayrılır — burada tam olarak bu oldu.
+
+- **İşaret parmakla biter, vuruşla değil** (v109). Oyuncu: *"çok hafif erken
+  basınca ilk nota sanki basılmamış gibi çizginin altına doğru kayıyor, ama
+  ses doğru çalıyor."* Çizim hem dokunuşu hem vuruşun gelmesini bekliyordu
+  (`progress > 1 && isPlayed`); birkaç milisaniye erken basan el ikisi
+  arasında kalıyor ve işaret çizgiyi geçip kaymaya devam ediyordu. İşaret bir
+  **talimat** ("bunda küçük bir nota var"); halledilmiş bir dokunuşun talimatı
+  kalmaz. Basılan nota düşmeye devam eder çünkü o hâlâ yolda ve ekran nerede
+  olduğunu söyler — işaret onu söylemiyor.
+
+- **Süslemenin ışığı diğerlerinden önce çıkar** (v109). Oyuncu: *"gerçekte o
+  notaya daha önce basıyoruz."* Doğru: tek dokunuş ikisini de çalıyor ama
+  küçük nota önce (`PlaySession._sound`). Işıkları birlikte yakmak, kulağın
+  açıkça iki şey duyduğu yerde elin tek bir şey yaptığını söylüyordu.
+  Süslemenin tüyü artık kendi ömrünün o kadar ilerisinden başlıyor
+  (`Spark.graceLead`, `Tap.graceLeadBeats`), yani diğerlerinden önce açılıp
+  önce sönüyor. Notaların tüyünü geciktirmek de aynı sonucu verirdi ama
+  oyuncunun kendi dokunuşunun cevabını 60 ms geciktirirdi; bu yol onu
+  geciktirmiyor.
 
 - **Kuyruk işaretin içinden geçmez** (v108). Oyuncu: *"bazı basılı tutmalı
   notalar ilk notanın üstüne denk gelebiliyor."* Sebep aritmetikle

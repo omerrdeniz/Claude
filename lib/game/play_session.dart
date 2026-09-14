@@ -13,6 +13,7 @@ class TapOutcome {
     this.places = const [],
     this.graceMidi,
     this.graceAcross = 0,
+    this.graceLeadMs = 0,
     this.voices = 1,
     this.scored = true,
     this.holdId,
@@ -46,6 +47,13 @@ class TapOutcome {
   /// And where that pitch sits across the screen, which is what decides where
   /// its mark — and so its light — is drawn.
   final double graceAcross;
+
+  /// And how far in front of the touch's own notes it sounded.
+  ///
+  /// One touch, two moments: the little note goes first and the rest follow
+  /// a breath later. In milliseconds, because the screen's clock is one and
+  /// the tempo has already been taken out of it here.
+  final double graceLeadMs;
 
   /// How many notes sounded together, which is what colours the hit.
   final int voices;
@@ -509,6 +517,7 @@ class PlaySession {
       places: tapTarget.noteAcross,
       graceMidi: tapTarget.graceMidi,
       graceAcross: tapTarget.graceAcross,
+      graceLeadMs: _graceLeadMsOf(tapTarget),
       voices: tapTarget.voices,
       holdId: holdId,
       crushId: crushId,
@@ -567,6 +576,11 @@ class PlaySession {
       sound(note, mainBeat, target.beat + note.duration, 1);
     }
   }
+
+  /// How long before a touch's own notes its ornament sounds, in
+  /// milliseconds — the gap [_sound] leaves between them, in the clock the
+  /// screen keeps.
+  double _graceLeadMsOf(Tap tap) => tap.graceLeadBeats / beatsPerSecond * 1000;
 
   /// How much lighter an ornament is struck than the note it leans into.
   ///
@@ -823,6 +837,7 @@ class PlaySession {
             places: next.noteAcross,
             graceMidi: next.graceMidi,
             graceAcross: next.graceAcross,
+            graceLeadMs: _graceLeadMsOf(next),
             voices: next.voices,
           ),
         );
@@ -1015,6 +1030,7 @@ class PlaySession {
       places: target.noteAcross,
       graceMidi: target.graceMidi,
       graceAcross: target.graceAcross,
+      graceLeadMs: _graceLeadMsOf(target),
       voices: target.voices,
     );
   }

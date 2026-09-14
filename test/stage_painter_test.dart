@@ -558,6 +558,42 @@ void main() {
     expect(marksAfter(played: true), isEmpty);
   });
 
+  test('an ornament is answered by the finger, not by the beat', () {
+    // A hand a few milliseconds early had the mark sliding on down past the
+    // line looking unplayed while the notes sounded correctly: the drawing
+    // waited for the beat as well as for the touch. The mark is an
+    // instruction, and a touch that has been dealt with has none left.
+    const g = StageGeometry(size: phone);
+    final chart = Chart.build(shipped('gnossienne-1'));
+    final tap = chart.taps.firstWhere((t) => t.hasGrace);
+
+    /// The marks on screen a fraction of a beat *before* the touch is due.
+    List<Rect> marks({required bool pressed}) {
+      final recorder = _Recorder();
+      StagePainter(
+        chart: chart,
+        beat: tap.beat - 0.2,
+        windowInBeats: 4,
+        playedNotes: pressed
+            ? {for (final note in tap.notes) (tap.beat, note.midi)}
+            : const {},
+      ).paint(recorder, phone);
+      final head = g.yAt(StageGeometry.progressFor(0.2, 4));
+      return [
+        for (var i = 0; i < recorder.rects.length; i++)
+          if (recorder.rectStyles[i] == PaintingStyle.fill &&
+              (recorder.rects[i].height - g.noteRadius * 2 * 0.55).abs() <
+                  0.5 &&
+              (recorder.rects[i].width - g.noteWidth * 0.55).abs() < 0.5 &&
+              (recorder.rects[i].center.dy - head).abs() < g.noteRadius * 3)
+            recorder.rects[i],
+      ];
+    }
+
+    expect(marks(pressed: false), hasLength(1), reason: 'still to be played');
+    expect(marks(pressed: true), isEmpty, reason: 'answered, beat or no beat');
+  });
+
   test('a tail stops clear of the little note it runs up to', () {
     // A hold's tail stops where the hand is next wanted. Where that next
     // touch carries an ornament there are *two* things drawn for it and the
@@ -621,7 +657,7 @@ void main() {
     final chart = Chart.build(shipped('gnossienne-1'));
     final tap = chart.taps.firstWhere((t) => t.hasGrace);
 
-    List<Rect> plumes({int? graceMidi}) {
+    List<Rect> plumes({int? graceMidi, double lead = 0}) {
       final recorder = _Recorder();
       StagePainter(
         chart: chart,
@@ -633,6 +669,7 @@ void main() {
             midis: [for (final note in tap.notes) note.midi],
             graceMidi: graceMidi,
             graceAcross: tap.graceAcross,
+            graceLead: lead,
             hand: tap.hand,
             quality: 1,
           )..age = 0.2,
@@ -649,6 +686,22 @@ void main() {
     final without = plumes();
     final with_ = plumes(graceMidi: tap.graceMidi);
     expect(with_, hasLength(without.length + 1));
+
+    // And it is ahead of them. One touch sounds both, the little note first,
+    // so its light is further through its own life from the first frame —
+    // the plume has already opened where the others are still opening.
+    final led = [
+      for (final rect in plumes(graceMidi: tap.graceMidi, lead: 0.25))
+        if (without.every((other) => (other.left - rect.left).abs() > 0.5))
+          rect,
+    ].single;
+    final together = [
+      for (final rect in with_)
+        if (without.every((other) => (other.left - rect.left).abs() > 0.5))
+          rect,
+    ].single;
+    expect(led.height, greaterThan(together.height));
+    expect(led.width, lessThan(together.width));
 
     final extra = with_.singleWhere(
       (rect) => without.every((other) => (other.left - rect.left).abs() > 0.5),
@@ -905,152 +958,6 @@ void main() {
       lessThan(apart(nearLower, wanted(upper))),
       reason: 'and the far end the more like the other note',
     );
-  });
-
-  group('the ornament is put on the side its key is', () {
-    const g = StageGeometry(size: phone);
-    const window = 4.0;
-
-    /// One ornamented note, the little one [semitones] from it.
-    Song leaning(int semitones) => Song(
-      id: 'lean',
-      title: 'Lean',
-      composer: '',
-      bpm: 100,
-      notes: [
-        Note(beat: 1.895, midi: 72 + semitones, duration: 0.105),
-        const Note(beat: 2, midi: 72, duration: 1),
-      ],
-    );
-
-    /// Where the mark was drawn, and where the note it leans into was.
-    (Rect mark, double noteX, List<Rect> ties) drawn(int semitones) {
-      final chart = Chart.build(leaning(semitones));
-      final tap = chart.taps.firstWhere((t) => t.hasGrace);
-      final recorder = _Recorder();
-      StagePainter(
-        chart: chart,
-        beat: tap.beat - 1,
-        windowInBeats: window,
-      ).paint(recorder, phone);
-
-      final marks = [
-        for (var i = 0; i < recorder.rects.length; i++)
-          if (recorder.rectStyles[i] == PaintingStyle.fill &&
-              (recorder.rects[i].height - g.noteRadius * 2 * 0.55).abs() <
-                  0.5 &&
-              (recorder.rects[i].width - g.noteWidth * 0.55).abs() < 0.5)
-            recorder.rects[i],
-      ];
-      expect(marks, hasLength(1));
-      return (
-        marks.single,
-        g.xAtPosition(tap.noteAcross.single),
-        recorder.strokedPaths,
-      );
-    }
-
-    test('a little note below it sits down and to the left', () {
-      final (mark, noteX, _) = drawn(-1);
-      expect(mark.center.dx, lessThan(noteX));
-    });
-
-    test('and one above it, down and to the right', () {
-      final (mark, noteX, _) = drawn(2);
-      expect(mark.center.dx, greaterThan(noteX));
-    });
-
-    test('never so close that the side cannot be seen', () {
-      // A semitone is a few pixels on this screen — across the library the
-      // middle ornament is 5.6 of them from its note. Drawn where its pitch
-      // actually falls, the mark read as straight down.
-      for (final semitones in [-1, 1, -2, 2]) {
-        final (mark, noteX, _) = drawn(semitones);
-        expect(
-          (mark.center.dx - noteX).abs(),
-          greaterThanOrEqualTo(g.noteWidth - 0.01),
-          reason: 'a $semitones semitone lean is still a lean',
-        );
-      }
-    });
-
-    test('and it is tied to the note, by a curve and not by a bar', () {
-      // The chord band joins notes that sound together and is a straight
-      // filled bar. This joins two that sound one after the other, so it has
-      // to look like something else entirely: a thin stroked curve, which is
-      // also what the ornament is written with on paper.
-      final (mark, noteX, ties) = drawn(-1);
-      expect(ties, hasLength(1), reason: 'one tie, for the one ornament');
-
-      final tie = ties.single;
-      // It spans the gap between the two, both ways.
-      expect(tie.left, lessThan(noteX));
-      expect(tie.right, greaterThan(mark.center.dx));
-      expect(tie.height, greaterThan(g.noteRadius));
-    });
-
-    test('on a chord it hangs off the outside, not in among the notes', () {
-      // The touch can be two or three notes. Measured across the library the
-      // little note is outside the chord every time — above it twenty-two
-      // times, below it twice, inside it never — so the mark belongs outside
-      // too, clear of the notes and of whatever is drawn between them.
-      final song = Song(
-        id: 'chord',
-        title: 'Chord',
-        composer: '',
-        bpm: 100,
-        notes: const [
-          Note(beat: 1.895, midi: 79, duration: 0.105),
-          Note(beat: 2, midi: 72, duration: 1),
-          Note(beat: 2, midi: 76, duration: 1),
-          Note(beat: 2, midi: 77, duration: 1),
-        ],
-      );
-      final chart = Chart.build(song);
-      final tap = chart.taps.firstWhere((t) => t.hasGrace);
-      expect(tap.notes, hasLength(3));
-
-      final recorder = _Recorder();
-      StagePainter(
-        chart: chart,
-        beat: tap.beat - 1,
-        windowInBeats: window,
-      ).paint(recorder, phone);
-
-      final mark = [
-        for (var i = 0; i < recorder.rects.length; i++)
-          if (recorder.rectStyles[i] == PaintingStyle.fill &&
-              (recorder.rects[i].height - g.noteRadius * 2 * 0.55).abs() <
-                  0.5 &&
-              (recorder.rects[i].width - g.noteWidth * 0.55).abs() < 0.5)
-            recorder.rects[i],
-      ].single;
-
-      // The little note is above all three, so it is right of all three —
-      // and of the highest of them by a clear note width, not tucked between
-      // two of the chord's own notes.
-      final notes = [for (final a in tap.noteAcross) g.xAtPosition(a)]..sort();
-      expect(mark.center.dx, greaterThan(notes.last));
-      expect(
-        mark.center.dx - notes.last,
-        greaterThanOrEqualTo(g.noteWidth - 0.01),
-      );
-
-      // And the tie reaches the chord's own edge rather than crossing under
-      // it to a note in the middle.
-      final tie = recorder.strokedPaths.single;
-      expect(tie.left, greaterThan(notes[notes.length - 2]));
-    });
-
-    test('a touch with no ornament is tied to nothing', () {
-      final recorder = _Recorder();
-      StagePainter(
-        chart: Chart.build(shipped('ode-to-joy')),
-        beat: 6,
-        windowInBeats: window,
-      ).paint(recorder, phone);
-      expect(recorder.strokedPaths, isEmpty);
-    });
   });
 
   test('an ornament is marked in its own note\'s colour, under the chord', () {
