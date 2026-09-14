@@ -3,12 +3,13 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v103):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v104):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
 yerine notanın kendi bitişine kadar kısalıyor. Tutmalı çizilme eşiği 0.30
-saniyeye indi. Ayrıntısı "Oynanış kararları"nda.
+saniyeye indi. Şarkıyı istediğin dakikadan başlatabiliyorsun ve ekranın
+üstünde ilerleme çubuğu var. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -28,6 +29,36 @@ Dal: **`main`**, ve tek dal o. Bir dönem her oturum kendi dalını açtı ve
 proje hiç `main`'e girmedi (`main` boş bir "Initial commit"ten ibaretti);
 geriye birbirinin içinde duran dört dal kaldı. Hepsi `main`'de toplandı,
 gerisi silindi.
+
+## Bir yere bakmak için: başlangıç noktası ve saat
+
+Oyuncu 0.30 saniyelik kuyrukları ekranda seçemeyeceğini söyleyince çıktı:
+*"oyun başlangıcına o şarkının kaçıncı dakika saniyesinden başlayacağımı
+seçebilme ayarı ekle... soldan sağa doğru dolan ince bir bar ekle."*
+
+- **`PlaySettings.startSeconds`** — şarkının kendi saniyesi cinsinden.
+  Ayarlarda `StartPicker`: ±5 ve ±30 saniyelik iki adım. Kaydırıcı değil,
+  çünkü ayar listenin üstünde duruyor ve hangi şarkıya uygulanacağı belli
+  değil, şarkıların boyu da aynı değil — çizilecek tek bir ölçek yok.
+
+- **Şarkının kendi saniyesi, duvar saati değil.** `beatsPerSecond` hızı
+  taşıyor, `startBeat` taşımıyor. Yavaşlatınca oraya varmak iki katı sürüyor
+  ama 1:03 hâlâ müziğin aynı yeri. Yazıp not edilebilecek tek sayı bu.
+
+- **Öncesi ne kaçmış sayılır ne de çalınır** (`PlaySession._skipToStart`).
+  `_expireMissedTaps` bütün şarkıyı tarıyor ve anı geçmiş her çalınmamış
+  notayı kaçmış sayıyor; ortadan başlamak, ilk kareden önce yüzlerce
+  kaçırma demekti. Öncesi `_resolved`'a konuyor: doğru olan da bu, o notalar
+  hiçbir zaman oyuncunun değildi. `fillMissed` açıkken de çalmıyorlar.
+  `restart` baştan değil, seçilen noktadan başlatıyor.
+
+- **İlerleme çubuğu** (`SongProgressBar`) ekranın en üstünde, 2.5 piksel.
+  Şarkının tamamını ölçüyor, bu oturumu değil: 1:30'dan başlarsan çubuk
+  yarı dolu açılıyor, çünkü müzikte orasın. Başlıktaki satır da
+  `1:03 / 3:16` yazıyor (`clockOf`).
+
+  Saniyeler tam, ondalık yok: saniyede altmış kez değişen bir sayının
+  ondalığı okunmuyor, ve "1:03'teki yer" için gerekmiyor.
 
 ## Oynanış kararları
 

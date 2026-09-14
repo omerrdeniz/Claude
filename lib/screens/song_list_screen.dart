@@ -177,6 +177,12 @@ class _SongListScreenState extends State<SongListScreen> {
               step: _latencyStep,
               onMeasure: _measureLatency,
             ),
+            const SizedBox(height: 18),
+            StartPicker(
+              startSeconds: _settings.startSeconds,
+              onChanged: (value) =>
+                  _set(_settings.copyWith(startSeconds: value)),
+            ),
             const SizedBox(height: 24),
             for (final info in SongLibrary.all)
               SongTile(info: info, settings: _settings),

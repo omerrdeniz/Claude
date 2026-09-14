@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import '../theme/song_ground.dart';
 import '../widgets/result_panel.dart';
 import '../widgets/score_hud.dart';
+import '../widgets/song_progress.dart';
 
 /// The playfield: notes flow toward the line, the player taps, the song plays.
 class PlayScreen extends StatefulWidget {
@@ -90,6 +91,7 @@ class _PlayScreenState extends State<PlayScreen>
       approachSeconds: widget.approachSeconds,
       latencyOffsetMs: widget.settings.latencyOffsetMs,
       speed: widget.settings.speed,
+      startSeconds: widget.settings.startSeconds,
     );
     _session.onMiss = (_) => setState(() {});
     // Runs play from inside the clock's own setState, so this only records —
@@ -289,6 +291,9 @@ class _PlayScreenState extends State<PlayScreen>
                   comboAge: (_now - _comboAt).inMilliseconds / 260,
                   hitLineFraction: 0.68,
                 ),
+                SongProgressBar(
+                  through: _session.songSeconds / _session.songLengthSeconds,
+                ),
                 _controls(),
                 if (_session.isFinished)
                   ResultPanel(
@@ -326,7 +331,9 @@ class _PlayScreenState extends State<PlayScreen>
                   ),
                   Text(
                     '${widget.song.composer} · '
-                    '${widget.settings.difficulty.label}',
+                    '${widget.settings.difficulty.label} · '
+                    '${clockOf(_session.songSeconds)} / '
+                    '${clockOf(_session.songLengthSeconds)}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.textMuted,

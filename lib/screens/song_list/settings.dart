@@ -216,6 +216,92 @@ class LatencyPicker extends StatelessWidget {
   }
 }
 
+/// Where in the song to begin.
+///
+/// The songs are three and four minutes long, and looking at one passage
+/// meant playing everything before it — every time. This is for that: set a
+/// minute and a second, and the piece starts there with the notes arriving
+/// travelling, as they do at the beginning.
+///
+/// Two step sizes rather than a slider. The setting sits above the list and
+/// applies to whichever song is opened next, and the songs are not the same
+/// length, so there is no one scale to draw. Half a minute and five seconds
+/// reach anything in a piece this long in a handful of taps.
+class StartPicker extends StatelessWidget {
+  const StartPicker({
+    super.key,
+    required this.startSeconds,
+    required this.onChanged,
+  });
+
+  final double startSeconds;
+  final ValueChanged<double> onChanged;
+
+  /// The two step sizes, in seconds.
+  static const double coarse = 30;
+  static const double fine = 5;
+
+  static String clockOf(double seconds) {
+    final whole = seconds.round();
+    return '${whole ~/ 60}:${(whole % 60).toString().padLeft(2, '0')}';
+  }
+
+  void _move(double by) => onChanged((startSeconds + by).clamp(0.0, 3600.0));
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Başlangıç noktası',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _StepButton(
+              icon: Icons.keyboard_double_arrow_left,
+              onTap: () => _move(-coarse),
+            ),
+            const SizedBox(width: 6),
+            _StepButton(icon: Icons.remove, onTap: () => _move(-fine)),
+            Expanded(
+              child: Text(
+                clockOf(startSeconds),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            _StepButton(icon: Icons.add, onTap: () => _move(fine)),
+            const SizedBox(width: 6),
+            _StepButton(
+              icon: Icons.keyboard_double_arrow_right,
+              onTap: () => _move(coarse),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          startSeconds <= 0
+              ? 'Şarkı baştan başlar'
+              : 'Şarkı ${clockOf(startSeconds)} noktasından başlar — '
+                    'öncesi ne çalınır ne de kaçmış sayılır',
+          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
 class _StepButton extends StatelessWidget {
   const _StepButton({required this.icon, required this.onTap});
 

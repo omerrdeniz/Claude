@@ -53,6 +53,7 @@ void main() {
     bool quantize = true,
     bool fillMissed = false,
     Judge judge = const Judge(),
+    double startSeconds = 0,
   }) {
     engine = RecordingEngine();
     final session = PlaySession(
@@ -61,6 +62,7 @@ void main() {
       judge: judge,
       quantize: quantize,
       fillMissed: fillMissed,
+      startSeconds: startSeconds,
     );
     session.start();
     return session;
@@ -604,6 +606,75 @@ void main() {
       expect(session.scoreboard.score, 0);
       wall(session, firstNoteAt + wallTimeOf(session, 0));
       expect(session.tap(right)?.scored, isTrue);
+    });
+  });
+
+  group('starting part way through the song', () {
+    // Four notes a beat apart, which at 120 is one every half second.
+    Song fourBars() =>
+        songOf([note(0, 60), note(2, 62), note(4, 64), note(6, 65)]);
+
+    test('the clock begins where it was asked to', () {
+      // Two seconds in is beat four, and the clock starts a lead-in before
+      // it so that note arrives travelling rather than already on the line.
+      final session = sessionFor(fourBars(), startSeconds: 2);
+      expect(session.beat, closeTo(4 - session.leadInBeats, 1e-9));
+      expect(session.songSeconds, closeTo(2 - 1.9, 1e-9));
+    });
+
+    test('and the song is as long as it always was', () {
+      final session = sessionFor(fourBars(), startSeconds: 2);
+      expect(session.songLengthSeconds, greaterThan(3));
+    });
+
+    test('what came before is not the player\'s to miss', () {
+      // The scoring walks the whole chart for notes nobody played. Beginning
+      // at beat four without saying so scored three misses before the first
+      // frame — a run started in the middle would open on a broken streak
+      // and an accuracy it could never recover.
+      final session = sessionFor(fourBars(), startSeconds: 2);
+      // The first frame, before anything from beat four on is even due.
+      wall(session, 0.1);
+      expect(session.scoreboard.counts[Verdict.miss], 0);
+    });
+
+    test('nor is it played for them', () {
+      final session = sessionFor(fourBars(), startSeconds: 2, fillMissed: true);
+      wall(session, 5);
+      expect(engine.struck.map((s) => s.$1), isNot(contains(60)));
+      expect(engine.struck.map((s) => s.$1), isNot(contains(62)));
+    });
+
+    test('but everything from there on still is', () {
+      final session = sessionFor(fourBars(), startSeconds: 2);
+      // Long enough that beat four has come and gone unplayed.
+      wall(session, 5);
+      expect(session.scoreboard.counts[Verdict.miss], greaterThan(0));
+    });
+
+    test('and restarting goes back there, not to the beginning', () {
+      final session = sessionFor(fourBars(), startSeconds: 2);
+      wall(session, 4);
+      session.restart();
+      session.update(const Duration(seconds: 4));
+      expect(session.beat, closeTo(4 - session.leadInBeats, 1e-9));
+      expect(session.scoreboard.counts[Verdict.miss], 0);
+    });
+
+    test('the speed does not move the place', () {
+      // The setting is in the song's own seconds. Half speed takes twice as
+      // long to get anywhere, but two seconds into the piece is the same bar
+      // of music either way.
+      final full = sessionFor(fourBars(), startSeconds: 2);
+      engine = RecordingEngine();
+      final half = PlaySession(
+        chart: Chart.build(fourBars(), difficulty: Difficulty.easy),
+        audio: PianoAudio(engine: engine),
+        speed: 0.5,
+        startSeconds: 2,
+      );
+      expect(half.startBeat, full.startBeat);
+      expect(half.songSeconds, lessThan(2));
     });
   });
 

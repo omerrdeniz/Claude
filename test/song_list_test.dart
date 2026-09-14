@@ -4,6 +4,7 @@ import 'package:piano_flow/data/song_library.dart';
 import 'package:piano_flow/game/chart.dart';
 import 'package:piano_flow/game/judgement.dart';
 import 'package:piano_flow/screens/play_screen.dart';
+import 'package:piano_flow/screens/song_list/settings.dart';
 import 'package:piano_flow/screens/song_list_screen.dart';
 
 void main() {
@@ -27,8 +28,11 @@ void main() {
   /// list to be short.
   Future<void> openSong(WidgetTester tester, String title) async {
     final song = find.text(title);
-    await tester.scrollUntilVisible(song, 120,
-        scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(
+      song,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.ensureVisible(song);
     await tester.pumpAndSettle();
     await tester.tap(song);
@@ -43,8 +47,11 @@ void main() {
     // This is the first test that would quietly stop checking the last song
     // as songs are added.
     for (final song in SongLibrary.all) {
-      await tester.scrollUntilVisible(find.text(song.title), 120,
-          scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        find.text(song.title),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text(song.title), findsOneWidget);
       // Beethoven wrote two of them, so a composer may appear more than once.
       expect(find.text(song.composer), findsAtLeastNWidgets(1));
@@ -99,19 +106,24 @@ void main() {
   testWidgets('every chosen setting reaches the playfield', (tester) async {
     await pumpList(tester);
     // Tapping the chip itself rather than the label inside it.
-    await tester.tap(find.ancestor(
-        of: find.text('Zor'), matching: find.byType(InkWell)));
+    await tester.tap(
+      find.ancestor(of: find.text('Zor'), matching: find.byType(InkWell)),
+    );
     await tester.pump();
-    await tester.tap(find.ancestor(
-        of: find.text('%40'), matching: find.byType(InkWell)));
+    await tester.tap(
+      find.ancestor(of: find.text('%40'), matching: find.byType(InkWell)),
+    );
     await tester.pump();
     await openSong(tester, firstSong);
 
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
     expect(screen.settings.difficulty, Difficulty.hard);
     expect(screen.settings.speed, 0.4);
-    expect(screen.settings.tolerance, TimingTolerance.wide,
-        reason: 'the default');
+    expect(
+      screen.settings.tolerance,
+      TimingTolerance.wide,
+      reason: 'the default',
+    );
     expect(screen.settings.quantize, isTrue, reason: 'the default');
     expect(screen.settings.latencyOffsetMs, 0, reason: 'the default');
   });
@@ -119,21 +131,25 @@ void main() {
   testWidgets('the timing settings reach the playfield too', (tester) async {
     /// The switch under [title], found by its own label rather than by being
     /// the only one on the screen — there is more than one now.
-    Finder switchUnder(String title) => find.ancestor(
-          of: find.text(title),
-          matching: find.byType(Row),
-        ).first;
+    Finder switchUnder(String title) =>
+        find.ancestor(of: find.text(title), matching: find.byType(Row)).first;
 
     await pumpList(tester);
     await tester.tap(find.text(TimingTolerance.tight.label));
     await tester.pump();
-    await tester.tap(find.descendant(
+    await tester.tap(
+      find.descendant(
         of: switchUnder('Notalar tam zamanında çalsın'),
-        matching: find.byType(Switch)));
+        matching: find.byType(Switch),
+      ),
+    );
     await tester.pump();
-    await tester.tap(find.descendant(
+    await tester.tap(
+      find.descendant(
         of: switchUnder('Kaçırdıklarım da duyulsun'),
-        matching: find.byType(Switch)));
+        matching: find.byType(Switch),
+      ),
+    );
     await tester.pump();
     await openSong(tester, 'Für Elise');
 
@@ -149,8 +165,14 @@ void main() {
     // reaches for when nothing they do registers.
     await pumpList(tester);
     await tester.scrollUntilVisible(find.text('Zamanlama ayarı'), 200);
+    // Scoped to its own picker: the start point below it steps with the same
+    // icons, and a bare finder takes whichever comes first.
+    final plus = find.descendant(
+      of: find.byType(LatencyPicker),
+      matching: find.byIcon(Icons.add),
+    );
     for (var i = 0; i < 3; i++) {
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(plus);
       await tester.pump();
     }
     expect(find.text('+30 ms'), findsOneWidget);
@@ -160,5 +182,44 @@ void main() {
 
     final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
     expect(screen.settings.latencyOffsetMs, 30);
+  });
+
+  testWidgets('the starting point reaches the game', (tester) async {
+    await pumpList(tester);
+    await tester.scrollUntilVisible(find.text('Başlangıç noktası'), 200);
+    final picker = find.byType(StartPicker);
+
+    expect(find.text('Şarkı baştan başlar'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: picker,
+        matching: find.byIcon(Icons.keyboard_double_arrow_right),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.descendant(of: picker, matching: find.byIcon(Icons.add)),
+    );
+    await tester.pump();
+
+    expect(find.text('0:35'), findsOneWidget, reason: 'half a minute and five');
+
+    await openSong(tester, firstSong);
+
+    final screen = tester.widget<PlayScreen>(find.byType(PlayScreen));
+    expect(screen.settings.startSeconds, 35);
+  });
+
+  testWidgets('and never goes before the beginning', (tester) async {
+    await pumpList(tester);
+    await tester.scrollUntilVisible(find.text('Başlangıç noktası'), 200);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(StartPicker),
+        matching: find.byIcon(Icons.remove),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('0:00'), findsOneWidget);
   });
 }

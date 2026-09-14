@@ -21,6 +21,7 @@ class PlaySettings {
     this.quantize = true,
     this.fillMissed = false,
     this.latencyOffsetMs = 0,
+    this.startSeconds = 0,
   });
 
   final Difficulty difficulty;
@@ -63,6 +64,19 @@ class PlaySettings {
   /// reliably arrives a little after the eye says to move.
   final double latencyOffsetMs;
 
+  /// Where in the song to begin, in seconds of the song's own time.
+  ///
+  /// Zero — the beginning — unless the player moves it. It is for looking at
+  /// one passage: a piece is three minutes long and the thing worth seeing
+  /// may be at two and a half, and playing to it every time is how a bug
+  /// goes unexamined.
+  ///
+  /// **The song's own seconds, not the clock on the wall.** Slowing a piece
+  /// down stretches the playing but not the score, so a moment stays at the
+  /// same number whatever speed it is played at — which is the only way a
+  /// time is worth writing down.
+  final double startSeconds;
+
   PlaySettings copyWith({
     Difficulty? difficulty,
     double? speed,
@@ -70,6 +84,7 @@ class PlaySettings {
     bool? quantize,
     bool? fillMissed,
     double? latencyOffsetMs,
+    double? startSeconds,
   }) => PlaySettings(
     difficulty: difficulty ?? this.difficulty,
     speed: speed ?? this.speed,
@@ -77,5 +92,6 @@ class PlaySettings {
     quantize: quantize ?? this.quantize,
     fillMissed: fillMissed ?? this.fillMissed,
     latencyOffsetMs: latencyOffsetMs ?? this.latencyOffsetMs,
+    startSeconds: startSeconds ?? this.startSeconds,
   );
 }

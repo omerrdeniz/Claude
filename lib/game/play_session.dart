@@ -149,8 +149,12 @@ class PlaySession {
     this.speed = 1.0,
     this.quantize = true,
     this.fillMissed = false,
+    this.startSeconds = 0,
   }) : assert(speed > 0),
-       _chart = chart;
+       assert(startSeconds >= 0),
+       _chart = chart {
+    _skipToStart();
+  }
 
   Chart _chart;
   Chart get chart => _chart;
@@ -171,6 +175,15 @@ class PlaySession {
 
   /// How long a note takes to travel down the screen.
   final double approachSeconds;
+
+  /// Where in the song to begin, in the song's own seconds.
+  ///
+  /// The song's own, so that slowing a piece down does not move the place:
+  /// [beatsPerSecond] carries [speed] and this deliberately does not.
+  final double startSeconds;
+
+  /// The same, as a beat.
+  double get startBeat => startSeconds * chart.song.bpm / 60;
 
   /// Fraction of the written tempo to play at.
   ///
@@ -261,7 +274,7 @@ class PlaySession {
   final List<({double beat, Hand hand})> _justMissed = [];
 
   /// The song clock starts before the first note, so it arrives travelling.
-  late double _beat = -leadInBeats;
+  late double _beat = startBeat - leadInBeats;
   late double _lastBeat = _beat;
   bool _running = false;
 
@@ -327,7 +340,9 @@ class PlaySession {
     if (!_running) return;
     _lastBeat = _beat;
     _beat =
-        (elapsed - _origin).inMicroseconds / 1e6 * beatsPerSecond - leadInBeats;
+        (elapsed - _origin).inMicroseconds / 1e6 * beatsPerSecond -
+        leadInBeats +
+        startBeat;
 
     _endFinishedHolds();
     _playAccompaniment();
@@ -1059,11 +1074,38 @@ class PlaySession {
     stop();
     _origin = _wallClock;
     _pausedAt = null;
-    _beat = -leadInBeats;
+    _beat = startBeat - leadInBeats;
     _lastBeat = _beat;
     scoreboard.reset();
     _resolved.clear();
     _filled.clear();
+    _skipToStart();
     _running = true;
   }
+
+  /// Put everything before [startBeat] behind us.
+  ///
+  /// Without this, beginning part way through a piece scores a miss for every
+  /// note before that point the moment the clock starts: [_expireMissedTaps]
+  /// walks the whole chart and anything still unplayed and past its moment is
+  /// a miss. Marking them dealt with says what is true — they were never the
+  /// player's to play — and keeps [fillMissed] from playing them too.
+  void _skipToStart() {
+    if (startBeat <= 0) return;
+    for (final tap in chart.taps) {
+      if (tap.beat >= startBeat) break; // taps are in time order
+      _resolve(tap);
+    }
+  }
+
+  /// How far into the song the clock has reached, in the song's own seconds.
+  ///
+  /// Not wall time: at half speed the player spends two minutes reaching the
+  /// one-minute mark, and it is the mark that is worth showing. It is the
+  /// same number the song list prints a length in and the same one
+  /// [startSeconds] is set in, so all three agree.
+  double get songSeconds => _beat / (chart.song.bpm / 60);
+
+  /// And how many there are altogether.
+  double get songLengthSeconds => chart.lengthInBeats / (chart.song.bpm / 60);
 }
