@@ -76,15 +76,15 @@ class _PlayScreenState extends State<PlayScreen>
   void initState() {
     super.initState();
     _session = PlaySession(
-      chart:
-          Chart.build(widget.song, difficulty: widget.settings.difficulty),
+      chart: Chart.build(widget.song, difficulty: widget.settings.difficulty),
       audio: _audio,
       // The hard level is the same notes judged more tightly; everything else
       // about it is identical, so this is the only place it differs.
       // Hard tightens whatever tolerance the player chose, rather than
       // replacing it.
-      judge: Judge.forTolerance(widget.settings.tolerance).tightened(
-          widget.settings.difficulty == Difficulty.hard ? 0.6 : 1.0),
+      judge: Judge.forTolerance(
+        widget.settings.tolerance,
+      ).tightened(widget.settings.difficulty == Difficulty.hard ? 0.6 : 1.0),
       quantize: widget.settings.quantize,
       fillMissed: widget.settings.fillMissed,
       approachSeconds: widget.approachSeconds,
@@ -97,12 +97,17 @@ class _PlayScreenState extends State<PlayScreen>
     _session.onDragNote = _record;
     // An ornament earned by staying on it: answered where it happened, so the
     // screen says so and not only the score.
-    _session.onCrush = (tap) => setState(() => _sparks.add(Spark(
+    _session.onCrush = (tap) => setState(
+      () => _sparks.add(
+        Spark(
           places: tap.noteAcross,
+          midis: [for (final note in tap.notes) note.midi],
           hand: tap.hand,
           voices: tap.voices,
           quality: 1,
-        )));
+        ),
+      ),
+    );
     _audio.start();
     // Not awaited: the synthesiser covers the first moments, and a song that
     // waits on a download to begin is worse than one that improves as it
@@ -189,12 +194,15 @@ class _PlayScreenState extends State<PlayScreen>
       // it can only do with the chord whole.
       final quality = _session.judge.quality(outcome.errorMs);
       if (outcome.places.isNotEmpty) {
-        _sparks.add(Spark(
-          places: outcome.places,
-          hand: outcome.hand,
-          voices: outcome.voices,
-          quality: quality,
-        ));
+        _sparks.add(
+          Spark(
+            places: outcome.places,
+            midis: [for (final note in outcome.notes) note.midi],
+            hand: outcome.hand,
+            voices: outcome.voices,
+            quality: quality,
+          ),
+        );
       }
     }
     if (_session.scoreboard.combo > _combo) _comboAt = _now;
@@ -321,7 +329,9 @@ class _PlayScreenState extends State<PlayScreen>
                     '${widget.song.composer} · '
                     '${widget.settings.difficulty.label}',
                     style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textMuted),
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                    ),
                   ),
                 ],
               ),

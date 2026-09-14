@@ -37,13 +37,13 @@ class _Dot {
   final bool isPlayed;
 
   _Dot movedTo(double newAcross) => _Dot(
-        across: newAcross,
-        midi: midi,
-        endBeat: endBeat,
-        isHold: isHold,
-        isHeld: isHeld,
-        isPlayed: isPlayed,
-      );
+    across: newAcross,
+    midi: midi,
+    endBeat: endBeat,
+    isHold: isHold,
+    isHeld: isHeld,
+    isPlayed: isPlayed,
+  );
 }
 
 /// Draws the playfield: the beams, the hit line, and the notes travelling down
@@ -160,7 +160,7 @@ class StagePainter extends CustomPainter {
       // milliseconds of nearly nothing.
       final burn = 1 - life * life * life;
       final strength = 0.7 + spark.quality * 0.3;
-      final colour = AppTheme.chordColor(spark.voices);
+      final (low, high) = chart.pitchRange;
       // Laid out exactly as the notes were, or a chord's light stands beside
       // the notes it came from.
       final places = _spreadPlaces(spark.places, g, radius, spark.hand);
@@ -178,7 +178,13 @@ class StagePainter extends CustomPainter {
       // the part the eye reads as the hit itself.
       final flash = (1 - life * 1.8).clamp(0.0, 1.0);
 
-      for (final place in places) {
+      for (var i = 0; i < places.length; i++) {
+        final place = places[i];
+        // Each plume in its own note's colour: the light is what happened to
+        // *that* note, so it is that note that should be recognisable in it.
+        final colour = i < spark.midis.length
+            ? AppTheme.pitchColor(spark.midis[i], low: low, high: high)
+            : AppTheme.chordColor(spark.voices);
         final x = g.xAtPosition(place);
         final shaft = Rect.fromLTRB(x - half, y, x + half, y + reach);
         canvas.drawRRect(
@@ -188,10 +194,16 @@ class StagePainter extends CustomPainter {
               Offset(x, y),
               Offset(x, y + reach),
               [
-                Color.lerp(colour, Colors.white, 0.7)!
-                    .withValues(alpha: burn * strength),
-                Color.lerp(colour, Colors.white, 0.2)!
-                    .withValues(alpha: 0.7 * burn * strength),
+                Color.lerp(
+                  colour,
+                  Colors.white,
+                  0.7,
+                )!.withValues(alpha: burn * strength),
+                Color.lerp(
+                  colour,
+                  Colors.white,
+                  0.2,
+                )!.withValues(alpha: 0.7 * burn * strength),
                 colour.withValues(alpha: 0.0),
               ],
               const [0.0, 0.35, 1.0],
@@ -249,8 +261,7 @@ class StagePainter extends CustomPainter {
             ground.glow.withValues(alpha: 0.20 + heat * 0.22),
             ground.glow.withValues(alpha: 0.0),
           ],
-        ).createShader(
-            Rect.fromCircle(center: glowCentre, radius: glowRadius)),
+        ).createShader(Rect.fromCircle(center: glowCentre, radius: glowRadius)),
     );
   }
 
@@ -293,8 +304,9 @@ class StagePainter extends CustomPainter {
           Offset(0, glow.bottom),
           [
             AppTheme.accentSoft.withValues(alpha: 0.0),
-            AppTheme.accentSoft
-                .withValues(alpha: 0.22 + flash * 0.22 + heat * 0.30),
+            AppTheme.accentSoft.withValues(
+              alpha: 0.22 + flash * 0.22 + heat * 0.30,
+            ),
             AppTheme.accentSoft.withValues(alpha: 0.0),
           ],
           const [0.0, 0.5, 1.0],
@@ -333,24 +345,30 @@ class StagePainter extends CustomPainter {
 
     // Everything the screen can show, above the line and below it — and one
     // note further down, since the lift can bring a line back into view.
-    final firstVisible = beat -
+    final firstVisible =
+        beat -
         windowInBeats * (1 - g.hitLineFraction) / g.hitLineFraction -
         lift;
     final lastVisible = beat + windowInBeats;
 
     final paint = Paint()..strokeWidth = 1;
-    for (var bar = (firstVisible / perBar).ceil() * perBar;
-        bar <= lastVisible;
-        bar += perBar) {
+    for (
+      var bar = (firstVisible / perBar).ceil() * perBar;
+      bar <= lastVisible;
+      bar += perBar
+    ) {
       // Plus the lift, not minus: further from the line is higher up.
-      final progress =
-          StageGeometry.progressFor(bar - beat + lift, windowInBeats);
+      final progress = StageGeometry.progressFor(
+        bar - beat + lift,
+        windowInBeats,
+      );
       final y = g.yAt(progress);
       // Dimmer the further off it is, like the notes, so the top of the
       // screen stays quiet.
       final near = progress.clamp(0.0, 1.0);
-      paint.color = Colors.white
-          .withValues(alpha: (0.10 + near * 0.12) * (progress > 1 ? 0.4 : 1));
+      paint.color = Colors.white.withValues(
+        alpha: (0.10 + near * 0.12) * (progress > 1 ? 0.4 : 1),
+      );
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
@@ -372,14 +390,18 @@ class StagePainter extends CustomPainter {
     for (final entry in moments.entries) {
       final group = entry.value;
       final tap = group.first;
-      final progress =
-          StageGeometry.progressFor(tap.beat - beat, windowInBeats);
+      final progress = StageGeometry.progressFor(
+        tap.beat - beat,
+        windowInBeats,
+      );
       if (progress < -0.05) continue;
 
       // A held note is not finished when its head crosses the line — the
       // finger is meant to stay down until its end does.
-      final tailProgress =
-          StageGeometry.progressFor(tap.drawnEndBeat - beat, windowInBeats);
+      final tailProgress = StageGeometry.progressFor(
+        tap.drawnEndBeat - beat,
+        windowInBeats,
+      );
 
       // Every note that sounds at this moment in this hand, wherever its
       // pitch puts it. A chord is drawn as its notes even when one finger
@@ -394,22 +416,26 @@ class StagePainter extends CustomPainter {
           final endBeat = member.drawnEndBeat < member.beat + note.duration
               ? member.drawnEndBeat
               : member.beat + note.duration;
-          dots.add(_Dot(
-            across: member.noteAcross[i],
-            midi: note.midi,
-            endBeat: endBeat,
-            // Held in the picture only where there is a tail to show for it.
-            // Whether the finger is meant to stay is [Tap.isHold] and belongs
-            // to the sound; whether saying so is worth a bar depends on how
-            // long that bar comes out on this screen, which only the painter
-            // knows. See [StageGeometry.holdReadsAsBar].
-            isHold: member.isHold &&
-                StageGeometry.holdReadsAsBar(
+          dots.add(
+            _Dot(
+              across: member.noteAcross[i],
+              midi: note.midi,
+              endBeat: endBeat,
+              // Held in the picture only where there is a tail to show for it.
+              // Whether the finger is meant to stay is [Tap.isHold] and belongs
+              // to the sound; whether saying so is worth a bar depends on how
+              // long that bar comes out on this screen, which only the painter
+              // knows. See [StageGeometry.holdReadsAsBar].
+              isHold:
+                  member.isHold &&
+                  StageGeometry.holdReadsAsBar(
                     (endBeat - member.beat) / windowInBeats * g.hitLineY,
-                    g.noteRadius),
-            isHeld: heldNotes.contains((member.beat, note.midi)),
-            isPlayed: playedNotes.contains((member.beat, note.midi)),
-          ));
+                    g.noteRadius,
+                  ),
+              isHeld: heldNotes.contains((member.beat, note.midi)),
+              isPlayed: playedNotes.contains((member.beat, note.midi)),
+            ),
+          );
         }
       }
 
@@ -431,8 +457,10 @@ class StagePainter extends CustomPainter {
       final radius = g.noteRadius;
       dots = _spreadChord(dots, g, radius, tap.hand);
 
-      double headOf(_Dot dot) => StageGeometry.headProgressFor(progress,
-          isHold: dot.isHold && dot.isHeld);
+      double headOf(_Dot dot) => StageGeometry.headProgressFor(
+        progress,
+        isHold: dot.isHold && dot.isHeld,
+      );
 
       if (dots.length > 1) {
         _paintChordBand(canvas, g, dots, headOf(dots.first), colour, fade);
@@ -441,8 +469,17 @@ class StagePainter extends CustomPainter {
       // One mark for the whole touch, before the notes so they sit on top of
       // it. A chord is several notes and one hand: the instruction is to the
       // hand.
-      if (group.any((m) => m.hasGrace)) {
-        _paintGrace(canvas, g, dots, headOf(dots.first), radius, colour, fade);
+      final ornament = [for (final m in group) ...m.grace];
+      if (ornament.isNotEmpty) {
+        _paintGrace(
+          canvas,
+          g,
+          dots,
+          headOf(dots.first),
+          radius,
+          ornament,
+          fade,
+        );
       }
 
       // Half the bar's thickness, as [_paintHoldBar] wants it: the tail comes
@@ -509,13 +546,15 @@ class StagePainter extends CustomPainter {
           centre,
           radius * 2.2,
           Paint()
-            ..shader = RadialGradient(
-              colors: [
-                AppTheme.accentSoft.withValues(alpha: 0.45),
-                AppTheme.accentSoft.withValues(alpha: 0.0),
-              ],
-            ).createShader(
-                Rect.fromCircle(center: centre, radius: radius * 2.2)),
+            ..shader =
+                RadialGradient(
+                  colors: [
+                    AppTheme.accentSoft.withValues(alpha: 0.45),
+                    AppTheme.accentSoft.withValues(alpha: 0.0),
+                  ],
+                ).createShader(
+                  Rect.fromCircle(center: centre, radius: radius * 2.2),
+                ),
         );
         canvas.drawCircle(
           centre,
@@ -600,7 +639,11 @@ class StagePainter extends CustomPainter {
 
     final sorted = [...dots]..sort((a, b) => a.across.compareTo(b.across));
     final places = _spreadPlaces(
-        [for (final dot in sorted) dot.across], g, radius, hand);
+      [for (final dot in sorted) dot.across],
+      g,
+      radius,
+      hand,
+    );
 
     return [
       for (var i = 0; i < sorted.length; i++) sorted[i].movedTo(places[i]),
@@ -621,8 +664,8 @@ class StagePainter extends CustomPainter {
 
     final (zoneStart, zoneEnd) = chart.separatesHands
         ? (hand == Hand.left
-            ? (Chart.leftZoneStart, Chart.leftZoneEnd)
-            : (Chart.rightZoneStart, Chart.rightZoneEnd))
+              ? (Chart.leftZoneStart, Chart.leftZoneEnd)
+              : (Chart.rightZoneStart, Chart.rightZoneEnd))
         : (Chart.leftZoneStart, Chart.rightZoneEnd);
 
     return StageGeometry.spreadChord(
@@ -640,12 +683,13 @@ class StagePainter extends CustomPainter {
   /// answers them one at a time. The band says: these belong together, and
   /// whether they take one finger or three, they sound at once.
   void _paintChordBand(
-      Canvas canvas,
-      StageGeometry g,
-      List<_Dot> dots,
-      double progress,
-      Color colour,
-      double fade) {
+    Canvas canvas,
+    StageGeometry g,
+    List<_Dot> dots,
+    double progress,
+    Color colour,
+    double fade,
+  ) {
     var lowest = 1.0;
     var highest = 0.0;
     for (final dot in dots) {
@@ -659,19 +703,27 @@ class StagePainter extends CustomPainter {
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTRB(left.dx, left.dy - thickness / 2, right.dx,
-            right.dy + thickness / 2),
+        Rect.fromLTRB(
+          left.dx,
+          left.dy - thickness / 2,
+          right.dx,
+          right.dy + thickness / 2,
+        ),
         Radius.circular(thickness / 2),
       ),
       Paint()
-        ..shader = ui.Gradient.linear(left, right, [
-          colour.withValues(alpha: 0.30 * fade),
-          colour.withValues(alpha: 0.46 * fade),
-          colour.withValues(alpha: 0.30 * fade),
-        ], const [0.0, 0.5, 1.0]),
+        ..shader = ui.Gradient.linear(
+          left,
+          right,
+          [
+            colour.withValues(alpha: 0.30 * fade),
+            colour.withValues(alpha: 0.46 * fade),
+            colour.withValues(alpha: 0.30 * fade),
+          ],
+          const [0.0, 0.5, 1.0],
+        ),
     );
   }
-
 
   /// The mark on a touch that carries an ornament: the small note itself,
   /// drawn under the one it leans into.
@@ -688,9 +740,19 @@ class StagePainter extends CustomPainter {
   /// It carries no direction any more. It used to be an arrow, back when the
   /// gesture was a flick; now the ornament is earned by staying on the note,
   /// and there is nothing to point at. What the mark has to say is only
-  /// *this one has a little note in it* — so it is drawn as one.
-  void _paintGrace(Canvas canvas, StageGeometry g, List<_Dot> dots,
-      double progress, double radius, Color colour, double fade) {
+  /// *this one has a little note in it* — so it is drawn as one: the same
+  /// capsule the notes are, smaller, in the little note's own pitch colour.
+  /// It is a note, and it should look like the note it is rather than like a
+  /// badge stuck to the chord.
+  void _paintGrace(
+    Canvas canvas,
+    StageGeometry g,
+    List<_Dot> dots,
+    double progress,
+    double radius,
+    List<Note> ornament,
+    double fade,
+  ) {
     var low = dots.first.across, high = dots.first.across;
     for (final dot in dots) {
       if (dot.across < low) low = dot.across;
@@ -698,13 +760,31 @@ class StagePainter extends CustomPainter {
     }
     final centre = g.positionAtPosition((low + high) / 2, progress);
     final at = Offset(centre.dx, centre.dy + radius * _graceDrop);
-    final small = radius * _graceRadius;
 
-    canvas.drawCircle(
-        at, small, Paint()..color = colour.withValues(alpha: 0.9 * fade));
-    canvas.drawCircle(
-      at,
-      small,
+    // Its own pitch, like every other note on the screen. Where an ornament
+    // is more than one note the lowest names it, which is the one the ear
+    // hears the ornament as.
+    final (lowest, highest) = chart.pitchRange;
+    final midi = ornament
+        .map((note) => note.midi)
+        .reduce((a, b) => a < b ? a : b);
+    final colour = AppTheme.pitchColor(midi, low: lowest, high: highest);
+
+    final body = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: at,
+        width: g.noteWidth * _graceScale,
+        height: radius * 2 * _graceScale,
+      ),
+      Radius.circular(g.noteWidth * _graceScale / 2),
+    );
+
+    canvas.drawRRect(
+      body,
+      Paint()..color = colour.withValues(alpha: 0.9 * fade),
+    );
+    canvas.drawRRect(
+      body,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.1
@@ -715,9 +795,13 @@ class StagePainter extends CustomPainter {
   /// How far under the notes the little one sits, in note radii.
   static const double _graceDrop = 1.5;
 
-  /// And how big it is drawn. Small enough to read as the little note it is
-  /// written as, big enough to see at arm's length.
-  static const double _graceRadius = 0.42;
+  /// And how big it is drawn, as a fraction of a note. Small enough to read
+  /// as the little note it is written as, big enough to see at arm's length.
+  ///
+  /// Its brushes are not the notes' — [_Brushes] caches one size at a time
+  /// and throws the cache away when the size changes, so asking it for a
+  /// second size would rebuild every brush on screen, every frame.
+  static const double _graceScale = 0.55;
 
   /// A note: an upright rounded bar, as tall as the disc it replaced and
   /// narrower.
@@ -733,8 +817,15 @@ class StagePainter extends CustomPainter {
   /// three of every hundred gaps inside a chord used to be stretched to clear
   /// a disc; a bar this wide leaves a quarter of them at the distance the
   /// music actually has.
-  void _paintNote(Canvas canvas, StageGeometry g, double across,
-      double progress, double radius, Color colour, double fade) {
+  void _paintNote(
+    Canvas canvas,
+    StageGeometry g,
+    double across,
+    double progress,
+    double radius,
+    Color colour,
+    double fade,
+  ) {
     final centre = g.positionAtPosition(across, progress);
     final width = g.noteWidth;
     final brush = _Brushes.forNote(colour, fade, radius);
@@ -765,9 +856,17 @@ class StagePainter extends CustomPainter {
   /// The body of a note that has to be held down, drawn as a bar as long as
   /// the note lasts — and no wider than the note, so the two read as one
   /// thing rather than a head on a post.
-  void _paintHoldBar(Canvas canvas, StageGeometry g, double across,
-      double progress, double tailProgress, double radius, double width,
-      Color colour, double fade) {
+  void _paintHoldBar(
+    Canvas canvas,
+    StageGeometry g,
+    double across,
+    double progress,
+    double tailProgress,
+    double radius,
+    double width,
+    Color colour,
+    double fade,
+  ) {
     if (tailProgress >= progress) return;
 
     // The bar reaches from the head back the distance the note lasts. Once
@@ -848,22 +947,27 @@ class _Brushes {
       _cachedRadius = radius;
     }
     final step = (fade * _fadeSteps).round().clamp(0, _fadeSteps);
-    return _cache[Object.hash(colour.toARGB32(), step)] ??=
-        _build(colour, step / _fadeSteps, radius);
+    return _cache[Object.hash(colour.toARGB32(), step)] ??= _build(
+      colour,
+      step / _fadeSteps,
+      radius,
+    );
   }
 
   static _Brushes _build(Color colour, double fade, double radius) {
     return _Brushes(
       Paint()
-        ..shader = RadialGradient(
-          colors: [
-            colour.withValues(alpha: 0.42 * fade),
-            colour.withValues(alpha: 0.16 * fade),
-            colour.withValues(alpha: 0.0),
-          ],
-          stops: const [0.35, 0.6, 1.0],
-        ).createShader(
-            Rect.fromCircle(center: Offset.zero, radius: radius * 2.0)),
+        ..shader =
+            RadialGradient(
+              colors: [
+                colour.withValues(alpha: 0.42 * fade),
+                colour.withValues(alpha: 0.16 * fade),
+                colour.withValues(alpha: 0.0),
+              ],
+              stops: const [0.35, 0.6, 1.0],
+            ).createShader(
+              Rect.fromCircle(center: Offset.zero, radius: radius * 2.0),
+            ),
       Paint()
         ..shader = RadialGradient(
           colors: [
@@ -879,5 +983,4 @@ class _Brushes {
         ..color = Colors.white.withValues(alpha: 0.55 * fade),
     );
   }
-
 }

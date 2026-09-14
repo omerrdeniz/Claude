@@ -3,8 +3,13 @@ import 'package:piano_flow/music/note.dart';
 import 'package:piano_flow/render/hit_sparks.dart';
 
 void main() {
-  Spark hit({double across = 0.5}) =>
-      Spark(places: [across], hand: Hand.right, voices: 1, quality: 1);
+  Spark hit({double across = 0.5}) => Spark(
+    places: [across],
+    midis: const [60],
+    hand: Hand.right,
+    voices: 1,
+    quality: 1,
+  );
 
   test('a spark burns out on its own', () {
     final field = SparkField(lifeMs: 100);
@@ -23,8 +28,11 @@ void main() {
       field.add(hit(across: i / 40));
     }
     expect(field.sparks, hasLength(4));
-    expect(field.sparks.first.places.single, closeTo(36 / 40, 1e-9),
-        reason: 'the oldest go first');
+    expect(
+      field.sparks.first.places.single,
+      closeTo(36 / 40, 1e-9),
+      reason: 'the oldest go first',
+    );
   });
 
   test('advancing an empty field is harmless', () {

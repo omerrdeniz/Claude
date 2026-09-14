@@ -19,16 +19,19 @@ const Size phone = Size(390, 844);
 const Size phoneLandscape = Size(844, 390);
 
 /// Paint one frame straight onto a canvas — no widget tree, no clock.
-ui.Picture paintFrame(Song song, double beat,
-    {double window = 4,
-    Map<Hand, double> litHands = const {},
-    Size size = phone,
-    Set<(double, int)> heldNotes = const {},
-    List<RunBead> runBeads = const [],
-    List<Spark> sparks = const [],
-    double heat = 0,
-    Ground ground = AppTheme.defaultGround,
-    Difficulty difficulty = Difficulty.normal}) {
+ui.Picture paintFrame(
+  Song song,
+  double beat, {
+  double window = 4,
+  Map<Hand, double> litHands = const {},
+  Size size = phone,
+  Set<(double, int)> heldNotes = const {},
+  List<RunBead> runBeads = const [],
+  List<Spark> sparks = const [],
+  double heat = 0,
+  Ground ground = AppTheme.defaultGround,
+  Difficulty difficulty = Difficulty.normal,
+}) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder, Offset.zero & size);
   StagePainter(
@@ -48,24 +51,31 @@ ui.Picture paintFrame(Song song, double beat,
 /// Save a frame as a PNG under build/screens, so the playfield can actually be
 /// looked at. There is no device here to look at it on, so it is rendered to
 /// file the same way the synthesiser is rendered to WAV.
-Future<int> savePng(Song song, double beat, String name,
-    {Map<Hand, double> litHands = const {},
-    Size size = phone,
-    Set<(double, int)> heldNotes = const {},
-    List<RunBead> runBeads = const [],
-    List<Spark> sparks = const [],
-    double heat = 0,
-    Ground ground = AppTheme.defaultGround,
-    Difficulty difficulty = Difficulty.normal}) async {
-  final picture = paintFrame(song, beat,
-      litHands: litHands,
-      size: size,
-      heldNotes: heldNotes,
-      runBeads: runBeads,
-      sparks: sparks,
-      heat: heat,
-      ground: ground,
-      difficulty: difficulty);
+Future<int> savePng(
+  Song song,
+  double beat,
+  String name, {
+  Map<Hand, double> litHands = const {},
+  Size size = phone,
+  Set<(double, int)> heldNotes = const {},
+  List<RunBead> runBeads = const [],
+  List<Spark> sparks = const [],
+  double heat = 0,
+  Ground ground = AppTheme.defaultGround,
+  Difficulty difficulty = Difficulty.normal,
+}) async {
+  final picture = paintFrame(
+    song,
+    beat,
+    litHands: litHands,
+    size: size,
+    heldNotes: heldNotes,
+    runBeads: runBeads,
+    sparks: sparks,
+    heat: heat,
+    ground: ground,
+    difficulty: difficulty,
+  );
   final image = await picture.toImage(size.width.toInt(), size.height.toInt());
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   final file = File('build/screens/$name.png');
@@ -77,24 +87,25 @@ Future<int> savePng(Song song, double beat, String name,
 /// Every note of the moment at [beat], as the session would report it while
 /// a finger was on them.
 Set<(double, int)> heldAt(Song song, double beat) => {
-      for (final note in song.notes)
-        if ((note.beat - beat).abs() < 0.01) (note.beat, note.midi),
-    };
+  for (final note in song.notes)
+    if ((note.beat - beat).abs() < 0.01) (note.beat, note.midi),
+};
 
 /// The bead a run is on at [beat], as the session would report it.
 RunBead beadOf(Song song, double beat, {required bool tracked}) {
   final chart = Chart.build(song);
-  final entry = chart.runs.entries.firstWhere((e) =>
-      beat >= e.value.first.beat && beat <= e.value.last.beat);
+  final entry = chart.runs.entries.firstWhere(
+    (e) => beat >= e.value.first.beat && beat <= e.value.last.beat,
+  );
   final run = entry.value;
   final at = run.lastWhere((tap) => tap.beat <= beat, orElse: () => run.first);
   return RunBead(
-      runId: entry.key,
-      hand: at.hand,
-      across: at.across,
-      tracked: tracked);
+    runId: entry.key,
+    hand: at.hand,
+    across: at.across,
+    tracked: tracked,
+  );
 }
-
 
 /// A canvas that only remembers where things were drawn.
 ///
@@ -125,9 +136,21 @@ class _Recorder implements Canvas {
 
   final List<double> lines = [];
 
+  /// The colour each of [rects] was painted with, in the same order. Only
+  /// plain paints say anything here — a shader's paint reports black — which
+  /// is enough for the marks that are drawn in one flat colour.
+  final List<Color> rectColours = [];
+
+  /// And whether that was a fill or an outline: most shapes are drawn twice,
+  /// a body and then a rim over it.
+  final List<PaintingStyle> rectStyles = [];
+
   @override
-  void drawRRect(RRect rrect, Paint paint) =>
-      rects.add(rrect.outerRect.shift(_shift));
+  void drawRRect(RRect rrect, Paint paint) {
+    rects.add(rrect.outerRect.shift(_shift));
+    rectColours.add(paint.color);
+    rectStyles.add(paint.style);
+  }
 
   @override
   void drawLine(Offset from, Offset to, Paint paint) {
@@ -149,22 +172,28 @@ void main() {
     final song = shipped('ode-to-joy');
     // Well past the line, so a pinned head and a falling one differ.
     expect(
-        () => paintFrame(song, 7.6, heldNotes: heldAt(song, 6.0)),
-        returnsNormally);
+      () => paintFrame(song, 7.6, heldNotes: heldAt(song, 6.0)),
+      returnsNormally,
+    );
     expect(() => paintFrame(song, 7.6), returnsNormally);
   });
 
   test('each chord size has its own colour', () {
     // Colour says how many fingers a moment needs; two sizes sharing one
     // colour would make that unreadable.
-    final colours = [for (var n = 1; n <= 4; n++) AppTheme.chordColor(n).toARGB32()];
+    final colours = [
+      for (var n = 1; n <= 4; n++) AppTheme.chordColor(n).toARGB32(),
+    ];
     expect(colours.toSet(), hasLength(4));
   });
 
   test('bigger chords than the palette still get a colour', () {
     expect(AppTheme.chordColor(9), AppTheme.chordColor(4));
-    expect(AppTheme.chordColor(0), AppTheme.chordColor(1),
-        reason: 'never off the end of the palette');
+    expect(
+      AppTheme.chordColor(0),
+      AppTheme.chordColor(1),
+      reason: 'never off the end of the palette',
+    );
   });
 
   test('notes stay clear of each other on a short screen', () {
@@ -175,8 +204,9 @@ void main() {
 
   test('the playfield paints in landscape too', () {
     expect(
-        () => paintFrame(shipped('ode-to-joy'), 6, size: phoneLandscape),
-        returnsNormally);
+      () => paintFrame(shipped('ode-to-joy'), 6, size: phoneLandscape),
+      returnsNormally,
+    );
   });
 
   test('a held note stays on screen until its end reaches the line', () {
@@ -195,8 +225,11 @@ void main() {
     expect(chart.taps.single.isHold, isTrue);
 
     // A beat and a half in: the head is well past the line, the tail is not.
-    expect(chart.visibleAt(1.5, 4), isNotEmpty,
-        reason: 'the note is still being held');
+    expect(
+      chart.visibleAt(1.5, 4),
+      isNotEmpty,
+      reason: 'the note is still being held',
+    );
     // Past its end, it should be gone.
     expect(chart.visibleAt(4.0, 4), isEmpty);
   });
@@ -204,7 +237,10 @@ void main() {
   test('a chord band never crosses the divide between the hands', () {
     // Both hands playing chords at once: the two bands must stay on their own
     // sides, which is what grouping by hand as well as by moment guarantees.
-    final chart = Chart.build(shipped('ode-to-joy'), difficulty: Difficulty.hard);
+    final chart = Chart.build(
+      shipped('ode-to-joy'),
+      difficulty: Difficulty.hard,
+    );
     final moments = <double, List<Tap>>{};
     for (final tap in chart.taps) {
       (moments[tap.beat] ??= []).add(tap);
@@ -214,9 +250,14 @@ void main() {
         final ofHand = group.where((t) => t.hand == hand);
         if (ofHand.isEmpty) continue;
         final low = ofHand.map((t) => t.across).reduce((a, b) => a < b ? a : b);
-        final high = ofHand.map((t) => t.across).reduce((a, b) => a > b ? a : b);
-        expect(hand == Hand.left ? high < 0.5 : low > 0.5, isTrue,
-            reason: 'a band would cross the middle');
+        final high = ofHand
+            .map((t) => t.across)
+            .reduce((a, b) => a > b ? a : b);
+        expect(
+          hand == Hand.left ? high < 0.5 : low > 0.5,
+          isTrue,
+          reason: 'a band would cross the middle',
+        );
       }
     }
   });
@@ -229,10 +270,16 @@ void main() {
         for (final song in shippedSongs) {
           for (final tap in Chart.build(song, difficulty: difficulty).taps) {
             final x = g.xAtPosition(tap.across);
-            expect(x - radius, greaterThanOrEqualTo(0),
-                reason: '${song.title} clipped on the left at $size');
-            expect(x + radius, lessThanOrEqualTo(size.width),
-                reason: '${song.title} clipped on the right at $size');
+            expect(
+              x - radius,
+              greaterThanOrEqualTo(0),
+              reason: '${song.title} clipped on the left at $size',
+            );
+            expect(
+              x + radius,
+              lessThanOrEqualTo(size.width),
+              reason: '${song.title} clipped on the right at $size',
+            );
           }
         }
       }
@@ -243,23 +290,34 @@ void main() {
     // Not an appearance test so much as a promise: the line must never be
     // there on easy, where a touch on either side counts for anything.
     expect(
-        () => paintFrame(shipped('ode-to-joy'), 5, difficulty: Difficulty.easy),
-        returnsNormally);
+      () => paintFrame(shipped('ode-to-joy'), 5, difficulty: Difficulty.easy),
+      returnsNormally,
+    );
     expect(
-        () => paintFrame(shipped('ode-to-joy'), 5, difficulty: Difficulty.hard),
-        returnsNormally);
+      () => paintFrame(shipped('ode-to-joy'), 5, difficulty: Difficulty.hard),
+      returnsNormally,
+    );
   });
 
   test('a beam lit by a hit still paints', () {
-    expect(() => paintFrame(shipped('ode-to-joy'), 6.0, litHands: {Hand.left: 1.0, Hand.right: 0.2}),
-        returnsNormally);
+    expect(
+      () => paintFrame(
+        shipped('ode-to-joy'),
+        6.0,
+        litHands: {Hand.left: 1.0, Hand.right: 0.2},
+      ),
+      returnsNormally,
+    );
   });
 
   test('painting a frame does not throw', () {
     for (final song in shippedSongs) {
       for (final beat in [-2.0, 0.0, 3.5, 12.0, 1000.0]) {
-        expect(() => paintFrame(song, beat), returnsNormally,
-            reason: '${song.title} at beat $beat');
+        expect(
+          () => paintFrame(song, beat),
+          returnsNormally,
+          reason: '${song.title} at beat $beat',
+        );
       }
     }
   });
@@ -270,8 +328,10 @@ void main() {
     // frames have to differ — otherwise the mechanic is invisible.
     final withRun = paintFrame(shipped('fur-elise'), 156.0);
     final withoutRun = paintFrame(shipped('prelude-in-c'), 5.0);
-    expect(withRun.approximateBytesUsed,
-        isNot(withoutRun.approximateBytesUsed));
+    expect(
+      withRun.approximateBytesUsed,
+      isNot(withoutRun.approximateBytesUsed),
+    );
     final chart = Chart.build(shipped('fur-elise'));
     final onScreen = chart
         .visibleAt(156.0, 4)
@@ -315,6 +375,7 @@ void main() {
       sparks: [
         Spark(
           places: tap.noteAcross,
+          midis: [for (final note in tap.notes) note.midi],
           hand: tap.hand,
           voices: tap.voices,
           quality: 1,
@@ -326,8 +387,7 @@ void main() {
     final plumes = {
       for (final rect in recorder.rects)
         if (rect.top >= line - 0.5) rect.center.dx,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     expect(plumes, hasLength(tap.notes.length));
 
     // The notes of that chord: bars still on their way down.
@@ -338,17 +398,79 @@ void main() {
     expect(heads, hasLength(tap.notes.length));
 
     for (final plume in plumes) {
-      expect(heads.any((head) => (head - plume).abs() < 0.5), isTrue,
-          reason: 'a spark at $plume has no note above it');
+      expect(
+        heads.any((head) => (head - plume).abs() < 0.5),
+        isTrue,
+        reason: 'a spark at $plume has no note above it',
+      );
     }
+  });
+
+  test('an ornament is marked in its own note\'s colour, under the chord', () {
+    // Gnossienne's ornaments: the little note sounds before the chord it
+    // leans into, so its mark sits below the chord and carries its own pitch
+    // — not the chord's colour, which is what it used to be drawn in.
+    const g = StageGeometry(size: phone);
+    final chart = Chart.build(shipped('gnossienne-1'));
+    final tap = chart.taps.firstWhere((t) => t.hasGrace);
+    final (low, high) = chart.pitchRange;
+    final wanted = AppTheme.pitchColor(
+      tap.grace.map((n) => n.midi).reduce((a, b) => a < b ? a : b),
+      low: low,
+      high: high,
+    );
+
+    const window = 4.0;
+    final recorder = _Recorder();
+    StagePainter(
+      chart: chart,
+      beat: tap.beat - 1,
+      windowInBeats: window,
+    ).paint(recorder, phone);
+
+    // Where that chord's heads are this frame, so its own mark can be told
+    // from any other ornament on screen.
+    final head = g.positionAtPosition(
+      tap.across,
+      StageGeometry.progressFor(1, window),
+    );
+
+    // The mark is the smaller capsule: a note's shape, scaled down. Nothing
+    // else the painter draws comes out that size.
+    final marks = [
+      for (var i = 0; i < recorder.rects.length; i++)
+        if (recorder.rectStyles[i] == PaintingStyle.fill &&
+            (recorder.rects[i].height - g.noteRadius * 2 * 0.55).abs() < 0.5 &&
+            (recorder.rects[i].width - g.noteWidth * 0.55).abs() < 0.5 &&
+            (recorder.rects[i].center.dy - head.dy).abs() < g.noteRadius * 4)
+          i,
+    ];
+    expect(
+      marks,
+      hasLength(1),
+      reason: 'one mark for the touch, not one a note',
+    );
+
+    final mark = recorder.rects[marks.single];
+    final ink = recorder.rectColours[marks.single];
+    expect(ink.r, closeTo(wanted.r, 0.01));
+    expect(ink.g, closeTo(wanted.g, 0.01));
+    expect(ink.b, closeTo(wanted.b, 0.01));
+
+    // The little note sounds *before* the chord, and sooner is nearer the
+    // line — so it is drawn below the heads it belongs to.
+    expect(mark.center.dy, greaterThan(head.dy));
   });
 
   group('the bar lines', () {
     /// Every level line the painter drew, top to bottom.
     List<double> barsAt(Song song, double beat, double window) {
       final recorder = _Recorder();
-      StagePainter(chart: Chart.build(song), beat: beat, windowInBeats: window)
-          .paint(recorder, phone);
+      StagePainter(
+        chart: Chart.build(song),
+        beat: beat,
+        windowInBeats: window,
+      ).paint(recorder, phone);
       return recorder.lines..sort();
     }
 
@@ -362,8 +484,11 @@ void main() {
       expect(lines.length, greaterThan(2));
       final step = g.hitLineY * song.beatsPerBar / window;
       for (var i = 1; i < lines.length; i++) {
-        expect(lines[i] - lines[i - 1], closeTo(step, 0.01),
-            reason: 'the lines are a bar apart, not something else');
+        expect(
+          lines[i] - lines[i - 1],
+          closeTo(step, 0.01),
+          reason: 'the lines are a bar apart, not something else',
+        );
       }
     });
 
@@ -376,8 +501,9 @@ void main() {
       // so it reads as a boundary rather than cutting the heads in half.
       final lines = barsAt(song, 8.0, window);
       expect(
-          lines.any((y) => (y - (g.hitLineY - g.noteRadius)).abs() < 0.01),
-          isTrue);
+        lines.any((y) => (y - (g.hitLineY - g.noteRadius)).abs() < 0.01),
+        isTrue,
+      );
     });
 
     test('a piece counted in twelve gets fewer of them', () {
@@ -398,82 +524,172 @@ void main() {
 
   test('renders the playfield to PNG', () async {
     final sizes = <String, int>{
-      'fur-elise-giris': await savePng(shipped('fur-elise'), 0.5, 'fur-elise-giris'),
-      'fur-elise-akis': await savePng(shipped('fur-elise'), 7.0, 'fur-elise-akis'),
+      'fur-elise-giris': await savePng(
+        shipped('fur-elise'),
+        0.5,
+        'fur-elise-giris',
+      ),
+      'fur-elise-akis': await savePng(
+        shipped('fur-elise'),
+        7.0,
+        'fur-elise-akis',
+      ),
       'ode-to-joy': await savePng(shipped('ode-to-joy'), 6.0, 'ode-to-joy'),
-      'prelude-in-c': await savePng(shipped('prelude-in-c'), 5.0, 'prelude-in-c'),
+      'prelude-in-c': await savePng(
+        shipped('prelude-in-c'),
+        5.0,
+        'prelude-in-c',
+      ),
       // A beam still glowing from a hit a moment ago.
-      'vurus-ani': await savePng(shipped('ode-to-joy'), 6.05, 'vurus-ani',
-          litHands: {Hand.right: 0.8}),
+      'vurus-ani': await savePng(
+        shipped('ode-to-joy'),
+        6.05,
+        'vurus-ani',
+        litHands: {Hand.right: 0.8},
+      ),
       // Chords: colour by finger count, with a band tying each one together.
       'akorlar': await savePng(shipped('ode-to-joy'), 5.0, 'akorlar'),
       'eller-ayri': await savePng(shipped('prelude-in-c'), 5.0, 'eller-ayri'),
       // One finger, three notes: the pips have to say so.
-      'kolay-akor': await savePng(shipped('ode-to-joy'), 5.0, 'kolay-akor',
-          difficulty: Difficulty.easy),
+      'kolay-akor': await savePng(
+        shipped('ode-to-joy'),
+        5.0,
+        'kolay-akor',
+        difficulty: Difficulty.easy,
+      ),
       // The same held note, caught and not caught. Caught, it waits on the
       // line with its bar shortening above it; missed, it falls past and
       // goes, tail and all.
-      'tutma-basili': await savePng(shipped('ode-to-joy'), 6.6, 'tutma-basili',
-          heldNotes: heldAt(shipped('ode-to-joy'), 6.0)),
+      'tutma-basili': await savePng(
+        shipped('ode-to-joy'),
+        6.6,
+        'tutma-basili',
+        heldNotes: heldAt(shipped('ode-to-joy'), 6.0),
+      ),
       'tutma-basilmadi': await savePng(
-          shipped('ode-to-joy'), 6.6, 'tutma-basilmadi'),
+        shipped('ode-to-joy'),
+        6.6,
+        'tutma-basilmadi',
+      ),
       // Bach's left hand: bass notes that ring under the figure above them.
       // Their tails now stop where the hand is next needed, instead of
       // stacking into a ladder.
       'ust-uste-tutmalar': await savePng(
-          shipped('prelude-in-c'), 6.0, 'ust-uste-tutmalar'),
+        shipped('prelude-in-c'),
+        6.0,
+        'ust-uste-tutmalar',
+      ),
       // A hit, and a streak running hot: rings opening on the line, the
       // floor lit, the beam thickened.
       'vurus-patlamasi': await savePng(
-          shipped('ode-to-joy'), 6.05, 'vurus-patlamasi',
-          litHands: {Hand.right: 0.9},
-          heat: 0.9,
-          sparks: [
-            Spark(places: [0.70, 0.74], hand: Hand.right, voices: 2, quality: 1)..age = 0.03,
-            Spark(places: [0.28, 0.29, 0.30], hand: Hand.left, voices: 3, quality: 0.9)..age = 0.20,
-            Spark(places: [0.20, 0.26, 0.33], hand: Hand.left, voices: 3, quality: 0.8)..age = 0.45,
-            Spark(places: [0.86], hand: Hand.right, voices: 1, quality: 0.6)..age = 0.75,
-          ]),
+        shipped('ode-to-joy'),
+        6.05,
+        'vurus-patlamasi',
+        litHands: {Hand.right: 0.9},
+        heat: 0.9,
+        sparks: [
+          Spark(
+            places: [0.70, 0.74],
+            midis: [67, 71],
+            hand: Hand.right,
+            voices: 2,
+            quality: 1,
+          )..age = 0.03,
+          Spark(
+            places: [0.28, 0.29, 0.30],
+            midis: [48, 52, 55],
+            hand: Hand.left,
+            voices: 3,
+            quality: 0.9,
+          )..age = 0.20,
+          Spark(
+            places: [0.20, 0.26, 0.33],
+            midis: [45, 50, 54],
+            hand: Hand.left,
+            voices: 3,
+            quality: 0.8,
+          )..age = 0.45,
+          Spark(
+            places: [0.86],
+            midis: [76],
+            hand: Hand.right,
+            voices: 1,
+            quality: 0.6,
+          )..age = 0.75,
+        ],
+      ),
       'zor-parmaklama': await savePng(
-          shipped('ode-to-joy'), 5.0, 'zor-parmaklama',
-          difficulty: Difficulty.hard),
+        shipped('ode-to-joy'),
+        5.0,
+        'zor-parmaklama',
+        difficulty: Difficulty.hard,
+      ),
       'akorlar-yatay': await savePng(
-          shipped('ode-to-joy'), 5.0, 'akorlar-yatay',
-          size: phoneLandscape),
+        shipped('ode-to-joy'),
+        5.0,
+        'akorlar-yatay',
+        size: phoneLandscape,
+      ),
       // Sideways: more beams, so the hands can divide the keyboard.
       'yatay-ode-to-joy': await savePng(
-          shipped('ode-to-joy'), 6.0, 'yatay-ode-to-joy',
-          size: phoneLandscape),
+        shipped('ode-to-joy'),
+        6.0,
+        'yatay-ode-to-joy',
+        size: phoneLandscape,
+      ),
       'yatay-prelude': await savePng(
-          shipped('prelude-in-c'), 5.0, 'yatay-prelude',
-          size: phoneLandscape),
+        shipped('prelude-in-c'),
+        5.0,
+        'yatay-prelude',
+        size: phoneLandscape,
+      ),
       // A run: the rondo's chromatic descent, sixty-two notes no hand can
       // tap, with the ribbon threading them into one slide.
       'hizli-akis': await savePng(shipped('fur-elise'), 156.0, 'hizli-akis'),
       // The bead a run is followed by: hollow when nobody is on it, lit when
       // a finger is.
-      'kosu-boncugu': await savePng(shipped('fur-elise'), 156.0, 'kosu-boncugu',
-          runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: true)]),
+      'kosu-boncugu': await savePng(
+        shipped('fur-elise'),
+        156.0,
+        'kosu-boncugu',
+        runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: true)],
+      ),
       'kosu-boncugu-bos': await savePng(
-          shipped('fur-elise'), 156.0, 'kosu-boncugu-bos',
-          runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: false)]),
+        shipped('fur-elise'),
+        156.0,
+        'kosu-boncugu-bos',
+        runBeads: [beadOf(shipped('fur-elise'), 156.0, tracked: false)],
+      ),
       // Inside one of the canon's two long runs, so the thread shows.
-      'kanon': await savePng(shipped('canon-in-d'), 80.0, 'kanon',
-          ground: groundOf(shipped('canon-in-d')),
-          runBeads: [beadOf(shipped('canon-in-d'), 80.0, tracked: true)]),
+      'kanon': await savePng(
+        shipped('canon-in-d'),
+        80.0,
+        'kanon',
+        ground: groundOf(shipped('canon-in-d')),
+        runBeads: [beadOf(shipped('canon-in-d'), 80.0, tracked: true)],
+      ),
       // Each piece brings its own light, read off its key: Satie's F minor
       // against Joplin's C major.
       'zemin-satie': await savePng(
-          shipped('gnossienne-1'), 20.0, 'zemin-satie',
-          ground: groundOf(shipped('gnossienne-1'))),
+        shipped('gnossienne-1'),
+        20.0,
+        'zemin-satie',
+        ground: groundOf(shipped('gnossienne-1')),
+      ),
       'zemin-joplin': await savePng(
-          shipped('entertainer'), 20.0, 'zemin-joplin',
-          ground: groundOf(shipped('entertainer'))),
+        shipped('entertainer'),
+        20.0,
+        'zemin-joplin',
+        ground: groundOf(shipped('entertainer')),
+      ),
     };
     for (final entry in sizes.entries) {
       // A stage drawn with nothing on it compresses to almost nothing.
-      expect(entry.value, greaterThan(10000), reason: '${entry.key} looks blank');
+      expect(
+        entry.value,
+        greaterThan(10000),
+        reason: '${entry.key} looks blank',
+      );
     }
   });
 }

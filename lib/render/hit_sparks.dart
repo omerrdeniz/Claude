@@ -13,6 +13,7 @@ import '../music/note.dart';
 class Spark {
   Spark({
     required this.places,
+    required this.midis,
     required this.hand,
     required this.voices,
     required this.quality,
@@ -33,6 +34,10 @@ class Spark {
   /// way it lays the notes out. Splitting it into one spark per note would
   /// throw away the only thing that layout needs: which notes are in it.
   final List<double> places;
+
+  /// Which notes they were, in the same order as [places]: the light a note
+  /// leaves is the note's own colour, not the touch's.
+  final List<int> midis;
 
   /// Which hand played it, since each hand has its own half of the screen to
   /// be laid out within.
