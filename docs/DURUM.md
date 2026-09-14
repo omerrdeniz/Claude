@@ -3,7 +3,7 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v111):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v112):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -144,6 +144,30 @@ ve bu her 1.09 saniyede bir tekrarlıyor.
   **her yandan bir tek nota**, zincir yok, ve yalnız koşunun kendi
   temposuyla ölçülen mesafede. Kanon'da en uzun koşu 11 notada kaldı; koşu
   sayısı 31 olarak aynı. Oyuncu seçti, DURUM'a aykırılığı söylendi.
+
+- **Bir parmak bir koşu çalar, bir sonrakine ödünç verilmez** (`_Drag.runId`,
+  v112). Oyuncu: *"önceden basılı tutmaya başladıysam bir sonraki birleştirme
+  grubunda da çalmaya devam ediyor. Her birleştirmeyi kendi ilk notasından
+  yakalayarak çalmaya başlayalım."* Parmak eskiden elinin o an hangi koşusu
+  varsa onu çalıyordu, yani geçen geçitten beri inik duran bir parmak
+  sonrakini kimse istemeden çalıyordu.
+
+  Artık parmak, **üstüne indiği** koşuya bağlı. Bunun tersi bir zamanlar
+  bilerek yapılmıştı ("parmağı her boşlukta kaldırıp tekrar basmak mekaniği
+  yakalanamaz kılıyordu", `test/play_session_test.dart` eski gerekçesi);
+  oyuncu oynayıp kararı değiştirdi.
+
+  **Koşuya her yerinden girilir** kuralı bozulmuyor: koşu başlamışken yeni
+  bir dokunuş onu yine ortasından yakalayabiliyor. Kalkan tek şey, kimsenin
+  uzanmadığı koşu.
+
+  Bedeli ölçüldü: Kanon'da bir koşunun son notası ile sonrakinin ilki
+  arasında **0.27 saniye** var (30 geçişin 29'u 0.3 s altında), Passacaglia'da
+  en az 0.25 s. Yani parmağı kaldırıp tekrar basmak için o kadar süre var —
+  ki bu, aynı bölümde iki sıradan nota arasındaki süreyle aynı.
+
+  Yan etki: `beginDrag` artık elinde boncuk yokken **null** dönüyor. Boncuksuz
+  dokunuş sadece bir dokunuştur.
 
 - **Boncuk yuvarlak değil, nota şeklinde.** Notanın durduğu yerde duruyor ve
   aynı parmağı istiyor; ekranda dik çubuklardan başka yuvarlak bir şey

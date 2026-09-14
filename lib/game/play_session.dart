@@ -112,12 +112,25 @@ class _Hold {
 /// times. A finger that is down is following the passage, not a numbered
 /// piece of it.
 class _Drag {
-  _Drag({required this.hand, required this.across});
+  _Drag({required this.hand, required this.across, required this.runId});
 
   final Hand hand;
 
   /// Where the finger is now, as a fraction across the screen.
   double across;
+
+  /// The run this finger came down on, and the only one it will ever play.
+  ///
+  /// A finger used to take whichever run its hand had going, so one that had
+  /// been down since the last passage played the next one without being
+  /// asked: *"önceden basılı tutmaya başladıysam bir sonraki birleştirme
+  /// grubunda da çalmaya devam ediyor."* A run is caught, and catching it is
+  /// putting a finger on it.
+  ///
+  /// Joining part way through is untouched — that is a *new* touch on a run
+  /// already running, and it still works. What is gone is the run nobody
+  /// reached for.
+  final int runId;
 }
 
 /// The bead a run is currently on: the note due now, sitting on the hit line.
@@ -800,8 +813,14 @@ class PlaySession {
   /// *staying* with the bead, which [dragReach] still asks for.
   int? beginDrag(double across) {
     if (!_running) return null;
+    final hand = Chart.handAt(across);
+    // Nothing to catch, nothing to carry: a touch with no run on the line is
+    // a tap and only a tap.
+    final bead = runBeads.where((b) => b.hand == hand).firstOrNull;
+    if (bead == null) return null;
+
     final id = _nextDragId++;
-    _drags[id] = _Drag(hand: Chart.handAt(across), across: across);
+    _drags[id] = _Drag(hand: hand, across: across, runId: bead.runId);
     return id;
   }
 
@@ -834,7 +853,8 @@ class PlaySession {
     if (beads.isEmpty) return;
 
     for (final drag in _drags.values) {
-      final bead = beads.where((b) => b.hand == drag.hand).firstOrNull;
+      // Its own run and no other — see [_Drag.runId].
+      final bead = beads.where((b) => b.runId == drag.runId).firstOrNull;
       if (bead == null) continue;
 
       final run = chart.runs[bead.runId]!;

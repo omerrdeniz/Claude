@@ -1116,19 +1116,21 @@ void main() {
     test('a finger in the other hand plays nothing', () {
       final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
       seek(session, 0);
-      final drag = session.beginDrag(left)!;
+      // There is nothing on that side to catch, so there is nothing to
+      // follow: the touch is a tap and only a tap.
+      expect(session.beginDrag(left), isNull);
       for (var i = 0; i < 8; i++) {
-        session.drag(drag, left);
         seek(session, i * 0.25 + 0.05);
       }
       expect(engine.struck, isEmpty, reason: 'the run is in the right hand');
     });
 
-    test('one finger carries one run into the next', () {
-      // The canon's runs come eight in a row, eight hundred milliseconds
-      // apart. Binding a finger to a single run meant lifting and pressing
-      // again in each of those gaps — which is what made the mechanic feel
-      // impossible to catch.
+    test('one finger plays one run, and is not lent to the next', () {
+      // It used to carry: a finger still down from the last passage played
+      // the next one without being asked for. The player found it and said
+      // so. A run is caught, and catching it is putting a finger on it —
+      // which is also why joining part way through still works, below: that
+      // is a new touch on a run already running.
       final second = [
         for (var i = 0; i < 8; i++) note(i * 0.25, 72 + i),
         // A gap too long to be part of the run, then another run.
@@ -1144,16 +1146,45 @@ void main() {
         session.drag(drag, places[i]);
         seek(session, i * 0.25 + 0.05);
       }
-      // Without ever lifting, straight on into the second run.
+      final afterFirst = engine.struck.length;
+      expect(afterFirst, 8, reason: 'the run it was put down on');
+
+      // Without ever lifting, on through where the second run is.
       for (var i = 0; i < 8; i++) {
         session.drag(drag, places[i]);
         seek(session, 4 + i * 0.25 + 0.05);
       }
       expect(
         engine.struck,
-        hasLength(16),
-        reason: 'the finger was dropped between the runs',
+        hasLength(afterFirst),
+        reason: 'nobody reached for the second run',
       );
+    });
+
+    test('and a fresh touch catches the next one', () {
+      // The other half of it: lifting and pressing again takes the new run,
+      // wherever it has got to.
+      final second = [
+        for (var i = 0; i < 8; i++) note(i * 0.25, 72 + i),
+        for (var i = 0; i < 8; i++) note(4 + i * 0.25, 72 + i),
+      ];
+      final session = sessionFor(songOf(second), difficulty: Difficulty.normal);
+      seek(session, 0);
+      final first = session.beginDrag(right)!;
+      final places = placesOf(session);
+      for (var i = 0; i < 8; i++) {
+        session.drag(first, places[i]);
+        seek(session, i * 0.25 + 0.05);
+      }
+      session.endDrag(first);
+
+      seek(session, 3.9);
+      final next = session.beginDrag(places[8])!;
+      for (var i = 0; i < 8; i++) {
+        session.drag(next, places[8 + i]);
+        seek(session, 4 + i * 0.25 + 0.05);
+      }
+      expect(engine.struck, hasLength(16));
     });
 
     test('slowing the song down gives longer to get onto the bead', () {
