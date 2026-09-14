@@ -3,12 +3,12 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v102):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v103):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
-yerine notanın kendi bitişine kadar kısalıyor. Ayrıntısı "Oynanış
-kararları"nda.
+yerine notanın kendi bitişine kadar kısalıyor. Tutmalı çizilme eşiği 0.30
+saniyeye indi. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -359,11 +359,23 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   yarıçaplık açıklık düşüyor. Geriye notanın kendisinden kısa bir güdük
   kalıyordu: "burada bekle" diyen, beklenemeyecek kadar kısa bir şey.
 
-  Eşik yeni bir sayı değil, çizimin zaten sorduğu soru: çubuk **kendi
-  kalınlığının iki katından** kısaysa o dokunuş sıradan nota olarak çiziliyor
-  — ne çubuk, ne çizgide durma (`StageGeometry.holdReadsAsBar`, çizerdeki
-  `_Dot.isHold`). Eskiden asgari çubuk boyu kalınlığın yarısıydı, yani
-  boyundan geniş bir çubuk.
+  Eşik: kuyruk **4.2 nota yarıçapından** kısaysa o dokunuş sıradan nota
+  olarak çiziliyor — ne çubuk, ne çizgide durma
+  (`StageGeometry.holdReadsAsBar`, çizerdeki `_Dot.isHold`). Telefonda
+  **0.30 saniyeye** denk geliyor.
+
+  **Eşik v103'te 0.32'den 0.30'a indi**, oyuncunun isteğiyle. Sebebi
+  Gnossienne'de çıktı: eşiği geçemeyen 14 notanın **hepsinin** kuyruğu tam
+  0.300 saniyeydi, yani eşiğin 18 milisaniye altında. Oyuncu sayıyı görünce
+  *"eşiği 0.3'e düşür bir bakayım"* dedi. Etkisi dar: 1568 tutmanın
+  kuyruksuz kalanı 149'dan 135'e iniyor, **yalnız Gnossienne'in 14'ü**
+  değişiyor. Prelüd'ün 66'sı ve Passacaglia'nın 69'u zaten 0.30'un da
+  altında, onlar aynı kalıyor.
+
+  Yani Gnossienne için bu, aşağıdaki şikâyetin **geri alınması**: o 14 nota
+  yine kuyruklu çiziliyor. Karar oyuncunun ve bilerek verildi; asıl kural
+  (kuyruğu gerçekten kısa olan nota tutmalı çizilmez) duruyor, yalnız
+  çizgisi biraz aşağı kaydı.
 
   **Ses ve yargı hiç değişmiyor:** `Tap.isHold` ve `Tap.sustains` oldukları
   gibi duruyor. Değişiklik güvenli, çünkü kuyruğu kısa olan nota **tam
@@ -371,15 +383,22 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
   kalkınca zaten kesilmiyordu. `test/stage_geometry_test.dart` bunu tüm
   kütüphane üzerinde kilitliyor.
 
-  Kapsam: 1568 tutmanın 149'u (%9.5), üç parçada — Prelüd 66 (134'ün yarısı),
-  Passacaglia 69, Gnossienne 14. Diğer on parçada tek nota değişmiyor;
+  Kapsam (v103 eşiğiyle): 1568 tutmanın 135'i (%8.6), iki parçada — Prelüd 66
+  (134'ün yarısı), Passacaglia 69. Diğer on bir parçada tek nota değişmiyor;
   Kanon'un yürüyen bası kasten tutmalı ve öyle kalıyor.
 
   **Karar piksel cinsinden, ve bu bilerek.** İniş süresi hıza bakmaksızın
   1.9 saniye (`approachSeconds`), yani kuyruğun ekrandaki boyu doğrudan
-  gerçek saniyeye bağlı: telefonda eşik 0.32 saniyeye denk geliyor. Şarkıyı
+  gerçek saniyeye bağlı: telefonda eşik 0.30 saniyeye denk geliyor. Şarkıyı
   %40 hıza aldığınızda aynı nota 0.8 saniyelik kuyruk çiziyor ve yine tutmalı
   görünüyor — çalışma hızında yapının görünmesi doğru olan.
+
+  **Ama ekranın şekli değişince saniye de değişiyor.** Nota yarıçapı geniş
+  ekranda yüksekliğe takılıyor, vuruş çizgisi de yukarı geliyor: telefonu yan
+  çevirince aynı 4.2 yarıçap 0.57 saniye ediyor, yani yatayda daha az nota
+  tutmalı çiziliyor. Oyuncu dik tutuşta oynadığı için henüz sorun değil.
+  Eşiği gerçekten saniyeye bağlamak istenirse `holdReadsAsBar`'ın piksel
+  yerine süre alması gerekir; bu bilinçli olarak yapılmadı.
 - **Nota bir dikdörtgen ve boyu süresi kadar.** Oyuncu bir Synthesia videosu
   gösterdi: *"kafamda biraz daha buna benzetme fikri vardı."* Oradan üç şey
   alındı, biri bilerek alınmadı.

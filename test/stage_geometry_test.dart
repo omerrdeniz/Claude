@@ -391,9 +391,16 @@ void main() {
       }
     });
 
-    test('it catches the ones the player found, and spares the rest', () {
-      // Satie's first Gnossienne is where this was reported.
-      expect(quiet('gnossienne-1'), isNotEmpty);
+    test('it catches the ones too short to stay on, and spares the rest', () {
+      // Bach's left hand and Handel's: tails well under three tenths of a
+      // second, where "stay here" is an instruction the music leaves no time
+      // to follow.
+      expect(quiet('prelude-in-c'), isNotEmpty);
+      expect(quiet('passacaglia'), isNotEmpty);
+      // Satie's first Gnossienne is where this was first reported, and it is
+      // also where the cut was later moved to. Its fourteen are three tenths
+      // of a second exactly — just inside now, by the player's own call.
+      expect(quiet('gnossienne-1'), isEmpty);
       // The canon's walking bass is the opposite case: a quarter note at 55
       // that rings for 1.09 seconds with nothing crowding it. It was made a
       // hold on purpose and stays one.

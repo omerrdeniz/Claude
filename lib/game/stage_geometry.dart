@@ -220,10 +220,18 @@ class StageGeometry {
   /// telling the player how much of the hold is left, and there is no length
   /// at which that stops being worth saying.
   ///
-  /// Twice the bar's own thickness. It used to be half of it — a bar wider
-  /// than it was long, which is a lump behind the note rather than a line
-  /// leading away from it, and reads as neither a hold nor a tap.
-  static const double holdBarLeast = holdBarWidth * 4;
+  /// Comfortably longer than the bar is thick — a bar wider than it is long
+  /// is a lump behind the note rather than a line leading away from it, and
+  /// reads as neither a hold nor a tap. It was exactly four times the
+  /// thickness until the player asked for the cut at three tenths of a
+  /// second; with the clearance it now comes to 4.2 radii, which on a phone
+  /// is 0.30 seconds of tail.
+  ///
+  /// Why that number and not a rounder one: Satie's first Gnossienne has
+  /// fourteen touches whose tails are three tenths of a second exactly, and
+  /// they sat eighteen milliseconds under the old cut. The player, looking
+  /// at them, asked for them back.
+  static const double holdBarLeast = 2.6;
 
   /// Where a note's head is drawn, given how far along it is.
   ///
