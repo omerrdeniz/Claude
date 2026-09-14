@@ -32,7 +32,18 @@ class MusicalKey {
   int get hashCode => Object.hash(tonic, minor);
 
   static const _names = [
-    'C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B',
+    'C',
+    'C♯',
+    'D',
+    'E♭',
+    'E',
+    'F',
+    'F♯',
+    'G',
+    'A♭',
+    'A',
+    'B♭',
+    'B',
   ];
 
   @override
@@ -216,8 +227,30 @@ double _correlation(List<double> weight, List<double> profile, int tonic) {
 /// Krumhansl and Kessler's profiles, from listeners rating how well each note
 /// fits a key. Left exactly as published.
 const List<double> _majorProfile = [
-  6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88,
+  6.35,
+  2.23,
+  3.48,
+  2.33,
+  4.38,
+  4.09,
+  2.52,
+  5.19,
+  2.39,
+  3.66,
+  2.29,
+  2.88,
 ];
 const List<double> _minorProfile = [
-  6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17,
+  6.33,
+  2.68,
+  3.52,
+  5.38,
+  2.60,
+  3.53,
+  2.54,
+  4.75,
+  3.98,
+  2.69,
+  3.34,
+  3.17,
 ];

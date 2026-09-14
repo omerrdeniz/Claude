@@ -52,8 +52,9 @@ class _CalibrationScreenState extends State<CalibrationScreen>
       widget.nowMs ?? () => _clock.elapsedMicroseconds / 1000;
 
   late final Ticker _ticker = createTicker(_onTick);
-  late final LatencyTally _tally =
-      LatencyTally(windowMs: widget.periodMs / 2 - 20);
+  late final LatencyTally _tally = LatencyTally(
+    windowMs: widget.periodMs / 2 - 20,
+  );
 
   /// Quiet at the start, so the first click is not the one being tapped at.
   static const double _leadInMs = 1200;
@@ -139,8 +140,10 @@ class _CalibrationScreenState extends State<CalibrationScreen>
                   alignment: Alignment.centerLeft,
                   child: TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Vazgeç',
-                        style: TextStyle(color: AppTheme.textMuted)),
+                    child: const Text(
+                      'Vazgeç',
+                      style: TextStyle(color: AppTheme.textMuted),
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -158,10 +161,13 @@ class _CalibrationScreenState extends State<CalibrationScreen>
                   _finished
                       ? 'Bitti.'
                       : 'Duyduğun her sesle birlikte ekrana dokun.\n'
-                          'Ekrana değil, sese uy — ölçülen şey ses.',
+                            'Ekrana değil, sese uy — ölçülen şey ses.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 15, color: AppTheme.textMuted, height: 1.5),
+                    fontSize: 15,
+                    color: AppTheme.textMuted,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 36),
                 Text(
@@ -181,7 +187,10 @@ class _CalibrationScreenState extends State<CalibrationScreen>
                     '${spread > 45 ? '  — biraz dağınık, tekrar deneyebilirsin' : ''}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        fontSize: 14, color: AppTheme.textMuted, height: 1.6),
+                      fontSize: 14,
+                      color: AppTheme.textMuted,
+                      height: 1.6,
+                    ),
                   )
                 else
                   const Text(
@@ -199,17 +208,22 @@ class _CalibrationScreenState extends State<CalibrationScreen>
                       foregroundColor: AppTheme.textPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    onPressed: () => Navigator.of(context).pop(offset.toDouble()),
+                    onPressed: () =>
+                        Navigator.of(context).pop(offset.toDouble()),
                     child: Text('Kullan  (${offset > 0 ? '+' : ''}$offset ms)'),
                   ),
                 if (_tally.taps > 0) ...[
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: _restart,
-                    child: const Text('Baştan',
-                        style: TextStyle(color: AppTheme.textMuted)),
+                    child: const Text(
+                      'Baştan',
+                      style: TextStyle(color: AppTheme.textMuted),
+                    ),
                   ),
                 ],
               ],

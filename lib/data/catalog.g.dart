@@ -12,7 +12,8 @@ const List<SongInfo> catalog = [
     id: 'house-of-the-rising-sun',
     title: 'House of the Rising Sun',
     composer: 'Geleneksel',
-    source: 'Geleneksel Amerikan halk şarkısı, anonim — kamu '
+    source:
+        'Geleneksel Amerikan halk şarkısı, anonim — kamu '
         'malı. Ezgi Frank Nordberg\'in geleneksel '
         'transkripsiyonundan (Digital Tradition / '
         'abcnotation.com). Piyano düzenlemesi Piano Flow.',
@@ -32,7 +33,8 @@ const List<SongInfo> catalog = [
     id: 'gnossienne-1',
     title: 'Gnossienne No. 1',
     composer: 'Erik Satie',
-    source: 'Kamu malı (1890). Mutopia Project baskısı (Knute '
+    source:
+        'Kamu malı (1890). Mutopia Project baskısı (Knute '
         'Snortum), Salabert 1913 baskısından, CC BY-SA 4.0, '
         'tam eser.',
     bpm: 100,
@@ -51,7 +53,8 @@ const List<SongInfo> catalog = [
     id: 'canon-in-d',
     title: 'Canon in D',
     composer: 'Johann Pachelbel',
-    source: 'Kamu malı (P. 37, 1694). Mutopia Project baskısı '
+    source:
+        'Kamu malı (P. 37, 1694). Mutopia Project baskısı '
         '(Michael Fischer v. Mollard), CC BY 4.0. Piyano '
         'düzenlemesi Piano Flow: sağ el birinci keman, sol el '
         'zemin bas.',
@@ -71,7 +74,8 @@ const List<SongInfo> catalog = [
     id: 'canon-run-test',
     title: 'Canon in D (run test)',
     composer: 'Johann Pachelbel',
-    source: 'Deneme parçası — Kanon\'un 18. ölçüsünden başlar, '
+    source:
+        'Deneme parçası — Kanon\'un 18. ölçüsünden başlar, '
         'sürükleme mekaniğini denemek için.',
     bpm: 55,
     beatsPerBar: 4,
@@ -106,7 +110,8 @@ const List<SongInfo> catalog = [
     id: 'prelude-in-c',
     title: 'Prelude in C, BWV 846',
     composer: 'Johann Sebastian Bach',
-    source: 'Kamu malı (BWV 846, 1722). Mutopia Project baskısı '
+    source:
+        'Kamu malı (BWV 846, 1722). Mutopia Project baskısı '
         '(Tobias Erbsland), tam eser.',
     bpm: 60,
     beatsPerBar: 4,
@@ -124,7 +129,8 @@ const List<SongInfo> catalog = [
     id: 'nocturne-op9-no2',
     title: 'Nocturne Op. 9 No. 2',
     composer: 'Frédéric Chopin',
-    source: 'Kamu malı (Op. 9 No. 2, 1832). Mutopia Project '
+    source:
+        'Kamu malı (Op. 9 No. 2, 1832). Mutopia Project '
         'baskısı (Renato Biolcati Rinaldi), CC BY-SA 3.0, tam '
         'eser.',
     bpm: 132,
@@ -143,7 +149,8 @@ const List<SongInfo> catalog = [
     id: 'passacaglia-easy',
     title: 'Passacaglia (kolay)',
     composer: 'George Frideric Handel',
-    source: 'Kamu malı (HWV 432/6, 1720). Zemin bas ve inen üst '
+    source:
+        'Kamu malı (HWV 432/6, 1720). Zemin bas ve inen üst '
         'çizgi Handel\'in; çeşitlemeler Piano Flow\'un, '
         'yetişilebilir olsun diye. Tam eser ayrıca '
         'kütüphanede.',
@@ -163,7 +170,8 @@ const List<SongInfo> catalog = [
     id: 'waltz-in-a-minor',
     title: 'Waltz in A minor, B. 150',
     composer: 'Frédéric Chopin',
-    source: 'Kamu malı (B. 150, 1847). Nota kaynağı: KernScores '
+    source:
+        'Kamu malı (B. 150, 1847). Nota kaynağı: KernScores '
         '(CCARH, Stanford) — Humdrum **kern dizgisi: Craig '
         'Stuart Sapp, 2004.',
     bpm: 120,
@@ -182,7 +190,8 @@ const List<SongInfo> catalog = [
     id: 'entertainer',
     title: 'The Entertainer',
     composer: 'Scott Joplin',
-    source: 'Kamu malı (1902). Mutopia Project baskısı (Chris '
+    source:
+        'Kamu malı (1902). Mutopia Project baskısı (Chris '
         'Sawer), 1902 orijinal baskısının tıpkıbasımı, tam '
         'eser.',
     bpm: 72,
@@ -201,7 +210,8 @@ const List<SongInfo> catalog = [
     id: 'fur-elise',
     title: 'Für Elise',
     composer: 'Ludwig van Beethoven',
-    source: 'Kamu malı (WoO 59, 1810). Mutopia Project baskısı '
+    source:
+        'Kamu malı (WoO 59, 1810). Mutopia Project baskısı '
         '(Stelios Samelis), tam eser.',
     bpm: 144,
     beatsPerBar: 3,
@@ -219,7 +229,8 @@ const List<SongInfo> catalog = [
     id: 'passacaglia-halvorsen',
     title: 'Passacaglia (Halvorsen)',
     composer: 'Handel / Halvorsen',
-    source: 'Kamu malı: Handel (HWV 432/6, 1720), Johan '
+    source:
+        'Kamu malı: Handel (HWV 432/6, 1720), Johan '
         'Halvorsen\'in 1893 düzenlemesi (Halvorsen † 1935). '
         'Nota verisi bir Online Sequencer dizgisinden '
         'çevrildi (onlinesequencer.net/2617124) — dizginin '
@@ -240,7 +251,8 @@ const List<SongInfo> catalog = [
     id: 'passacaglia',
     title: 'Passacaglia',
     composer: 'George Frideric Handel',
-    source: 'Kamu malı (HWV 432/6, 1720). IMSLP baskısı (Pierre '
+    source:
+        'Kamu malı (HWV 432/6, 1720). IMSLP baskısı (Pierre '
         'Gouin, Éditions Outremontaises), CC BY-SA 4.0, tam '
         'eser. Johan Halvorsen\'in 1893 düzenlemesiyle '
         'tanınır.',

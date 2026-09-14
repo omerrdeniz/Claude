@@ -12,8 +12,8 @@ import 'synth_engine.dart';
 /// in a browser.
 class PianoAudio {
   PianoAudio({SynthEngine? engine, this.sampleRate = 44100, PcmOutput? output})
-      : engine = engine ?? SynthEngine(sampleRate: 44100),
-        _output = output ?? PcmOutput();
+    : engine = engine ?? SynthEngine(sampleRate: 44100),
+      _output = output ?? PcmOutput();
 
   final SynthEngine engine;
   final int sampleRate;
@@ -32,7 +32,10 @@ class PianoAudio {
   /// fun.
   Future<bool> start() async {
     if (_running) return true;
-    _running = await _output.start(sampleRate: sampleRate, render: engine.render);
+    _running = await _output.start(
+      sampleRate: sampleRate,
+      render: engine.render,
+    );
     if (!_running) debugPrint('PianoAudio: no audio on this platform');
     return _running;
   }
@@ -71,8 +74,9 @@ class PianoAudio {
     return _loading ??= () async {
       try {
         final data = await rootBundle.load(samplesAsset);
-        return _bank = SampleBank.parse(data.buffer
-            .asUint8List(data.offsetInBytes, data.lengthInBytes));
+        return _bank = SampleBank.parse(
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        );
       } catch (error) {
         // A missing or unreadable bank is not worth failing over: it costs
         // tone, not the game.

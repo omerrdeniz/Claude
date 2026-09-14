@@ -14,9 +14,9 @@ class LatencyTally {
     this.windowMs = 300,
     this.minimumTaps = 8,
     this.wantedTaps = 16,
-  })  : assert(windowMs > 0),
-        assert(minimumTaps > 0),
-        assert(wantedTaps >= minimumTaps);
+  }) : assert(windowMs > 0),
+       assert(minimumTaps > 0),
+       assert(wantedTaps >= minimumTaps);
 
   /// How far from a click a tap may be and still be counted as aimed at it.
   ///

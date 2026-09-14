@@ -11,11 +11,7 @@ import '../play_screen.dart';
 /// They travel as one [PlaySettings] rather than one parameter each: when they
 /// were separate, settings went missing on the way to [PlayScreen] twice.
 class SongTile extends StatelessWidget {
-  const SongTile({
-    super.key,
-    required this.info,
-    required this.settings,
-  });
+  const SongTile({super.key, required this.info, required this.settings});
 
   final SongInfo info;
   final PlaySettings settings;
@@ -45,10 +41,10 @@ class SongTile extends StatelessWidget {
   static String paceOf(double tapsPerSecond) => tapsPerSecond < 2.5
       ? 'Sakin'
       : tapsPerSecond < 4
-          ? 'Akıcı'
-          : tapsPerSecond < 6
-              ? 'Hızlı'
-              : 'Çok hızlı';
+      ? 'Akıcı'
+      : tapsPerSecond < 6
+      ? 'Hızlı'
+      : 'Çok hızlı';
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +83,9 @@ class SongTile extends StatelessWidget {
                       Text(
                         info.composer,
                         style: const TextStyle(
-                            fontSize: 13, color: AppTheme.textMuted),
+                          fontSize: 13,
+                          color: AppTheme.textMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -98,7 +96,9 @@ class SongTile extends StatelessWidget {
                     Text(
                       '$minutes:${seconds.toString().padLeft(2, '0')}',
                       style: const TextStyle(
-                          fontSize: 13, color: AppTheme.textMuted),
+                        fontSize: 13,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -111,8 +111,11 @@ class SongTile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(width: 10),
-                const Icon(Icons.play_arrow_rounded,
-                    color: AppTheme.accentSoft, size: 26),
+                const Icon(
+                  Icons.play_arrow_rounded,
+                  color: AppTheme.accentSoft,
+                  size: 26,
+                ),
               ],
             ),
           ),

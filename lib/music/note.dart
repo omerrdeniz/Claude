@@ -17,10 +17,10 @@ class Note {
     required this.duration,
     this.velocity = 0.75,
     this.hand = Hand.right,
-  })  : assert(beat >= 0),
-        assert(duration > 0),
-        assert(midi >= 0 && midi <= 127),
-        assert(velocity > 0 && velocity <= 1);
+  }) : assert(beat >= 0),
+       assert(duration > 0),
+       assert(midi >= 0 && midi <= 127),
+       assert(velocity > 0 && velocity <= 1);
 
   /// Onset, in beats from the start of the song.
   final double beat;

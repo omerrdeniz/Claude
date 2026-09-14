@@ -14,8 +14,10 @@ class _SilentOutput implements PcmOutput {
   double get latencyMs => 0;
 
   @override
-  Future<bool> start({required int sampleRate, required RenderCallback render}) async =>
-      false;
+  Future<bool> start({
+    required int sampleRate,
+    required RenderCallback render,
+  }) async => false;
 
   @override
   Future<void> stop() async {}

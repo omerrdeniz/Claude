@@ -31,9 +31,12 @@ const bpm = 120.0; // one beat is exactly half a second
 Song songOf(List<Note> notes) =>
     Song(id: 't', title: 'T', composer: '', bpm: bpm, notes: notes);
 
-Note note(double beat, int midi,
-        {double duration = 0.5, Hand hand = Hand.right}) =>
-    Note(beat: beat, midi: midi, duration: duration, hand: hand);
+Note note(
+  double beat,
+  int midi, {
+  double duration = 0.5,
+  Hand hand = Hand.right,
+}) => Note(beat: beat, midi: midi, duration: duration, hand: hand);
 
 /// Somewhere on the right-hand side of the screen.
 const double right = 0.75;
@@ -117,8 +120,11 @@ void main() {
       final session = sessionFor(songOf([note(8, 60)]));
       seek(session, 0);
       expect(session.tap(right), isNull);
-      expect(session.scoreboard.notesPlayed, 0,
-          reason: 'a stray finger must not be punished');
+      expect(
+        session.scoreboard.notesPlayed,
+        0,
+        reason: 'a stray finger must not be punished',
+      );
     });
 
     test('one note cannot be played twice', () {
@@ -138,10 +144,7 @@ void main() {
   });
 
   group('the two hands', () {
-    final duet = songOf([
-      note(0, 84),
-      note(0, 40, hand: Hand.left),
-    ]);
+    final duet = songOf([note(0, 84), note(0, 40, hand: Hand.left)]);
 
     test('a hand only answers its own notes', () {
       final session = sessionFor(duet, difficulty: Difficulty.normal);
@@ -228,10 +231,8 @@ void main() {
     // half of Bach's in the first prelude.
     group('a note the same hand has to leave', () {
       /// A long note with another in the same hand before it ends.
-      Song overlapping() => songOf([
-            note(0, 60, duration: 4),
-            note(1, 67, duration: 0.5),
-          ]);
+      Song overlapping() =>
+          songOf([note(0, 60, duration: 4), note(1, 67, duration: 0.5)]);
 
       test('is marked as sustained, where a lone one is not', () {
         final chart = Chart.build(overlapping(), difficulty: Difficulty.easy);
@@ -254,33 +255,44 @@ void main() {
 
         seek(session, 1);
         expect(session.tap(right)?.notes.single.midi, 67);
-        expect(engine.released, isNot(contains(60)),
-            reason: 'the held note stopped when the next one was played');
+        expect(
+          engine.released,
+          isNot(contains(60)),
+          reason: 'the held note stopped when the next one was played',
+        );
       });
 
-      test('leaves the line when the finger does, though it goes on sounding',
-          () {
-        // Sound and picture part company here, deliberately. Keeping every
-        // sustained note pinned on the line filled the screen with notes the
-        // hand had long since left — unreadable, and untrue.
-        final session = sessionFor(overlapping());
-        seek(session, 0);
-        final id = session.tap(right)!.holdId!;
-        expect(session.heldNotes, contains((0.0, 60)));
+      test(
+        'leaves the line when the finger does, though it goes on sounding',
+        () {
+          // Sound and picture part company here, deliberately. Keeping every
+          // sustained note pinned on the line filled the screen with notes the
+          // hand had long since left — unreadable, and untrue.
+          final session = sessionFor(overlapping());
+          seek(session, 0);
+          final id = session.tap(right)!.holdId!;
+          expect(session.heldNotes, contains((0.0, 60)));
 
-        session.releaseHold(id);
-        expect(session.heldNotes, isEmpty, reason: 'the finger has gone');
-        expect(session.isHolding, isFalse);
-        expect(engine.released, isEmpty, reason: 'but the note has not');
-      });
+          session.releaseHold(id);
+          expect(session.heldNotes, isEmpty, reason: 'the finger has gone');
+          expect(session.isHolding, isFalse);
+          expect(engine.released, isEmpty, reason: 'but the note has not');
+        },
+      );
 
       test('the tail is drawn only as far as the next note', () {
         final chart = Chart.build(overlapping(), difficulty: Difficulty.easy);
         expect(chart.taps.first.endBeat, 4, reason: 'it sounds for four beats');
-        expect(chart.taps.first.drawnEndBeat, 1,
-            reason: 'but the hand is needed again at one');
-        expect(chart.taps.last.drawnEndBeat, chart.taps.last.endBeat,
-            reason: 'nothing follows it, so it is drawn whole');
+        expect(
+          chart.taps.first.drawnEndBeat,
+          1,
+          reason: 'but the hand is needed again at one',
+        );
+        expect(
+          chart.taps.last.drawnEndBeat,
+          chart.taps.last.endBeat,
+          reason: 'nothing follows it, so it is drawn whole',
+        );
       });
 
       test('a note nothing follows is still cut short by letting go', () {
@@ -301,11 +313,13 @@ void main() {
     });
 
     test('a chord under one finger reports all of its notes', () {
-      final session = sessionFor(songOf([
-        note(0, 60, duration: 2),
-        note(0, 64, duration: 2),
-        note(0, 67, duration: 2),
-      ]));
+      final session = sessionFor(
+        songOf([
+          note(0, 60, duration: 2),
+          note(0, 64, duration: 2),
+          note(0, 67, duration: 2),
+        ]),
+      );
       seek(session, 0);
       session.tap(right);
       expect(session.heldNotes, containsAll([(0.0, 60), (0.0, 64), (0.0, 67)]));
@@ -323,8 +337,11 @@ void main() {
       seek(session, 0);
       final outcome = session.tap(right);
       seek(session, 0.5);
-      expect(session.releaseHold(outcome!.holdId!), isTrue,
-          reason: 'the note was still meant to be sounding');
+      expect(
+        session.releaseHold(outcome!.holdId!),
+        isTrue,
+        reason: 'the note was still meant to be sounding',
+      );
       expect(engine.released, contains(60));
     });
 
@@ -333,8 +350,11 @@ void main() {
       seek(session, 0);
       final outcome = session.tap(right);
       seek(session, 2.1);
-      expect(session.releaseHold(outcome!.holdId!), isFalse,
-          reason: 'nothing to cut short — it had finished');
+      expect(
+        session.releaseHold(outcome!.holdId!),
+        isFalse,
+        reason: 'nothing to cut short — it had finished',
+      );
     });
 
     test('letting go costs no points', () {
@@ -381,8 +401,11 @@ void main() {
       seek(session, 0.8);
       final outcome = session.tap(right);
       expect(outcome!.errorMs, lessThan(0));
-      expect(outcome.verdict, isNot(Verdict.perfect),
-          reason: 'flattering the ear must not flatter the score');
+      expect(
+        outcome.verdict,
+        isNot(Verdict.perfect),
+        reason: 'flattering the ear must not flatter the score',
+      );
     });
 
     test('a late touch sounds at once, since there is no going back', () {
@@ -402,8 +425,10 @@ void main() {
 
   group('tolerance', () {
     double? errorAt(TimingTolerance tolerance) {
-      final session = sessionFor(songOf([note(0, 60)]),
-          judge: Judge.forTolerance(tolerance));
+      final session = sessionFor(
+        songOf([note(0, 60)]),
+        judge: Judge.forTolerance(tolerance),
+      );
       seek(session, 0.55); // 275ms late
       final outcome = session.tap(right);
       return outcome != null && outcome.scored ? outcome.errorMs : null;
@@ -433,25 +458,35 @@ void main() {
     test('and stays silent, which is the default', () {
       final session = sessionFor(songOf([note(0, 60)]));
       seek(session, 2);
-      expect(engine.struck, isEmpty,
-          reason: 'nothing plays itself unless the player asks it to');
+      expect(
+        engine.struck,
+        isEmpty,
+        reason: 'nothing plays itself unless the player asks it to',
+      );
     });
 
     test('switched on, it sounds anyway, quietly', () {
       // In Normal both hands are the player's, and two thirds of Chopin's
       // nocturne is the left one. Without this, someone answering only the
       // melody hears a piece full of holes.
-      final session =
-          sessionFor(songOf([note(0, 60, duration: 1)]), fillMissed: true);
+      final session = sessionFor(
+        songOf([note(0, 60, duration: 1)]),
+        fillMissed: true,
+      );
       seek(session, 1);
       expect(engine.struck.map((s) => s.$1), [60]);
-      expect(engine.struck.single.$2, lessThan(0.5),
-          reason: 'present, not competing with a note actually played');
+      expect(
+        engine.struck.single.$2,
+        lessThan(0.5),
+        reason: 'present, not competing with a note actually played',
+      );
     });
 
     test('a filled note is not sounded twice', () {
-      final session =
-          sessionFor(songOf([note(0, 60, duration: 1)]), fillMissed: true);
+      final session = sessionFor(
+        songOf([note(0, 60, duration: 1)]),
+        fillMissed: true,
+      );
       seek(session, 1);
       seek(session, 1.5);
       seek(session, 2);
@@ -461,26 +496,38 @@ void main() {
     test('filling does not close the window on a late hand', () {
       // The note is filled at the perfect window, but the player can still
       // reach it, still scores, and still hears their own touch play it.
-      final session = sessionFor(songOf([note(0, 60, duration: 1)]),
-          quantize: false, fillMissed: true);
+      final session = sessionFor(
+        songOf([note(0, 60, duration: 1)]),
+        quantize: false,
+        fillMissed: true,
+      );
       seek(session, 0.2); // past the fill, inside the judging window
       expect(engine.struck, hasLength(1), reason: 'the fill has happened');
 
       final outcome = session.tap(right);
       expect(outcome?.scored, isTrue);
       expect(engine.struck, hasLength(2), reason: 'and the touch plays it too');
-      expect(engine.struck.last.$2, greaterThan(engine.struck.first.$2),
-          reason: 'the played one is the louder');
+      expect(
+        engine.struck.last.$2,
+        greaterThan(engine.struck.first.$2),
+        reason: 'the played one is the louder',
+      );
     });
 
     test('a note played in time is never filled', () {
-      final session = sessionFor(songOf([note(0, 60, duration: 1)]),
-          quantize: false, fillMissed: true);
+      final session = sessionFor(
+        songOf([note(0, 60, duration: 1)]),
+        quantize: false,
+        fillMissed: true,
+      );
       seek(session, 0);
       session.tap(right);
       seek(session, 2);
-      expect(engine.struck, hasLength(1),
-          reason: 'nothing was missed, so nothing was filled');
+      expect(
+        engine.struck,
+        hasLength(1),
+        reason: 'nothing was missed, so nothing was filled',
+      );
     });
 
     test('the miss is reported once, not every frame', () {
@@ -508,8 +555,11 @@ void main() {
       final outcome = session.tap(right);
       expect(outcome!.scored, isFalse);
       expect(outcome.errorMs, greaterThan(0));
-      expect(session.scoreboard.counts[Verdict.miss], 1,
-          reason: 'not counted a second time');
+      expect(
+        session.scoreboard.counts[Verdict.miss],
+        1,
+        reason: 'not counted a second time',
+      );
     });
   });
 
@@ -561,9 +611,9 @@ void main() {
     // One beat is half a second here. The small note is written a tenth of a
     // beat — fifty milliseconds — before a note that stays.
     Song ornamented({int grace = 60, int main = 62}) => songOf([
-          note(1.9, grace, duration: 0.1),
-          note(2.0, main, duration: 1.0),
-        ]);
+      note(1.9, grace, duration: 0.1),
+      note(2.0, main, duration: 1.0),
+    ]);
 
     /// Wind the clock to [beat] and touch the right-hand side.
     TapOutcome? playAt(PlaySession session, double beat) {
@@ -575,8 +625,11 @@ void main() {
       final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
       playAt(session, 2.0);
       wall(session, (2.4 + session.leadInBeats) / session.beatsPerSecond);
-      expect(engine.struck.map((s) => s.$1), [60, 62],
-          reason: 'the ornament leads into the note, from one finger');
+      expect(
+        engine.struck.map((s) => s.$1),
+        [60, 62],
+        reason: 'the ornament leads into the note, from one finger',
+      );
     });
 
     test('and the small one is struck lighter', () {
@@ -584,8 +637,11 @@ void main() {
       playAt(session, 2.0);
       wall(session, (2.4 + session.leadInBeats) / session.beatsPerSecond);
       final struck = {for (final s in engine.struck) s.$1: s.$2};
-      expect(struck[60]!, lessThan(struck[62]!),
-          reason: 'the weight of an acciaccatura belongs to the main note');
+      expect(
+        struck[60]!,
+        lessThan(struck[62]!),
+        reason: 'the weight of an acciaccatura belongs to the main note',
+      );
     });
 
     test('playing it plain still sounds both and still scores', () {
@@ -606,7 +662,10 @@ void main() {
       expect(outcome!.crushId, isNotNull);
       // Still there when the holding time has passed.
       final held = 2.0 + PlaySession.crushHoldSeconds * session.beatsPerSecond;
-      wall(session, (held + 0.01 + session.leadInBeats) / session.beatsPerSecond);
+      wall(
+        session,
+        (held + 0.01 + session.leadInBeats) / session.beatsPerSecond,
+      );
       expect(session.scoreboard.score, greaterThan(before));
     });
 
@@ -618,7 +677,10 @@ void main() {
       final before = session.scoreboard.score;
       session.endCrush(outcome!.crushId!);
       final held = 2.0 + PlaySession.crushHoldSeconds * session.beatsPerSecond;
-      wall(session, (held + 0.5 + session.leadInBeats) / session.beatsPerSecond);
+      wall(
+        session,
+        (held + 0.5 + session.leadInBeats) / session.beatsPerSecond,
+      );
       expect(session.scoreboard.score, before);
     });
 
@@ -646,14 +708,30 @@ void main() {
       final before = session.scoreboard.score;
       // The next note of this hand is 0.2 beats away — sooner than the hold.
       wall(session, (2.21 + session.leadInBeats) / session.beatsPerSecond);
-      expect(session.scoreboard.score, greaterThan(before),
-          reason: 'held for as long as the music left the hand free');
+      expect(
+        session.scoreboard.score,
+        greaterThan(before),
+        reason: 'held for as long as the music left the hand free',
+      );
+    });
+
+    test('the screen is told which little note sounded', () {
+      // The light at the line is drawn in each note's own colour, and the
+      // ornament sounds with the touch — so the touch has to say which note
+      // it was. Without it the little note was the one thing that reached
+      // the line and never burst.
+      final session = sessionFor(ornamented(), difficulty: Difficulty.normal);
+      expect(playAt(session, 2.0)!.graceMidi, 60);
     });
 
     test('a note without an ornament offers no crush', () {
-      final session = sessionFor(songOf([note(2.0, 62, duration: 1.0)]),
-          difficulty: Difficulty.normal);
-      expect(playAt(session, 2.0)!.crushId, isNull);
+      final session = sessionFor(
+        songOf([note(2.0, 62, duration: 1.0)]),
+        difficulty: Difficulty.normal,
+      );
+      final outcome = playAt(session, 2.0)!;
+      expect(outcome.crushId, isNull);
+      expect(outcome.graceMidi, isNull, reason: 'and nothing to light');
     });
   });
 
@@ -661,24 +739,34 @@ void main() {
     // The left hand a beat behind the right, as Satie writes it: the melody
     // on one, the bass on two.
     Song apart() => songOf([
-          note(2, 72, hand: Hand.right, duration: 1),
-          note(3, 48, hand: Hand.left, duration: 1),
-        ]);
+      note(2, 72, hand: Hand.right, duration: 1),
+      note(3, 48, hand: Hand.left, duration: 1),
+    ]);
 
     test('books it, and hears it on its own beat', () {
       final session = sessionFor(apart(), difficulty: Difficulty.normal);
       wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
       session.tap(right);
-      final outcome = session.tap(left); // both hands at once, as a beginner would
-      expect(outcome, isNotNull,
-          reason: 'a real touch must never be answered with silence');
+      final outcome = session.tap(
+        left,
+      ); // both hands at once, as a beginner would
+      expect(
+        outcome,
+        isNotNull,
+        reason: 'a real touch must never be answered with silence',
+      );
       expect(outcome!.scored, isTrue);
-      expect(engine.struck.map((s) => s.$1), [72],
-          reason: 'the bass has not sounded yet — its beat has not come');
+      expect(
+        engine.struck.map((s) => s.$1),
+        [72],
+        reason: 'the bass has not sounded yet — its beat has not come',
+      );
 
       wall(session, (3.1 + session.leadInBeats) / session.beatsPerSecond);
-      expect(engine.struck.map((s) => s.$1), [72, 48],
-          reason: 'and now it has');
+      expect(engine.struck.map((s) => s.$1), [
+        72,
+        48,
+      ], reason: 'and now it has');
     });
 
     test('it keeps the streak but is not a perfect', () {
@@ -694,8 +782,11 @@ void main() {
       wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
       session.tap(left);
       wall(session, (3 + session.leadInBeats) / session.beatsPerSecond);
-      expect(session.tap(left)?.scored ?? false, isFalse,
-          reason: 'it was already taken');
+      expect(
+        session.tap(left)?.scored ?? false,
+        isFalse,
+        reason: 'it was already taken',
+      );
     });
 
     test('the hardest level books nothing', () {
@@ -706,8 +797,11 @@ void main() {
     });
 
     test('and neither does a player who asked to hear their own timing', () {
-      final session =
-          sessionFor(apart(), difficulty: Difficulty.normal, quantize: false);
+      final session = sessionFor(
+        apart(),
+        difficulty: Difficulty.normal,
+        quantize: false,
+      );
       wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
       expect(session.tap(left)?.scored ?? false, isFalse);
     });
@@ -719,8 +813,11 @@ void main() {
       ]);
       final session = sessionFor(far, difficulty: Difficulty.normal);
       wall(session, (2 + session.leadInBeats) / session.beatsPerSecond);
-      expect(session.tap(left)?.scored ?? false, isFalse,
-          reason: 'four beats away is not the hand reaching, it is a stray');
+      expect(
+        session.tap(left)?.scored ?? false,
+        isFalse,
+        reason: 'four beats away is not the hand reaching, it is a stray',
+      );
     });
   });
 
@@ -742,12 +839,16 @@ void main() {
     /// Quantizing is off so that a touch sounds the moment it lands: with it
     /// on, an early one waits for its beat and the test could not tell a note
     /// held back from a note lost.
-    (PlaySession, RecordingEngine) calibrated(double latencyMs,
-        {double noteAtBeat = 0}) {
+    (PlaySession, RecordingEngine) calibrated(
+      double latencyMs, {
+      double noteAtBeat = 0,
+    }) {
       final recorder = RecordingEngine();
       final session = PlaySession(
-        chart: Chart.build(songOf([note(noteAtBeat, 60)]),
-            difficulty: Difficulty.easy),
+        chart: Chart.build(
+          songOf([note(noteAtBeat, 60)]),
+          difficulty: Difficulty.easy,
+        ),
         audio: PianoAudio(engine: recorder),
         latencyOffsetMs: latencyMs,
         quantize: false,
@@ -756,10 +857,13 @@ void main() {
     }
 
     /// Move to [beat] of song time.
-    void at(PlaySession session, double beat) => session.update(Duration(
+    void at(PlaySession session, double beat) => session.update(
+      Duration(
         microseconds:
             ((beat + session.leadInBeats) / session.beatsPerSecond * 1e6)
-                .round()));
+                .round(),
+      ),
+    );
 
     // The bug this pins down: matching a touch to a note used one clock and
     // judging it used another, a whole latency apart. Between the two there
@@ -779,15 +883,30 @@ void main() {
 
         final outcome = session.tap(right);
         final off = offsetMs.round();
-        expect(outcome, isNotNull,
-            reason: 'a touch $off ms off the beat did nothing at all');
-        expect(outcome!.verdict, isNot(Verdict.miss),
-            reason: 'a touch $off ms off was inside the window and still '
-                'judged a miss');
-        expect(outcome.scored, isTrue, reason: 'a touch $off ms off went '
-            'unscored');
-        expect(recorder.struck.map((s) => s.$1), contains(60),
-            reason: 'a touch $off ms off was silent');
+        expect(
+          outcome,
+          isNotNull,
+          reason: 'a touch $off ms off the beat did nothing at all',
+        );
+        expect(
+          outcome!.verdict,
+          isNot(Verdict.miss),
+          reason:
+              'a touch $off ms off was inside the window and still '
+              'judged a miss',
+        );
+        expect(
+          outcome.scored,
+          isTrue,
+          reason:
+              'a touch $off ms off went '
+              'unscored',
+        );
+        expect(
+          recorder.struck.map((s) => s.$1),
+          contains(60),
+          reason: 'a touch $off ms off was silent',
+        );
       }
     });
 
@@ -812,8 +931,9 @@ void main() {
         songOf([for (var i = 0; i < 8; i++) note(i * 0.25, 72 + i)]);
 
     /// Where each note of the run sits across the screen.
-    List<double> placesOf(PlaySession session) =>
-        [for (final tap in session.chart.taps) tap.across];
+    List<double> placesOf(PlaySession session) => [
+      for (final tap in session.chart.taps) tap.across,
+    ];
 
     /// Put a finger down on the run's hand, the way a player does.
     (PlaySession, int) joined({double atBeat = 0}) {
@@ -827,21 +947,30 @@ void main() {
     test('a run puts a bead on the line before its first note', () {
       final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
       seek(session, -0.2);
-      expect(session.runBeads, hasLength(1),
-          reason: 'nothing to aim at before the run starts');
+      expect(
+        session.runBeads,
+        hasLength(1),
+        reason: 'nothing to aim at before the run starts',
+      );
       expect(session.runBeads.single.tracked, isFalse);
-      expect(session.runBeads.single.across,
-          closeTo(session.chart.taps.first.across, 1e-9));
+      expect(
+        session.runBeads.single.across,
+        closeTo(session.chart.taps.first.across, 1e-9),
+      );
     });
 
-    test('the bead travels with the pitches, between them as well as on them',
-        () {
-      final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
-      final places = placesOf(session);
-      seek(session, 0.125); // halfway between the first two notes
-      expect(session.runBeads.single.across,
-          closeTo((places[0] + places[1]) / 2, 1e-6));
-    });
+    test(
+      'the bead travels with the pitches, between them as well as on them',
+      () {
+        final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
+        final places = placesOf(session);
+        seek(session, 0.125); // halfway between the first two notes
+        expect(
+          session.runBeads.single.across,
+          closeTo((places[0] + places[1]) / 2, 1e-6),
+        );
+      },
+    );
 
     test('the bead arrives before the run does, to be got hold of', () {
       // Half a second of lead, against a judging window of a fifth. There is
@@ -850,11 +979,17 @@ void main() {
       final session = sessionFor(fastRun(), difficulty: Difficulty.normal);
       seek(session, -0.6); // 300 ms early: past the window, inside the lead
       expect(session.runBeads, hasLength(1));
-      expect(session.tap(session.runBeads.single.across)?.scored ?? false,
-          isFalse, reason: 'nothing is playable yet');
+      expect(
+        session.tap(session.runBeads.single.across)?.scored ?? false,
+        isFalse,
+        reason: 'nothing is playable yet',
+      );
       final drag = session.beginDrag(session.runBeads.single.across)!;
-      expect(session.runBeads.single.tracked, isTrue,
-          reason: 'but the run can be got hold of');
+      expect(
+        session.runBeads.single.tracked,
+        isTrue,
+        reason: 'but the run can be got hold of',
+      );
       session.endDrag(drag);
     });
 
@@ -881,8 +1016,7 @@ void main() {
         session.drag(drag, left);
         seek(session, i * 0.25 + 0.05);
       }
-      expect(engine.struck, isEmpty,
-          reason: 'the run is in the right hand');
+      expect(engine.struck, isEmpty, reason: 'the run is in the right hand');
     });
 
     test('one finger carries one run into the next', () {
@@ -910,8 +1044,11 @@ void main() {
         session.drag(drag, places[i]);
         seek(session, 4 + i * 0.25 + 0.05);
       }
-      expect(engine.struck, hasLength(16),
-          reason: 'the finger was dropped between the runs');
+      expect(
+        engine.struck,
+        hasLength(16),
+        reason: 'the finger was dropped between the runs',
+      );
     });
 
     test('slowing the song down gives longer to get onto the bead', () {
@@ -926,19 +1063,26 @@ void main() {
         // Walk back until the bead is gone; that is how much warning there is.
         var beats = 0.0;
         while (beats < 20) {
-          session.update(Duration(
-              microseconds: ((-beats + session.leadInBeats) /
-                      session.beatsPerSecond *
-                      1e6)
-                  .round()));
+          session.update(
+            Duration(
+              microseconds:
+                  ((-beats + session.leadInBeats) /
+                          session.beatsPerSecond *
+                          1e6)
+                      .round(),
+            ),
+          );
           if (session.runBeads.isEmpty) break;
           beats += 0.05;
         }
         return beats / session.beatsPerSecond;
       }
 
-      expect(leadSeconds(0.6), greaterThan(leadSeconds(1.0) * 1.5),
-          reason: 'at 60% speed there should be far more warning');
+      expect(
+        leadSeconds(0.6),
+        greaterThan(leadSeconds(1.0) * 1.5),
+        reason: 'at 60% speed there should be far more warning',
+      );
     });
 
     test('following the bead plays the run', () {
@@ -962,8 +1106,11 @@ void main() {
       for (var i = 0; i < 3; i++) {
         seek(session, i * 0.25 + 0.05);
       }
-      expect(engine.struck.map((s) => s.$1), [72, 73, 74],
-          reason: 'a still finger in the right place still plays');
+      expect(
+        engine.struck.map((s) => s.$1),
+        [72, 73, 74],
+        reason: 'a still finger in the right place still plays',
+      );
     });
 
     test('a finger that stays behind loses the far end of the run', () {
@@ -974,8 +1121,11 @@ void main() {
         seek(session, i * 0.25 + 0.05);
       }
       seek(session, 4);
-      expect(engine.struck.map((s) => s.$1), isNot(contains(79)),
-          reason: 'the run walked away from the finger');
+      expect(
+        engine.struck.map((s) => s.$1),
+        isNot(contains(79)),
+        reason: 'the run walked away from the finger',
+      );
       expect(session.scoreboard.counts[Verdict.miss], greaterThan(0));
     });
 
@@ -985,16 +1135,18 @@ void main() {
       final (session, drag) = joined(atBeat: 1.0);
       session.drag(drag, placesOf(session)[5]);
       seek(session, 1.4);
-      expect(engine.struck.map((s) => s.$1), [76, 77],
-          reason: 'the notes already gone are gone; the rest is playable');
+      expect(
+        engine.struck.map((s) => s.$1),
+        [76, 77],
+        reason: 'the notes already gone are gone; the rest is playable',
+      );
     });
 
     test('a run never runs ahead of the music', () {
       final (session, drag) = joined();
       session.drag(drag, placesOf(session)[7]); // finger already at the end
       seek(session, 0.05);
-      expect(engine.struck, isEmpty,
-          reason: 'the later notes are not due yet');
+      expect(engine.struck, isEmpty, reason: 'the later notes are not due yet');
     });
 
     test('lifting the finger ends it', () {
@@ -1019,8 +1171,11 @@ void main() {
       session.drag(drag, placesOf(session).first);
       session.drag(other, placesOf(session).first);
       seek(session, 0.05);
-      expect(engine.struck.map((s) => s.$1), [72],
-          reason: 'two fingers on one run should not double it');
+      expect(
+        engine.struck.map((s) => s.$1),
+        [72],
+        reason: 'two fingers on one run should not double it',
+      );
 
       // A tap now finds the *next* note, never the one the run just played.
       session.tap(placesOf(session).first);
@@ -1048,8 +1203,11 @@ void main() {
       expect(session.chart.runs, hasLength(2));
       for (var beat = -1.0; beat < 5; beat += 0.05) {
         seek(session, beat);
-        expect(session.runBeads.length, lessThanOrEqualTo(1),
-            reason: 'two rings at beat $beat');
+        expect(
+          session.runBeads.length,
+          lessThanOrEqualTo(1),
+          reason: 'two rings at beat $beat',
+        );
       }
     });
   });

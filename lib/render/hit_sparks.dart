@@ -16,6 +16,7 @@ class Spark {
     required this.midis,
     required this.hand,
     required this.quality,
+    this.graceMidi,
   });
 
   /// Where on the hit line it happened, 0 at the left edge and 1 at the right
@@ -37,6 +38,12 @@ class Spark {
   /// Which notes they were, in the same order as [places]: the light a note
   /// leaves is the note's own colour, not the touch's.
   final List<int> midis;
+
+  /// The ornament the touch carried, if it carried one.
+  ///
+  /// Not one of [midis]: it has no place of its own on the line. Its mark is
+  /// drawn in the middle of the touch, so that is where its light comes from.
+  final int? graceMidi;
 
   /// Which hand played it, since each hand has its own half of the screen to
   /// be laid out within.

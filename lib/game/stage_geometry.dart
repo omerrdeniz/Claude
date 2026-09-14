@@ -13,10 +13,8 @@ import 'dart:ui';
 /// into columns. Travel is linear in time, because a note covering equal
 /// distance in equal time is what lets the eye predict the beat.
 class StageGeometry {
-  const StageGeometry({
-    required this.size,
-    this.hitLineFraction = 0.68,
-  }) : assert(hitLineFraction > 0 && hitLineFraction < 1);
+  const StageGeometry({required this.size, this.hitLineFraction = 0.68})
+    : assert(hitLineFraction > 0 && hitLineFraction < 1);
 
   final Size size;
 

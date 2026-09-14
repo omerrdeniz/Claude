@@ -23,16 +23,16 @@ enum Difficulty {
 
 extension DifficultyLabel on Difficulty {
   String get label => switch (this) {
-        Difficulty.easy => 'Kolay',
-        Difficulty.normal => 'Normal',
-        Difficulty.hard => 'Zor',
-      };
+    Difficulty.easy => 'Kolay',
+    Difficulty.normal => 'Normal',
+    Difficulty.hard => 'Zor',
+  };
 
   String get description => switch (this) {
-        Difficulty.easy => 'Tek alan, akorlar tek parmakla',
-        Difficulty.normal => 'Eller ayrı, akorlar tek parmakla',
-        Difficulty.hard => 'Eller ayrı, akorun her notası ayrı parmakla',
-      };
+    Difficulty.easy => 'Tek alan, akorlar tek parmakla',
+    Difficulty.normal => 'Eller ayrı, akorlar tek parmakla',
+    Difficulty.hard => 'Eller ayrı, akorun her notası ayrı parmakla',
+  };
 
   /// Whether the screen is divided between the hands.
   bool get separatesHands => this != Difficulty.easy;
@@ -99,6 +99,12 @@ class Tap {
 
   bool get hasGrace => grace.isNotEmpty;
 
+  /// The pitch the ornament is drawn and lit in. Where it is more than one
+  /// note the lowest names it, which is the one the ear hears it as.
+  int? get graceMidi => grace.isEmpty
+      ? null
+      : grace.map((note) => note.midi).reduce((a, b) => a < b ? a : b);
+
   /// Where the ornament sits across the screen, as [across] does.
   double graceAcross = 0;
 
@@ -112,7 +118,8 @@ class Tap {
   /// too small to aim at and too small to see. Direction is real, size is not.
   int get graceLean {
     if (grace.isEmpty) return 0;
-    final mine = notes.map((n) => n.midi).reduce((a, b) => a + b) / notes.length;
+    final mine =
+        notes.map((n) => n.midi).reduce((a, b) => a + b) / notes.length;
     final its = grace.map((n) => n.midi).reduce((a, b) => a + b) / grace.length;
     return mine == its ? 0 : (mine > its ? 1 : -1);
   }
@@ -197,9 +204,9 @@ class Chart {
     required List<Tap> taps,
     required List<Note> autoNotes,
     Map<int, List<Tap>> runs = const {},
-  })  : taps = List.unmodifiable(taps),
-        autoNotes = List.unmodifiable(autoNotes),
-        runs = Map.unmodifiable(runs);
+  }) : taps = List.unmodifiable(taps),
+       autoNotes = List.unmodifiable(autoNotes),
+       runs = Map.unmodifiable(runs);
 
   final Song song;
   final Difficulty difficulty;
@@ -293,30 +300,36 @@ class Chart {
         if (difficulty.fingersChords) {
           for (final note in notes) {
             final at = acrossOf(hand, note.midi.toDouble());
-            taps.add(Tap(
-              beat: moment.first.beat,
-              notes: [note],
-              hand: hand,
-              across: at,
-            )..noteAcross = [at]);
+            taps.add(
+              Tap(
+                beat: moment.first.beat,
+                notes: [note],
+                hand: hand,
+                across: at,
+              )..noteAcross = [at],
+            );
           }
         } else {
           final places = [
-            for (final note in notes) acrossOf(hand, note.midi.toDouble())
+            for (final note in notes) acrossOf(hand, note.midi.toDouble()),
           ];
-          taps.add(Tap(
-            beat: moment.first.beat,
-            notes: notes,
-            hand: hand,
-            across: places.reduce((a, b) => a + b) / places.length,
-          )..noteAcross = places);
+          taps.add(
+            Tap(
+              beat: moment.first.beat,
+              notes: notes,
+              hand: hand,
+              across: places.reduce((a, b) => a + b) / places.length,
+            )..noteAcross = places,
+          );
         }
       }
     }
 
-    taps.sort((a, b) => a.beat != b.beat
-        ? a.beat.compareTo(b.beat)
-        : a.across.compareTo(b.across));
+    taps.sort(
+      (a, b) => a.beat != b.beat
+          ? a.beat.compareTo(b.beat)
+          : a.across.compareTo(b.across),
+    );
 
     _crushOrnaments(taps, song);
 
@@ -385,7 +398,10 @@ class Chart {
   /// not a fast passage, it is one moment with several notes in it, and the
   /// hard level splits it into a touch per note.
   static Map<int, List<Tap>> _findRuns(
-      List<Tap> taps, Song song, bool separatesHands) {
+    List<Tap> taps,
+    Song song,
+    bool separatesHands,
+  ) {
     final secondsPerBeat = 60 / song.bpm;
     final onsetTolerance = onsetToleranceAt(song.bpm);
     final byHand = <Hand, List<Tap>>{};
@@ -512,7 +528,9 @@ class Chart {
 
   /// Split the song into what the player plays and what plays itself.
   static (List<Note>, List<Note>) _divideVoices(
-      Song song, Difficulty difficulty) {
+    Song song,
+    Difficulty difficulty,
+  ) {
     final onsetTolerance = onsetToleranceAt(song.bpm);
     final all = [...song.melody, ...song.accompaniment];
     if (difficulty != Difficulty.easy) return (all, const []);
@@ -529,8 +547,11 @@ class Chart {
     final moments = _byOnset(all, onsetTolerance);
     final leans = [
       for (var i = 0; i < moments.length; i++)
-        _leansInto(moments[i], i + 1 < moments.length ? moments[i + 1] : null,
-            song.bpm)
+        _leansInto(
+          moments[i],
+          i + 1 < moments.length ? moments[i + 1] : null,
+          song.bpm,
+        ),
     ];
 
     for (var i = 0; i < moments.length; i++) {
@@ -577,8 +598,7 @@ class Chart {
     final sorted = [...notes]..sort((a, b) => a.beat.compareTo(b.beat));
     final out = <List<Note>>[];
     for (final note in sorted) {
-      if (out.isNotEmpty &&
-          note.beat - out.last.first.beat <= onsetTolerance) {
+      if (out.isNotEmpty && note.beat - out.last.first.beat <= onsetTolerance) {
         out.last.add(note);
       } else {
         out.add([note]);

@@ -197,6 +197,7 @@ class _PlayScreenState extends State<PlayScreen>
           Spark(
             places: outcome.places,
             midis: [for (final note in outcome.notes) note.midi],
+            graceMidi: outcome.graceMidi,
             hand: outcome.hand,
             quality: quality,
           ),

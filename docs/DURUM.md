@@ -3,10 +3,10 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v100):** ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v101):** ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
-Akor büyüklüğünü renkle söyleyen son yer de kalktı. Ayrıntısı "Oynanış
-kararları"nda.
+Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
+artık çizgide patlıyor. Ayrıntısı "Oynanış kararları"nda.
 
 ## Proje
 
@@ -83,6 +83,26 @@ tartışmaya açmadan önce buraya bakın** — bir kısmı zaten denenip redded
     Süslemenin fırçaları notalarınkinden ayrı tutuldu: `_Brushes` tek boyut
     önbellekliyor ve boyut değişince önbelleği atıyor, yani ondan ikinci bir
     boyut istemek her karede bütün fırçaları yeniden kurardı.
+
+  - **Süsleme işareti de çizgide biter** (v101). Oyuncu bildirdi: *"acciaccatura'daki
+    ilk nota patlamıyor, çizgiden sonra kaymaya devam ediyor."* İşaret
+    notalara bağlıydı ama notaların "çalındıysa çizgide dur" kuralına tabi
+    değildi: dokunuş cevaplanınca notalar çizgide duruyor, işaret aşağı
+    kaymaya devam ediyordu. İki parça düzeltme:
+
+    - dokunuş cevaplandıysa (`progress > 1` **ve** notaların hepsi çalındı)
+      işaret çizilmiyor. Notaların kendi kuralı gibi `headOf` değil ham
+      `progress` kullanılıyor — süslemeli nota basılı tutulduğu için başı
+      çizgide durur, işaret tutulmuyor;
+    - ve `Spark.graceMidi` ile küçük nota da kendi ışığını atıyor: dokunuşun
+      ortasında, işaretin durduğu yerde, işaretin boyunda. Küçük notanın
+      `places` içine girmemesinin sebebi, orada bir yeri olmaması — akorun
+      yayılması onu yanlış yere koyardı.
+
+    Dokunuşun süslemesi artık `TapOutcome.graceMidi` ile taşınıyor ve sesi
+    çalan **üç** yolun üçünde de dolduruluyor (normal dokunuş, rezervasyon,
+    koşu). `_sound` süslemeyi zaten üç yolda da çalıyordu; ışığın sesin
+    peşinden gitmesi gerekiyor.
 
   **Beşliler çemberi denendi ve geri alındı — tekrar önermeyin.** İlk öneri
   oydu (oyunun zemini de o çemberi kullanıyor, tutarlı olurdu). Ama render

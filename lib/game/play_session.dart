@@ -11,6 +11,7 @@ class TapOutcome {
     required this.errorMs,
     required this.notes,
     this.places = const [],
+    this.graceMidi,
     this.voices = 1,
     this.scored = true,
     this.holdId,
@@ -36,6 +37,10 @@ class TapOutcome {
   /// Where each of those notes sits across the screen, so a hit can be lit
   /// where it happened rather than somewhere in the middle of the hand.
   final List<double> places;
+
+  /// The ornament this touch sounded along with its notes, if any — the
+  /// pitch of it, for the screen to light it in.
+  final int? graceMidi;
 
   /// How many notes sounded together, which is what colours the hit.
   final int voices;
@@ -144,8 +149,8 @@ class PlaySession {
     this.speed = 1.0,
     this.quantize = true,
     this.fillMissed = false,
-  })  : assert(speed > 0),
-        _chart = chart;
+  }) : assert(speed > 0),
+       _chart = chart;
 
   Chart _chart;
   Chart get chart => _chart;
@@ -218,7 +223,7 @@ class PlaySession {
 
   /// Notes tapped early, waiting for their moment.
   final List<({double beat, int midi, double velocity, double duration})>
-      _waiting = [];
+  _waiting = [];
 
   final Scoreboard scoreboard = Scoreboard();
 
@@ -321,8 +326,8 @@ class PlaySession {
     _wallClock = elapsed;
     if (!_running) return;
     _lastBeat = _beat;
-    _beat = (elapsed - _origin).inMicroseconds / 1e6 * beatsPerSecond -
-        leadInBeats;
+    _beat =
+        (elapsed - _origin).inMicroseconds / 1e6 * beatsPerSecond - leadInBeats;
 
     _endFinishedHolds();
     _playAccompaniment();
@@ -365,8 +370,10 @@ class PlaySession {
       if (!_isPending(tap)) continue;
       for (final note in tap.notes) {
         if (!_filled.add(_keyOf(note))) continue;
-        audio.noteOn(note.midi,
-            velocity: (note.velocity * _fillVelocity).clamp(0.05, 1.0));
+        audio.noteOn(
+          note.midi,
+          velocity: (note.velocity * _fillVelocity).clamp(0.05, 1.0),
+        );
         _scheduleRelease(note.midi, note.endBeat);
       }
     }
@@ -480,6 +487,7 @@ class PlaySession {
       errorMs: errorMs,
       notes: tapTarget.notes,
       places: tapTarget.noteAcross,
+      graceMidi: tapTarget.graceMidi,
       voices: tapTarget.voices,
       holdId: holdId,
       crushId: crushId,
@@ -691,9 +699,11 @@ class PlaySession {
             runId: entry.value.key,
             hand: entry.key,
             across: across,
-            tracked: _drags.values.any((drag) =>
-                drag.hand == entry.key &&
-                (drag.across - across).abs() <= dragReach),
+            tracked: _drags.values.any(
+              (drag) =>
+                  drag.hand == entry.key &&
+                  (drag.across - across).abs() <= dragReach,
+            ),
           );
         }(),
     ];
@@ -783,14 +793,17 @@ class PlaySession {
         _resolve(next);
         scoreboard.register(verdict);
         _sound(next, errorMs);
-        onDragNote?.call(TapOutcome(
-          verdict: verdict,
-          hand: next.hand,
-          errorMs: errorMs,
-          notes: next.notes,
-          places: next.noteAcross,
-          voices: next.voices,
-        ));
+        onDragNote?.call(
+          TapOutcome(
+            verdict: verdict,
+            hand: next.hand,
+            errorMs: errorMs,
+            notes: next.notes,
+            places: next.noteAcross,
+            graceMidi: next.graceMidi,
+            voices: next.voices,
+          ),
+        );
       }
       _runReached[bead.runId] = index;
     }
@@ -813,10 +826,10 @@ class PlaySession {
   /// there: the finger is not on it any more, and a line full of notes
   /// pinned under a hand that has moved away is unreadable.
   Set<(double, int)> get heldNotes => {
-        for (final hold in _holds.values)
-          if (hold.underFinger)
-            for (final midi in hold.midis) (hold.beat, midi),
-      };
+    for (final hold in _holds.values)
+      if (hold.underFinger)
+        for (final midi in hold.midis) (hold.beat, midi),
+  };
 
   /// The finger came off a long note.
   ///
@@ -978,6 +991,7 @@ class PlaySession {
       errorMs: 0,
       notes: target.notes,
       places: target.noteAcross,
+      graceMidi: target.graceMidi,
       voices: target.voices,
     );
   }
@@ -1019,8 +1033,10 @@ class PlaySession {
   /// what has been played is tracked per note rather than per tap, the score,
   /// the streak and every already-played note survive the change.
   void rebindChart(Chart replacement) {
-    assert(replacement.song.id == _chart.song.id,
-        'a rebind must describe the same song');
+    assert(
+      replacement.song.id == _chart.song.id,
+      'a rebind must describe the same song',
+    );
     _chart = replacement;
   }
 

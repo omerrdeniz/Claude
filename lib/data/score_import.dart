@@ -34,15 +34,17 @@ abstract final class ScoreImport {
       // clipped — it belongs to a phrase nobody is going to hear.
       if (beat < info.startBeat) continue;
       final duration = _snap(note.duration) * info.beatsPerQuarter;
-      notes.add(Note(
-        beat: beat - info.startBeat,
-        duration: duration,
-        midi: note.midi,
-        velocity: note.hand == Hand.left
-            ? info.leftVelocity
-            : info.rightVelocity,
-        hand: note.hand,
-      ));
+      notes.add(
+        Note(
+          beat: beat - info.startBeat,
+          duration: duration,
+          midi: note.midi,
+          velocity: note.hand == Hand.left
+              ? info.leftVelocity
+              : info.rightVelocity,
+          hand: note.hand,
+        ),
+      );
     }
 
     return Song(

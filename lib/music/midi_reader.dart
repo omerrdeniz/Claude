@@ -38,7 +38,8 @@ class MidiReader {
 
     if (format == 2) {
       throw const FormatException(
-          'MIDI format 2 is not supported: its tracks are separate sequences');
+        'MIDI format 2 is not supported: its tracks are separate sequences',
+      );
     }
     if (division & 0x8000 != 0) {
       // SMPTE timing measures absolute time, not beats, so there is no tempo
@@ -126,7 +127,8 @@ class MidiReader {
             final velocity = r.uint8();
             if (velocity > 0) {
               (open[channel] ??= []).add(
-                  _OpenNote(pitch: pitch, tick: tick, velocity: velocity));
+                _OpenNote(pitch: pitch, tick: tick, velocity: velocity),
+              );
               if (!noteTracks.contains(track)) noteTracks.add(track);
             } else {
               // A note-on with zero velocity is a note-off; most files use it.
@@ -145,7 +147,8 @@ class MidiReader {
             r.skip(1);
           default:
             throw FormatException(
-                'Corrupt MIDI: unknown status 0x${status.toRadixString(16)}');
+              'Corrupt MIDI: unknown status 0x${status.toRadixString(16)}',
+            );
         }
       }
 
@@ -153,7 +156,9 @@ class MidiReader {
       // give it a beat rather than dropping it.
       for (final pending in open.values) {
         for (final note in pending) {
-          notes.add(_build(note, tick + ticksPerBeat.round(), ticksPerBeat, track));
+          notes.add(
+            _build(note, tick + ticksPerBeat.round(), ticksPerBeat, track),
+          );
         }
       }
 
@@ -175,8 +180,14 @@ class MidiReader {
     );
   }
 
-  static void _close(List<_OpenNote>? pending, int pitch, int tick,
-      double ticksPerBeat, int track, List<Note> out) {
+  static void _close(
+    List<_OpenNote>? pending,
+    int pitch,
+    int tick,
+    double ticksPerBeat,
+    int track,
+    List<Note> out,
+  ) {
     if (pending == null) return;
     // Close the oldest sounding copy, so a repeated pitch pairs up correctly.
     final index = pending.indexWhere((n) => n.pitch == pitch);
@@ -186,7 +197,11 @@ class MidiReader {
   }
 
   static Note _build(
-      _OpenNote note, int endTick, double ticksPerBeat, int track) {
+    _OpenNote note,
+    int endTick,
+    double ticksPerBeat,
+    int track,
+  ) {
     // A zero-length note would be inaudible; give it something to sound over.
     final ticks = (endTick - note.tick).clamp(1, 1 << 30);
     return _TrackedNote(
@@ -216,7 +231,7 @@ class MidiReader {
         final inTrack = tracked.where((t) => t.track == track);
         averagePitch[track] =
             inTrack.map((t) => t.note.midi).reduce((a, b) => a + b) /
-                inTrack.length;
+            inTrack.length;
       }
       final lowest = averagePitch.entries
           .reduce((a, b) => a.value <= b.value ? a : b)
@@ -279,13 +294,13 @@ class _TrackedNote implements Note {
     double? duration,
     double? velocity,
     Hand? hand,
-  }) =>
-      note.copyWith(
-          beat: beat,
-          midi: midi,
-          duration: duration,
-          velocity: velocity,
-          hand: hand);
+  }) => note.copyWith(
+    beat: beat,
+    midi: midi,
+    duration: duration,
+    velocity: velocity,
+    hand: hand,
+  );
 }
 
 /// A byte reader over the file, tracking position for the variable-length
@@ -339,7 +354,9 @@ class _Cursor {
       value = (value << 7) | (byte & 0x7F);
       if (byte & 0x80 == 0) return value;
     }
-    throw const FormatException('Corrupt MIDI: oversized variable-length value');
+    throw const FormatException(
+      'Corrupt MIDI: oversized variable-length value',
+    );
   }
 
   void skip(int count) {

@@ -145,11 +145,16 @@ class _Recorder implements Canvas {
   /// a body and then a rim over it.
   final List<PaintingStyle> rectStyles = [];
 
+  /// And whether it was painted with a gradient, which is what tells the
+  /// notes and the light they throw from the flat marks drawn over them.
+  final List<bool> rectShaded = [];
+
   @override
   void drawRRect(RRect rrect, Paint paint) {
     rects.add(rrect.outerRect.shift(_shift));
     rectColours.add(paint.color);
     rectStyles.add(paint.style);
+    rectShaded.add(paint.shader != null);
   }
 
   @override
@@ -387,6 +392,98 @@ void main() {
     }
   });
 
+  test('an answered ornament stops at the line instead of sliding past', () {
+    // The little note sounds when the finger lands, so its mark ends at the
+    // line with everything else the touch answered. It used to carry on down
+    // while the notes it belonged to stopped dead — the player read that as
+    // the ornament never bursting.
+    const g = StageGeometry(size: phone);
+    final chart = Chart.build(shipped('gnossienne-1'));
+    final tap = chart.taps.firstWhere((t) => t.hasGrace);
+
+    /// The marks drawn a quarter of a beat after the touch was due.
+    List<Rect> marksAfter({required bool played}) {
+      final recorder = _Recorder();
+      StagePainter(
+        chart: chart,
+        beat: tap.beat + 0.25,
+        windowInBeats: 4,
+        playedNotes: played
+            ? {for (final note in tap.notes) (tap.beat, note.midi)}
+            : const {},
+        heldNotes: played
+            ? {for (final note in tap.notes) (tap.beat, note.midi)}
+            : const {},
+      ).paint(recorder, phone);
+      return [
+        for (var i = 0; i < recorder.rects.length; i++)
+          if (recorder.rectStyles[i] == PaintingStyle.fill &&
+              (recorder.rects[i].height - g.noteRadius * 2 * 0.55).abs() <
+                  0.5 &&
+              (recorder.rects[i].width - g.noteWidth * 0.55).abs() < 0.5 &&
+              recorder.rects[i].center.dy > g.hitLineY)
+            recorder.rects[i],
+      ];
+    }
+
+    // Nobody played it: it goes on falling past the line, like any note
+    // nobody caught.
+    expect(marksAfter(played: false), isNotEmpty);
+    // Played: gone, and the burst of light is what is left of it.
+    expect(marksAfter(played: true), isEmpty);
+  });
+
+  test('an answered ornament throws its own light at the line', () {
+    // One plume more than the touch has notes, in the middle of them, where
+    // the little note's mark was.
+    const g = StageGeometry(size: phone);
+    final chart = Chart.build(shipped('gnossienne-1'));
+    final tap = chart.taps.firstWhere((t) => t.hasGrace);
+
+    List<Rect> plumes({int? graceMidi}) {
+      final recorder = _Recorder();
+      StagePainter(
+        chart: chart,
+        beat: tap.beat,
+        windowInBeats: 4,
+        sparks: [
+          Spark(
+            places: tap.noteAcross,
+            midis: [for (final note in tap.notes) note.midi],
+            graceMidi: graceMidi,
+            hand: tap.hand,
+            quality: 1,
+          )..age = 0.2,
+        ],
+      ).paint(recorder, phone);
+      return [
+        for (var i = 0; i < recorder.rects.length; i++)
+          if (recorder.rectShaded[i] &&
+              recorder.rects[i].top >= g.hitLineY - 0.5)
+            recorder.rects[i],
+      ];
+    }
+
+    final without = plumes();
+    final with_ = plumes(graceMidi: tap.graceMidi);
+    expect(with_, hasLength(without.length + 1));
+
+    // The extra one is in the middle of the others, narrower than they are:
+    // the little note's light, the size its mark was.
+    final extra = with_.singleWhere(
+      (rect) => without.every((other) => (other.left - rect.left).abs() > 0.5),
+    );
+    expect(extra.width, lessThan(without.first.width));
+    expect(
+      extra.center.dx,
+      closeTo(
+        without.map((r) => r.center.dx).reduce((a, b) => a + b) /
+            without.length,
+        1,
+      ),
+    );
+  });
+
   test('a chord band runs between the colours of the notes it joins', () async {
     // The band used to be one flat colour standing for how many notes the
     // chord had. Every note on screen is coloured by its pitch now, so the
@@ -476,11 +573,7 @@ void main() {
     final chart = Chart.build(shipped('gnossienne-1'));
     final tap = chart.taps.firstWhere((t) => t.hasGrace);
     final (low, high) = chart.pitchRange;
-    final wanted = AppTheme.pitchColor(
-      tap.grace.map((n) => n.midi).reduce((a, b) => a < b ? a : b),
-      low: low,
-      high: high,
-    );
+    final wanted = AppTheme.pitchColor(tap.graceMidi!, low: low, high: high);
 
     const window = 4.0;
     final recorder = _Recorder();

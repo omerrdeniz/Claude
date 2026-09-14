@@ -7,23 +7,23 @@ enum TimingTolerance { wide, normal, tight }
 
 extension TimingToleranceLabel on TimingTolerance {
   String get label => switch (this) {
-        TimingTolerance.wide => 'Geniş',
-        TimingTolerance.normal => 'Normal',
-        TimingTolerance.tight => 'Dar',
-      };
+    TimingTolerance.wide => 'Geniş',
+    TimingTolerance.normal => 'Normal',
+    TimingTolerance.tight => 'Dar',
+  };
 
   /// Multiplier applied to every judging window.
   double get factor => switch (this) {
-        TimingTolerance.wide => 1.8,
-        TimingTolerance.normal => 1.0,
-        TimingTolerance.tight => 0.6,
-      };
+    TimingTolerance.wide => 1.8,
+    TimingTolerance.normal => 1.0,
+    TimingTolerance.tight => 0.6,
+  };
 
   String get description => switch (this) {
-        TimingTolerance.wide => 'Erken ve geç basışlar da doğru sayılır',
-        TimingTolerance.normal => 'Dengeli',
-        TimingTolerance.tight => 'Vuruşa yakın basmak gerekir',
-      };
+    TimingTolerance.wide => 'Erken ve geç basışlar da doğru sayılır',
+    TimingTolerance.normal => 'Dengeli',
+    TimingTolerance.tight => 'Vuruşa yakın basmak gerekir',
+  };
 }
 
 /// How well a tap landed.
@@ -31,19 +31,19 @@ enum Verdict { perfect, great, good, miss }
 
 extension VerdictLabel on Verdict {
   String get label => switch (this) {
-        Verdict.perfect => 'Mükemmel',
-        Verdict.great => 'İyi',
-        Verdict.good => 'Tamam',
-        Verdict.miss => 'Kaçtı',
-      };
+    Verdict.perfect => 'Mükemmel',
+    Verdict.great => 'İyi',
+    Verdict.good => 'Tamam',
+    Verdict.miss => 'Kaçtı',
+  };
 
   /// Points before the combo multiplier.
   int get points => switch (this) {
-        Verdict.perfect => 100,
-        Verdict.great => 70,
-        Verdict.good => 40,
-        Verdict.miss => 0,
-      };
+    Verdict.perfect => 100,
+    Verdict.great => 70,
+    Verdict.good => 40,
+    Verdict.miss => 0,
+  };
 }
 
 /// Turns timing error into a verdict.
@@ -54,12 +54,9 @@ extension VerdictLabel on Verdict {
 /// broken performance. A tap that finds nothing at all feels broken rather
 /// than strict, which is worth more than the precision it costs.
 class Judge {
-  const Judge({
-    this.perfectMs = 55,
-    this.greatMs = 115,
-    this.goodMs = 210,
-  })  : assert(perfectMs < greatMs),
-        assert(greatMs < goodMs);
+  const Judge({this.perfectMs = 55, this.greatMs = 115, this.goodMs = 210})
+    : assert(perfectMs < greatMs),
+      assert(greatMs < goodMs);
 
   final double perfectMs;
   final double greatMs;
@@ -83,10 +80,10 @@ class Judge {
 
   /// The same judge with every window scaled by [factor].
   Judge tightened(double factor) => Judge(
-        perfectMs: perfectMs * factor,
-        greatMs: greatMs * factor,
-        goodMs: goodMs * factor,
-      );
+    perfectMs: perfectMs * factor,
+    greatMs: greatMs * factor,
+    goodMs: goodMs * factor,
+  );
 
   /// A judge set to a given tolerance.
   factory Judge.forTolerance(TimingTolerance tolerance) =>

@@ -35,8 +35,7 @@ class ResultPanel extends StatelessWidget {
             children: [
               Text(
                 songTitle,
-                style: const TextStyle(
-                    fontSize: 15, color: AppTheme.textMuted),
+                style: const TextStyle(fontSize: 15, color: AppTheme.textMuted),
               ),
               const SizedBox(height: 14),
               Text(
@@ -63,16 +62,21 @@ class ResultPanel extends StatelessWidget {
               _row('En uzun seri', '${scoreboard.bestCombo}'),
               const SizedBox(height: 12),
               for (final verdict in Verdict.values)
-                _row(verdict.label, '${scoreboard.counts[verdict]}',
-                    muted: true),
+                _row(
+                  verdict.label,
+                  '${scoreboard.counts[verdict]}',
+                  muted: true,
+                ),
               const SizedBox(height: 28),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   TextButton(
                     onPressed: onBack,
-                    child: const Text('Şarkılar',
-                        style: TextStyle(color: AppTheme.textMuted)),
+                    child: const Text(
+                      'Şarkılar',
+                      style: TextStyle(color: AppTheme.textMuted),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   FilledButton(
@@ -80,7 +84,9 @@ class ResultPanel extends StatelessWidget {
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.accent,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 28, vertical: 14),
+                        horizontal: 28,
+                        vertical: 14,
+                      ),
                     ),
                     child: const Text('Tekrar çal'),
                   ),
@@ -102,14 +108,18 @@ class ResultPanel extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label,
-                style: TextStyle(fontSize: 14, color: AppTheme.textMuted)),
-            Text(value,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: colour,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                )),
+            Text(
+              label,
+              style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                color: colour,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
           ],
         ),
       ),

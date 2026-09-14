@@ -89,7 +89,9 @@ class SettingSwitch extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                    fontSize: 14, color: AppTheme.textPrimary),
+                  fontSize: 14,
+                  color: AppTheme.textPrimary,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -142,8 +144,8 @@ class LatencyPicker extends StatelessWidget {
     final description = rounded == 0
         ? 'Cihazın bildirdiği gecikme kullanılıyor'
         : rounded > 0
-            ? 'Dokunuşların $rounded ms erken sayılıyor'
-            : 'Dokunuşların ${-rounded} ms geç sayılıyor';
+        ? 'Dokunuşların $rounded ms erken sayılıyor'
+        : 'Dokunuşların ${-rounded} ms geç sayılıyor';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,9 +156,10 @@ class LatencyPicker extends StatelessWidget {
               child: Text(
                 'Zamanlama ayarı',
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600),
+                  color: AppTheme.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             _StepButton(
@@ -168,8 +171,10 @@ class LatencyPicker extends StatelessWidget {
               child: Text(
                 '${rounded > 0 ? '+' : ''}$rounded ms',
                 textAlign: TextAlign.center,
-                style:
-                    const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 14,
+                ),
               ),
             ),
             _StepButton(
@@ -199,8 +204,10 @@ class LatencyPicker extends StatelessWidget {
                 minimumSize: const Size(0, 32),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('Ölç',
-                  style: TextStyle(fontSize: 13, color: AppTheme.accentSoft)),
+              child: const Text(
+                'Ölç',
+                style: TextStyle(fontSize: 13, color: AppTheme.accentSoft),
+              ),
             ),
           ],
         ),

@@ -86,7 +86,10 @@ class ScoreHud extends StatelessWidget {
               fontSize: 15 + reach * 9,
               fontWeight: reach > 0.4 ? FontWeight.w600 : FontWeight.w400,
               color: Color.lerp(
-                  AppTheme.accentSoft, Colors.white, kick * 0.6 + reach * 0.3),
+                AppTheme.accentSoft,
+                Colors.white,
+                kick * 0.6 + reach * 0.3,
+              ),
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),

@@ -16,10 +16,14 @@ import 'song_list/song_tile.dart';
 /// at a glance — v51 is plainly newer than v50, where two commit hashes are
 /// not. The hash is kept beside it because that is what actually identifies
 /// the build. Both come from `tool/deploy.sh`.
-const String appVersion =
-    String.fromEnvironment('APP_VERSION', defaultValue: '');
-const String buildId =
-    String.fromEnvironment('BUILD_ID', defaultValue: 'geliştirme');
+const String appVersion = String.fromEnvironment(
+  'APP_VERSION',
+  defaultValue: '',
+);
+const String buildId = String.fromEnvironment(
+  'BUILD_ID',
+  defaultValue: 'geliştirme',
+);
 
 /// What the player reads at the top of the list, and quotes back when a fix
 /// does not seem to have arrived.
@@ -63,8 +67,11 @@ class _SongListScreenState extends State<SongListScreen> {
 
   void _set(PlaySettings settings) => setState(() => _settings = settings);
 
-  void _setLatency(double value) => _set(_settings.copyWith(
-      latencyOffsetMs: value.clamp(-_latencyLimit, _latencyLimit)));
+  void _setLatency(double value) => _set(
+    _settings.copyWith(
+      latencyOffsetMs: value.clamp(-_latencyLimit, _latencyLimit),
+    ),
+  );
 
   Future<void> _measureLatency() async {
     final measured = await Navigator.of(context).push<double>(
@@ -84,9 +91,9 @@ class _SongListScreenState extends State<SongListScreen> {
             Text(
               'Piano Flow',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.2,
-                  ),
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+              ),
             ),
             const SizedBox(height: 6),
             Row(
@@ -139,7 +146,8 @@ class _SongListScreenState extends State<SongListScreen> {
               options: TimingTolerance.values,
               selected: _settings.tolerance,
               labelOf: (tolerance) => tolerance.label,
-              caption: 'Tolerans — '
+              caption:
+                  'Tolerans — '
                   '${_settings.tolerance.description.toLowerCase()}',
               onChanged: (value) => _set(_settings.copyWith(tolerance: value)),
             ),
@@ -157,7 +165,7 @@ class _SongListScreenState extends State<SongListScreen> {
               title: 'Kaçırdıklarım da duyulsun',
               subtitle: _settings.fillMissed
                   ? 'Basmadığın her nota kısık çalar — hiç basmazsan '
-                      'şarkı kendi çalar'
+                        'şarkı kendi çalar'
                   : 'Yalnız senin bastığın notalar duyulur',
               value: _settings.fillMissed,
               onChanged: (value) => _set(_settings.copyWith(fillMissed: value)),

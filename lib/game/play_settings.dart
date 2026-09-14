@@ -70,13 +70,12 @@ class PlaySettings {
     bool? quantize,
     bool? fillMissed,
     double? latencyOffsetMs,
-  }) =>
-      PlaySettings(
-        difficulty: difficulty ?? this.difficulty,
-        speed: speed ?? this.speed,
-        tolerance: tolerance ?? this.tolerance,
-        quantize: quantize ?? this.quantize,
-        fillMissed: fillMissed ?? this.fillMissed,
-        latencyOffsetMs: latencyOffsetMs ?? this.latencyOffsetMs,
-      );
+  }) => PlaySettings(
+    difficulty: difficulty ?? this.difficulty,
+    speed: speed ?? this.speed,
+    tolerance: tolerance ?? this.tolerance,
+    quantize: quantize ?? this.quantize,
+    fillMissed: fillMissed ?? this.fillMissed,
+    latencyOffsetMs: latencyOffsetMs ?? this.latencyOffsetMs,
+  );
 }

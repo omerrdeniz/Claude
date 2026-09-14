@@ -21,8 +21,8 @@ import 'sample_bank.dart';
 /// a handful of multiply-adds per partial and no transcendental calls.
 class SynthEngine {
   SynthEngine({this.sampleRate = 44100, this.maxVoices = 24})
-      : assert(sampleRate > 0),
-        assert(maxVoices > 0) {
+    : assert(sampleRate > 0),
+      assert(maxVoices > 0) {
     for (var i = 0; i < _tableSize; i++) {
       _sine[i] = math.sin(2 * math.pi * i / _tableSize);
     }
@@ -239,7 +239,8 @@ class _Voice {
     _sample = bank.samples[index];
     _position = 0;
     // Resample for the interval, and for the bank's rate against ours.
-    _step = math.pow(2, (note - bank.midis[index]) / 12.0).toDouble() *
+    _step =
+        math.pow(2, (note - bank.midis[index]) / 12.0).toDouble() *
         bank.sampleRate /
         sampleRate;
 

@@ -105,7 +105,8 @@ abstract final class AppTheme {
       chordColors[(across.clamp(0.0, 1.0) * (chordColors.length - 1)).round()];
 
   static Color beamColor(int beam, [int beamCount = 4]) => colorAcross(
-      beamCount <= 1 ? 0.5 : beam.clamp(0, beamCount - 1) / (beamCount - 1));
+    beamCount <= 1 ? 0.5 : beam.clamp(0, beamCount - 1) / (beamCount - 1),
+  );
 
   /// Bundled with the app, so text renders identically everywhere and needs
   /// no network — the web build otherwise fetches its font from a CDN.

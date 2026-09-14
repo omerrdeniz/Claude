@@ -178,23 +178,21 @@ class StagePainter extends CustomPainter {
       // the part the eye reads as the hit itself.
       final flash = (1 - life * 1.8).clamp(0.0, 1.0);
 
-      for (var i = 0; i < places.length; i++) {
-        final place = places[i];
-        // Each plume in its own note's colour: the light is what happened to
-        // *that* note, so it is that note that should be recognisable in it.
-        final colour = AppTheme.pitchColor(
-          spark.midis[i],
-          low: low,
-          high: high,
-        );
-        final x = g.xAtPosition(place);
-        final shaft = Rect.fromLTRB(x - half, y, x + half, y + reach);
+      // Each plume in its own note's colour: the light is what happened to
+      // *that* note, so it is that note that should be recognisable in it.
+      void plume(double x, int midi, double scale) {
+        final colour = AppTheme.pitchColor(midi, low: low, high: high);
+        final width = half * scale;
+        final length = reach * scale;
         canvas.drawRRect(
-          RRect.fromRectAndRadius(shaft, Radius.circular(half)),
+          RRect.fromRectAndRadius(
+            Rect.fromLTRB(x - width, y, x + width, y + length),
+            Radius.circular(width),
+          ),
           Paint()
             ..shader = ui.Gradient.linear(
               Offset(x, y),
-              Offset(x, y + reach),
+              Offset(x, y + length),
               [
                 Color.lerp(
                   colour,
@@ -215,10 +213,25 @@ class StagePainter extends CustomPainter {
         if (flash > 0) {
           canvas.drawCircle(
             Offset(x, y),
-            radius * (0.8 + (1 - flash) * 1.1),
+            radius * (0.8 + (1 - flash) * 1.1) * scale,
             Paint()..color = Colors.white.withValues(alpha: flash),
           );
         }
+      }
+
+      for (var i = 0; i < places.length; i++) {
+        plume(g.xAtPosition(places[i]), spark.midis[i], 1);
+      }
+
+      // And the ornament, where the touch carried one. It sounds as the
+      // finger lands, so it bursts with the rest of the touch — from the
+      // middle of it, where its mark was, and at the size that mark was.
+      // Without this the little note was the one thing on screen that
+      // reached the line and simply carried on falling.
+      final graceMidi = spark.graceMidi;
+      if (graceMidi != null) {
+        final middle = places.reduce((a, b) => a + b) / places.length;
+        plume(g.xAtPosition(middle), graceMidi, _graceScale);
       }
     }
   }
@@ -470,15 +483,28 @@ class StagePainter extends CustomPainter {
       // One mark for the whole touch, before the notes so they sit on top of
       // it. A chord is several notes and one hand: the instruction is to the
       // hand.
-      final ornament = [for (final m in group) ...m.grace];
-      if (ornament.isNotEmpty) {
+      //
+      // Only until the touch is answered. The little note sounds when the
+      // finger lands, and a hit ends at the line in a burst of light — so
+      // its mark has to end there too. It used to go on sliding down past
+      // the line while the notes it belonged to stopped dead, which is what
+      // the player saw as the ornament not bursting. The touch's own
+      // progress, not the head's: the head of an ornamented note stops at
+      // the line because the finger stays on it, and the mark is not being
+      // held.
+      final ornament = [
+        for (final m in group)
+          if (m.graceMidi != null) m.graceMidi!,
+      ];
+      final answered = progress > 1 && dots.every((dot) => dot.isPlayed);
+      if (ornament.isNotEmpty && !answered) {
         _paintGrace(
           canvas,
           g,
           dots,
           headOf(dots.first),
           radius,
-          ornament,
+          ornament.reduce((a, b) => a < b ? a : b),
           fade,
         );
       }
@@ -762,7 +788,7 @@ class StagePainter extends CustomPainter {
     List<_Dot> dots,
     double progress,
     double radius,
-    List<Note> ornament,
+    int midi,
     double fade,
   ) {
     var low = dots.first.across, high = dots.first.across;
@@ -773,13 +799,8 @@ class StagePainter extends CustomPainter {
     final centre = g.positionAtPosition((low + high) / 2, progress);
     final at = Offset(centre.dx, centre.dy + radius * _graceDrop);
 
-    // Its own pitch, like every other note on the screen. Where an ornament
-    // is more than one note the lowest names it, which is the one the ear
-    // hears the ornament as.
+    // Its own pitch, like every other note on the screen.
     final (lowest, highest) = chart.pitchRange;
-    final midi = ornament
-        .map((note) => note.midi)
-        .reduce((a, b) => a < b ? a : b);
     final colour = AppTheme.pitchColor(midi, low: lowest, high: highest);
 
     final body = RRect.fromRectAndRadius(

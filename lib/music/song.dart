@@ -14,9 +14,9 @@ class Song {
     required List<Note> notes,
     this.beatsPerBar = 4,
     this.source = '',
-  })  : assert(bpm > 0),
-        assert(beatsPerBar > 0),
-        notes = List.unmodifiable(_sorted(notes));
+  }) : assert(bpm > 0),
+       assert(beatsPerBar > 0),
+       notes = List.unmodifiable(_sorted(notes));
 
   final String id;
   final String title;
@@ -36,9 +36,11 @@ class Song {
 
   static List<Note> _sorted(List<Note> notes) {
     final copy = [...notes];
-    copy.sort((a, b) => a.beat != b.beat
-        ? a.beat.compareTo(b.beat)
-        : a.midi.compareTo(b.midi));
+    copy.sort(
+      (a, b) => a.beat != b.beat
+          ? a.beat.compareTo(b.beat)
+          : a.midi.compareTo(b.midi),
+    );
     return copy;
   }
 
@@ -52,8 +54,8 @@ class Song {
   double get lengthInBeats =>
       notes.fold(0.0, (max, n) => n.endBeat > max ? n.endBeat : max);
 
-  Duration get duration => Duration(
-      milliseconds: (lengthInBeats / bpm * 60 * 1000).round());
+  Duration get duration =>
+      Duration(milliseconds: (lengthInBeats / bpm * 60 * 1000).round());
 
   /// Lowest and highest pitch, which the game uses to lay out the beams.
   (int, int) get pitchRange {

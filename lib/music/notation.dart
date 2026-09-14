@@ -20,7 +20,18 @@ import 'note.dart';
 const _pitchClasses = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11};
 
 const _noteNames = [
-  'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+  'C',
+  'C#',
+  'D',
+  'D#',
+  'E',
+  'F',
+  'F#',
+  'G',
+  'G#',
+  'A',
+  'A#',
+  'B',
 ];
 
 final _noteNamePattern = RegExp(r'^([A-Ga-g])([#b]*)(-?\d+)$');
@@ -29,7 +40,8 @@ final _noteNamePattern = RegExp(r'^([A-Ga-g])([#b]*)(-?\d+)$');
 int noteToMidi(String name) {
   final match = _noteNamePattern.firstMatch(name.trim());
   if (match == null) throw FormatException('Bad note name: "$name"');
-  var midi = _pitchClasses[match.group(1)!.toUpperCase()]! +
+  var midi =
+      _pitchClasses[match.group(1)!.toUpperCase()]! +
       (int.parse(match.group(3)!) + 1) * 12;
   for (final accidental in match.group(2)!.split('')) {
     midi += accidental == '#' ? 1 : -1;
@@ -41,8 +53,7 @@ int noteToMidi(String name) {
 }
 
 /// 60 -> 'C4'. Sharps only; this is for display and debugging.
-String midiToNote(int midi) =>
-    '${_noteNames[midi % 12]}${midi ~/ 12 - 1}';
+String midiToNote(int midi) => '${_noteNames[midi % 12]}${midi ~/ 12 - 1}';
 
 /// Parse a sequence into notes with absolute onsets.
 ///
@@ -71,7 +82,8 @@ List<Note> seq(
 
     final at = body.indexOf('@');
     if (at != -1) {
-      noteVelocity = double.tryParse(body.substring(at + 1)) ??
+      noteVelocity =
+          double.tryParse(body.substring(at + 1)) ??
           (throw FormatException('Bad velocity in "$token"'));
       if (noteVelocity <= 0 || noteVelocity > 1) {
         throw FormatException('Velocity must be in 0..1 in "$token"');
@@ -81,7 +93,8 @@ List<Note> seq(
 
     final star = body.indexOf('*');
     if (star != -1) {
-      repeat = int.tryParse(body.substring(star + 1)) ??
+      repeat =
+          int.tryParse(body.substring(star + 1)) ??
           (throw FormatException('Bad repeat count in "$token"'));
       if (repeat < 1) throw FormatException('Bad repeat count in "$token"');
       body = body.substring(0, star);
@@ -99,13 +112,15 @@ List<Note> seq(
     for (var r = 0; r < repeat; r++) {
       if (parts[0].toUpperCase() != 'R') {
         for (final pitch in parts[0].split('+')) {
-          notes.add(Note(
-            beat: _round(cursor),
-            midi: noteToMidi(pitch),
-            duration: _round(duration * gate),
-            velocity: noteVelocity,
-            hand: hand,
-          ));
+          notes.add(
+            Note(
+              beat: _round(cursor),
+              midi: noteToMidi(pitch),
+              duration: _round(duration * gate),
+              velocity: noteVelocity,
+              hand: hand,
+            ),
+          );
         }
       }
       cursor = _round(cursor + duration);
