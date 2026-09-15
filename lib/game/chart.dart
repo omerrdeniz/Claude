@@ -460,8 +460,9 @@ class Chart {
 
   /// Cut the relentless stretches into figures, and those into steps.
   ///
-  /// A figure is [figureLength] or more touches of one hand, each within
-  /// [figureGapSeconds] of the last. Notes already in a run are left out:
+  /// A figure is a stretch of one hand's touches, each within
+  /// [figureGapSeconds] of the last, lasting at least [figureLeastSeconds].
+  /// Notes already in a run are left out:
   /// a run cannot be tapped at all and has its own answer, and two mechanics
   /// on one note is one too many.
   static Map<int, List<FigureStep>> _findFigures(
@@ -488,7 +489,8 @@ class Chart {
         if (gap > onsetTolerance * secondsPerBeat && gap <= figureGapSeconds) {
           continue;
         }
-        if (i - start >= figureLength) {
+        if ((line[i - 1].beat - line[start].beat) * secondsPerBeat >=
+            figureLeastSeconds) {
           final id = nextId++;
           figures[id] = _cutIntoSteps(
             line.sublist(start, i),
@@ -550,46 +552,42 @@ class Chart {
       final from = rest[at - 1 > -1 ? at - 1 : 0];
       final before = at == 0 ? figure.first : from;
       final net = notes.last.notes.first.midi - before.notes.first.midi;
-      final Swipe direction;
-      if (net >= figureTurnSemitones) {
-        direction = Swipe.right;
-      } else if (net <= -figureTurnSemitones) {
-        direction = Swipe.left;
-      } else {
-        // The music stays where it is — the Rondo's opening turns on two
-        // notes for five beats. There is no way to point, so the hand is
-        // asked for the other axis, and for the opposite of last time so it
-        // keeps moving.
-        direction = steps.isNotEmpty && steps.last.direction == Swipe.up
-            ? Swipe.down
-            : Swipe.up;
+
+      // The music stays where it is — the Rondo's opening turns on two notes
+      // for five beats — or it goes the way the hand is already going. Either
+      // way there is nothing to point at, so the hand is asked for the other
+      // axis, and for the opposite of last time so it keeps moving.
+      final other = steps.isNotEmpty && steps.last.direction == Swipe.up
+          ? Swipe.down
+          : Swipe.up;
+      var direction = net >= figureTurnSemitones
+          ? Swipe.right
+          : net <= -figureTurnSemitones
+          ? Swipe.left
+          : other;
+      // Never the same way twice running. Asking a hand already travelling
+      // left to go left again is asking it to keep going, and that is what
+      // the player found unplayable. Joining the two into one movement was
+      // tried instead and was worse: the same eight-note passage came out as
+      // one movement in one place and two in another, and one long movement
+      // is a tap and then a wait — *"tek parça olursa basıyor ve
+      // bekliyoruz."* The hand stays in it.
+      if (steps.isNotEmpty && direction == steps.last.direction) {
+        direction = other;
       }
 
       steps.add(FigureStep(taps: notes, direction: direction, from: before));
       at += take;
     }
 
-    // Two movements the same way are one movement. Asking a hand already
-    // travelling left to go left again is asking it to keep going, which is
-    // the complaint this whole rule exists to answer — so neighbouring steps
-    // that point the same way are joined, and every step now asks for a
-    // direction the hand is not already going in.
-    final merged = <FigureStep>[];
-    for (final step in steps) {
-      if (merged.isNotEmpty && merged.last.direction == step.direction) {
-        merged.last.taps.addAll(step.taps);
-        continue;
-      }
-      merged.add(step);
-    }
-    for (var i = 0; i < merged.length; i++) {
-      merged[i].from.figureTurn = merged[i].direction;
-      for (final tap in merged[i].taps) {
+    for (var i = 0; i < steps.length; i++) {
+      steps[i].from.figureTurn = steps[i].direction;
+      for (final tap in steps[i].taps) {
         tap.figureId = id;
         tap.figureStep = i;
       }
     }
-    return merged;
+    return steps;
   }
 
   /// The most two touches of a figure may be apart, in seconds.
@@ -601,9 +599,19 @@ class Chart {
   /// the Entertainer, both a fifth of a second a note.
   static const double figureGapSeconds = 0.21;
 
-  /// How many notes in a row it takes to be worth a gesture rather than
-  /// taps. Three is a flourish; four is a figure.
-  static const int figureLength = 4;
+  /// How long a hand has to be kept at it before the gesture is worth having,
+  /// in seconds.
+  ///
+  /// Four notes was the first line and it was too low: Für Elise is full of
+  /// four-note groups a breath apart, and turning each of them into a touch
+  /// and a movement is not relief, it is a second thing to get right — *"bizim
+  /// amacımız bir el çok defa arka arkaya tıklama yapıyorsa bu mekaniği
+  /// eklemekti."* Four notes is also not a fixed amount of work: at the widest
+  /// gap a figure allows it is six tenths of a second, and at the tightest it
+  /// is a fifth. What tires a hand is being kept at it, so the line is a
+  /// length of time — and at [figureGapSeconds] a second and a half is seven
+  /// notes or more without a break.
+  static const double figureLeastSeconds = 1.2;
 
   /// How much music one movement of the hand is worth, in seconds.
   ///

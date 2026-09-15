@@ -3,11 +3,13 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v119):** hızlı seriler artık tek tek basmak yerine el
-hareketiyle çalınıyor, bir hareket **bir saniyelik müzik** ediyor (3 nota
-değil), ve ekranda bir hareketin notalarını bir **iplik** bağlıyor, yönü de
-elin üstünde olduğu notanın yanındaki beyaz **çift chevron** söylüyor.
-Ayrıntısı "Figür" bölümünde. Ondan önce: ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v120):** hızlı seriler artık tek tek basmak yerine el
+hareketiyle çalınıyor. Mekanik yalnızca bir el **kesintisiz 1.2 saniye**
+(en az 7 nota) çalıştırıldığında devreye giriyor; bir hareket **bir saniyelik
+müzik** ediyor ve aynı yön iki kez istenmiyor, yani uzun bölümler hep aynı
+şekilde ikiye bölünüyor. Ekranda bir hareketin notalarını bir **iplik**
+bağlıyor, yönü de elin üstünde olduğu notanın yanındaki beyaz **çift
+chevron** söylüyor. Ayrıntısı "Figür" bölümünde. Ondan önce: ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -112,7 +114,7 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
 
-## Figür: hareketle çalınan hızlı seriler (v117-v119)
+## Figür: hareketle çalınan hızlı seriler (v117-v120)
 
 Oyuncu Für Elise'i oynarken: *"arka arkaya gelen hızlı notalara sürekli
 basmaya çalışmak oyun zevkini ciddi azaltıyor. Bu seriler başladığında ilk
@@ -130,8 +132,9 @@ bir soru ama oyun için asıl soru *"bu yapmaya değer mi"*. Ölçü doğruydu,
 soru yanlıştı — v115 turunda "0.208 hızlı değil" diye kapatmıştım.
 
 - **Figür ≠ koşu.** Koşu tapılamaz (70 ms), boncukla taşınıyor. Figür sadece
-  bitmek bilmiyor: 0.21 saniyeye kadar aralık, en az 4 nota, **ve zaten
-  koşuda olan notalar dışarıda** (bir notaya iki mekanik fazla).
+  bitmek bilmiyor: 0.21 saniyeye kadar aralık, **kesintisiz en az 1.2 saniye**
+  (`figureLeastSeconds`, v120 — aşağıya bakın), **ve zaten koşuda olan notalar
+  dışarıda** (bir notaya iki mekanik fazla).
 - **İlk nota dokunuşla çalınır** — figüre *girilir*, ve oyunun en eski kuralı
   ilk sesi oyuncunun parmağının çıkarmasını istiyor.
 - **Gerisi adımlar hâlinde**, her adımın bir yönü var
@@ -167,16 +170,56 @@ nota saymıyor; ne sıklıkta bir şey yapması istendiği bir **süre**.
 - Sonuç: Für Elise'in girişindeki 9 nota **tek dokunuş + tek sola kaydırma**.
   Adım sayısı 153 → 111, ortanca adım **0.83 s**.
 
+### Eşik: dört nota figür değil (v120)
+
+Oyuncu: *"Bu mekaniğin çalışması için bir eşik olması lazım. Für Elise'de 4'lü
+notalar için de bu mekanik eklenmiş. Bizim amacımız bir el çok defa arka
+arkaya tıklama yapıyorsa bu mekaniği eklemekti."*
+
+İlk eşik **4 nota** idi ve düşüktü. Für Elise 4'lü gruplarla dolu (her 1.25
+saniyede bir, aralarında 0.63 saniye nefes) — bunları dokunuş + hareket'e
+çevirmek rahatlama değil, **ikinci bir doğru yapılacak iş**. Üstelik 4 nota
+sabit bir yük de değil: figürün izin verdiği en geniş aralıkta 0.63 saniye,
+en sıkısında 0.2 saniye.
+
+Eli yoran **kesintisiz tutulmak**, o yüzden eşik bir süre:
+`figureLeastSeconds = 1.2`. `figureGapSeconds`'ta bu **en az 7 nota** demek.
+Ölçüldü:
+
+| eşik | Für Elise figür | en kısa figür | Entertainer figür |
+|---|---|---|---|
+| 4 nota (v119) | 72 | 4 | 92 |
+| 0.9 s | 18 | 8 | 40 |
+| **1.2 s** | **18** | **8** | **34** |
+| 1.5 s | 17 | 9 | 9 |
+| 2.0 s | 3 | 16 | 6 |
+
+1.5 saniye Entertainer'ı 9 figüre düşürüyor — oysa oyuncunun ikinci şikâyeti
+oydu. 1.2 ikisini de koruyor.
+
+### Aynı yön iki kez istenmiyor — ama birleştirilmiyor da (v120)
+
+v119'da aynı yönü isteyen komşu adımlar **birleştiriliyordu**. Yanlıştı:
+aynı 8-10 notalık bölüm bir yerde tek hareket, başka bir yerde iki hareket
+çıkıyordu (yön dizisi "ll" ise birleşiyor, "rl" ise bölünüyordu). Oyuncu:
+*"Bence bölünmesi daha iyi çünkü oyuncuyu dahil etmiş oluyoruz. Tek parça
+olursa basıyor ve bekliyoruz."*
+
+Artık birleştirme yok: bir adımın yönü bir öncekiyle aynı çıkarsa **diğer
+eksene** düşüyor (yukarı/aşağı, bir öncekinin tersi) — müziğin kendi üstünde
+döndüğü durum için zaten var olan kural. Sonuç: Für Elise'in bütün 9-10
+notalık bölümleri **istisnasız 2 hareket**, [5 nota, 3-4 nota].
+
 Kapsam (hamle = dokunuş + hareket):
 
-| parça | figür | adım | nota | hamle | ortanca adım |
-|---|---|---|---|---|---|
-| Halvorsen | 55 | 104 | 772/940 | %65 az | 1.00 s |
-| Für Elise | 72 | 111 | 525/924 | %37 az | 0.83 s |
-| Entertainer | 92 | 107 | 550/1372 | %26 az | 0.63 s |
-| Passacaglia (kolay) | 1 | 8 | 97/405 | %22 az | 2.28 s |
-| Passacaglia | 12 | 25 | 214/1971 | %9 az | 1.01 s |
-| Kanon, Gnossienne, Prelüd, Neşeye Övgü, Vals, Rising Sun | — | | | değişmez | |
+| parça | figür | adım | nota | hamle | en kısa figür | ortanca adım |
+|---|---|---|---|---|---|---|
+| Halvorsen | 31 | 104 | 652/940 | %55 az | 7 | 1.20 s |
+| Für Elise | 18 | 62 | 308/924 | %25 az | 8 | 0.83 s |
+| Entertainer | 34 | 53 | 296/1372 | %15 az | 7 | 1.04 s |
+| Passacaglia (kolay) | 1 | 14 | 97/405 | %20 az | 97 | 1.14 s |
+| Passacaglia | 6 | 29 | 184/1971 | %8 az | 11 | 1.01 s |
+| Kanon, Gnossienne, Prelüd, Neşeye Övgü, Nokturn, Vals, Rising Sun | — | | | değişmez | | |
 
 ### Ekranda: iplik + chevron (v119)
 

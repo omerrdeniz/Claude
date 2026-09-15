@@ -611,9 +611,36 @@ void main() {
       // zevkini ciddi azaltıyor" — said of this piece and of the Entertainer,
       // whose notes are the same fifth of a second apart.
       final chart = Chart.build(shipped('fur-elise'));
-      expect(chart.figures, isNotEmpty);
+      expect(chart.figures, hasLength(greaterThan(10)));
       final inFigures = chart.taps.where((t) => t.figureId != null).length;
-      expect(inFigures, greaterThan(chart.taps.length ~/ 3));
+      expect(inFigures, greaterThan(chart.taps.length ~/ 4));
+    });
+
+    test('but a short flurry is not one', () {
+      // Four notes was the first line and it caught the rondo's four-note
+      // groups, which are a breath apart and perfectly tappable: *"bizim
+      // amacımız bir el çok defa arka arkaya tıklama yapıyorsa bu mekaniği
+      // eklemekti."* What tires a hand is being kept at it, so the line is a
+      // length of time.
+      for (final song in shippedSongs) {
+        final secondsPerBeat = 60 / song.bpm;
+        for (final d in Difficulty.values) {
+          final chart = Chart.build(song, difficulty: d);
+          for (final entry in chart.figures.entries) {
+            final steps = entry.value;
+            final caught = chart.taps.singleWhere(
+              (t) => t.figureId == entry.key && t.figureStep == -1,
+            );
+            final seconds =
+                (steps.last.taps.last.beat - caught.beat) * secondsPerBeat;
+            expect(
+              seconds,
+              greaterThanOrEqualTo(Chart.figureLeastSeconds),
+              reason: '${song.title}/${d.name} at ${caught.beat}',
+            );
+          }
+        }
+      }
     });
 
     test('and the unhurried pieces have none', () {
@@ -745,11 +772,11 @@ void main() {
     test('every step says which way the hand goes', () {
       final chart = Chart.build(shipped('fur-elise'));
       final opening = chart.figures.values.first;
-      // The Rondo turns on two notes and then falls away. It wanders, but it
-      // ends lower than it began, so the whole of it is one movement left —
-      // one touch and one slide for the eight notes after the first.
-      expect(opening.map((s) => s.direction).toList(), [Swipe.left]);
-      expect(opening.single.taps, hasLength(8));
+      // The Rondo turns on two notes and then falls away: a first movement
+      // to the left, and — because the music is still falling and the hand
+      // is already going that way — a second one out of the other axis.
+      expect(opening.map((s) => s.direction).toList(), [Swipe.left, Swipe.up]);
+      expect(opening.map((s) => s.taps.length).toList(), [5, 3]);
     });
 
     test('and music that stays where it is asks for the other axis', () {

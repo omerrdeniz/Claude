@@ -679,17 +679,11 @@ void main() {
   });
 
   group('a figure is answered by moving the hand', () {
-    // Eight notes a fifth of a second apart in one hand: fast enough that
-    // tapping every one is a chore, slow enough that a hand can gesture.
+    // Eight notes a fifth of a second apart in one hand, a second and a half
+    // of them without a break: fast enough that tapping every one is a chore,
+    // slow enough that a hand can gesture, long enough to be worth it.
     Song relentless() =>
         songOf([for (var i = 0; i < 8; i++) note(i * 0.4, 72 + i)]);
-
-    /// The same, but it climbs for a second and then falls away — two
-    /// movements rather than one.
-    Song turning() => songOf([
-      for (var i = 0; i < 6; i++) note(i * 0.4, 72 + i),
-      for (var i = 0; i < 6; i++) note(2.4 + i * 0.4, 76 - i),
-    ]);
 
     (PlaySession, int, List<FigureStep>) caught() {
       final session = sessionFor(relentless(), difficulty: Difficulty.normal);
@@ -726,19 +720,18 @@ void main() {
       expect(session.beginFigure(left, 0.5), isNull, reason: 'the other hand');
     });
 
-    test('the right movement carries the whole burst', () {
-      // *"Bir kere sürüklediğimde sonraki notalar çalmalı."* Seven notes in
-      // a second and a half all go one way, so they are one movement — the
-      // hand is not asked again half way through.
+    test('the right movement plays a whole movement of notes', () {
+      // *"Bir kere sürüklediğimde sonraki notalar çalmalı."* Five notes on
+      // one flick — the hand is not asked again half way through them.
       final (session, id, steps) = caught();
-      expect(steps, hasLength(1), reason: 'one way, one movement');
+      expect(steps.first.taps, hasLength(5));
       swipe(session, id, steps.first.direction);
       for (var beat = 0.0; beat <= 3.0; beat += 0.02) {
         seek(session, beat);
       }
       expect(
         engine.struck.map((s) => s.$1),
-        containsAll([for (final t in steps.single.taps) t.notes.first.midi]),
+        containsAll([for (final t in steps.first.taps) t.notes.first.midi]),
       );
     });
 
@@ -774,13 +767,11 @@ void main() {
     });
 
     test('but a movement is only worth its own step', () {
-      // Music that turns asks the hand to turn with it, and the second half
-      // waits for the second movement.
-      final session = sessionFor(turning(), difficulty: Difficulty.normal);
-      final steps = session.chart.figures.values.single;
-      expect(steps, hasLength(2), reason: 'up and then down');
-      seek(session, 0);
-      final id = session.beginFigure(right, 0.5)!;
+      // The rest of the figure waits for the next movement. One movement for
+      // the whole of it was tried and is worse: *"tek parça olursa basıyor ve
+      // bekliyoruz."*
+      final (session, id, steps) = caught();
+      expect(steps, hasLength(2), reason: 'two movements');
       swipe(session, id, steps.first.direction);
       for (var beat = 0.0; beat <= 5.0; beat += 0.02) {
         seek(session, beat);
@@ -803,8 +794,8 @@ void main() {
       // nothing, which is the mistake runs made twice.
       final session = sessionFor(
         songOf([
-          for (var i = 0; i < 4; i++) note(i * 0.4, 72 + i * 2),
-          for (var i = 0; i < 4; i++) note(1.8 + i * 0.4, 79 - i * 2),
+          for (var i = 0; i < 8; i++) note(i * 0.4, 72 + i),
+          for (var i = 0; i < 8; i++) note(3.4 + i * 0.4, 79 - i),
         ]),
         difficulty: Difficulty.normal,
       );
@@ -812,21 +803,25 @@ void main() {
       final first = session.chart.figures.values.first;
       final second = session.chart.figures.values.last;
 
+      // The first figure, answered to the end so there is nothing left in it.
       seek(session, 0);
       final one = session.beginFigure(right, 0.5)!;
-      swipe(session, one, first.first.direction);
-      for (var beat = 0.0; beat <= 1.4; beat += 0.02) {
-        seek(session, beat);
+      for (var i = 0; i < first.length; i++) {
+        swipe(session, one, first[i].direction);
+        final until = i + 1 < first.length ? first[i + 1].taps.first.beat : 3.0;
+        for (var beat = session.beat; beat <= until; beat += 0.02) {
+          seek(session, beat);
+        }
       }
       session.endFigure(one);
 
-      // Early on the second figure's first note, while the first figure's
-      // judging window has not quite shut.
-      seek(session, 1.5);
+      // Early on the second figure, while the first one's judging window has
+      // not quite shut.
+      seek(session, 3.1);
       final two = session.beginFigure(right, 0.5);
       expect(two, isNotNull);
       swipe(session, two!, second.first.direction);
-      for (var beat = 1.5; beat <= 3.4; beat += 0.02) {
+      for (var beat = 3.1; beat <= 6.4; beat += 0.02) {
         seek(session, beat);
       }
       final heard = engine.struck.map((s) => s.$1).toSet();

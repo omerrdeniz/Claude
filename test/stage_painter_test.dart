@@ -1370,10 +1370,11 @@ void main() {
     }
 
     test('the mark stands clear of every note of the touch it is beside', () {
-      // The Entertainer plays a chord here whose notes are a seventh apart,
-      // and the mark was placed from the first of them — which put it exactly
-      // on the second: *"hangi nota hangi yön hepsi karışıyor."*
-      const at = 21.25;
+      // The Entertainer plays a three-note chord here spread across most of
+      // the hand's zone, and the mark was placed from the first note of it —
+      // which put it on one of the others: *"hangi nota hangi yön hepsi
+      // karışıyor."*
+      const at = 11.25;
       final chart = Chart.build(
         shipped('entertainer'),
         difficulty: Difficulty.normal,
@@ -1405,14 +1406,14 @@ void main() {
     });
 
     test('a thread runs from the note the hand is on to the last it plays', () {
-      // Für Elise's opening is one movement and eight notes. The thread is
-      // what says *those* eight: a direction on its own says what to do but
-      // not to what.
+      // The first movement of Für Elise's opening. The thread is what says
+      // *these* notes: a direction on its own says what to do but not to
+      // what.
       final chart = Chart.build(
         shipped('fur-elise'),
         difficulty: Difficulty.normal,
       );
-      final step = chart.figures.values.first.single;
+      final step = chart.figures.values.first.first;
       const g = StageGeometry(size: phone);
       double yOf(double beat) => g.yAt(StageGeometry.progressFor(beat, 4));
 
