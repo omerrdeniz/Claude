@@ -86,6 +86,16 @@ class Tap {
   int? figureId;
   int figureStep = -1;
 
+  /// The movement the hand has to make *from this note*, if any.
+  ///
+  /// The mark used to sit on the first note of the step it opened, which is
+  /// not the note the hand is on when it has to move: *"hangi nota hangi yön
+  /// hepsi karışıyor."* A movement is made from somewhere. So it is written
+  /// on the note the finger is already on — the touch that catches the
+  /// figure for the first movement, and the last note of the movement before
+  /// for the rest.
+  Swipe? figureTurn;
+
   /// Position within [runId]'s run, counting from zero.
   int runIndex = 0;
 
@@ -243,10 +253,15 @@ enum Swipe { left, right, up, down }
 ///
 /// See [Chart.figures].
 class FigureStep {
-  FigureStep({required this.taps, required this.direction});
+  FigureStep({required this.taps, required this.direction, required this.from});
 
   final List<Tap> taps;
   final Swipe direction;
+
+  /// The note the hand is on when it has to move: the touch that catches the
+  /// figure for the first movement, the last note of the movement before for
+  /// the rest. Where the mark goes, and where the ribbon starts.
+  final Tap from;
 }
 
 /// A song laid out for play: what the player touches, and what plays itself.
@@ -550,7 +565,7 @@ class Chart {
             : Swipe.up;
       }
 
-      steps.add(FigureStep(taps: notes, direction: direction));
+      steps.add(FigureStep(taps: notes, direction: direction, from: before));
       at += take;
     }
 
@@ -568,6 +583,7 @@ class Chart {
       merged.add(step);
     }
     for (var i = 0; i < merged.length; i++) {
+      merged[i].from.figureTurn = merged[i].direction;
       for (final tap in merged[i].taps) {
         tap.figureId = id;
         tap.figureStep = i;

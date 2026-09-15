@@ -699,6 +699,35 @@ void main() {
       }
     });
 
+    test('the mark goes on the note the hand is on, not the one it plays', () {
+      // *"Hangi nota hangi yön hepsi karışıyor."* A movement is made *from*
+      // somewhere: the touch that catches the figure for the first one, the
+      // last note of the movement before for the rest.
+      for (final song in shippedSongs) {
+        final chart = Chart.build(song);
+        final marked = <Tap>{};
+        for (final entry in chart.figures.entries) {
+          final steps = entry.value;
+          final caught = chart.taps.singleWhere(
+            (t) => t.figureId == entry.key && t.figureStep == -1,
+          );
+          expect(steps.first.from, same(caught), reason: song.title);
+          for (var i = 1; i < steps.length; i++) {
+            expect(steps[i].from, same(steps[i - 1].taps.last));
+          }
+          for (final step in steps) {
+            expect(step.from.figureTurn, step.direction, reason: song.title);
+            marked.add(step.from);
+          }
+        }
+        // And nothing else carries one.
+        for (final tap in chart.taps) {
+          if (marked.contains(tap)) continue;
+          expect(tap.figureTurn, isNull, reason: '${song.title} at ${tap.beat}');
+        }
+      }
+    });
+
     test('a note is never both a run and a figure', () {
       // Two mechanics on one note is one too many: a run cannot be tapped at
       // all and has its own answer.

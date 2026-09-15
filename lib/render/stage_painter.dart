@@ -434,6 +434,9 @@ class StagePainter extends CustomPainter {
   }
 
   void _paintNotes(Canvas canvas, StageGeometry g) {
+    // Which notes one movement of the hand is worth, under everything else.
+    _paintFigureRibbons(canvas, g);
+
     // Far notes first, so nearer ones overlap them.
     final visible = chart.visibleAt(beat, windowInBeats).toList()
       ..sort((a, b) => b.beat.compareTo(a.beat));
@@ -558,22 +561,27 @@ class StagePainter extends CustomPainter {
         );
       }
 
-      // The movement each step of a figure asks for, over the note it starts
-      // on. See [Chart.figures].
+      // The movement the hand has to make from this note, over the note
+      // itself. See [Tap.figureTurn].
       for (final member in group) {
-        final figureId = member.figureId;
-        if (figureId == null || member.figureStep < 0) continue;
-        final step = chart.figures[figureId]![member.figureStep];
-        if (!identical(step.taps.first, member)) continue;
-        final (low, high) = chart.pitchRange;
+        final turn = member.figureTurn;
+        if (turn == null) continue;
+        // Clear of everything this hand plays at this moment, not just of
+        // the first note of it: the mark goes beside the touch, and a chord
+        // is several notes wide.
+        var lo = dots.first.across, hi = dots.first.across;
+        for (final dot in dots) {
+          if (dot.across < lo) lo = dot.across;
+          if (dot.across > hi) hi = dot.across;
+        }
         _paintStepArrow(
           canvas,
           g,
-          member.noteAcross.first,
+          lo,
+          hi,
           headOf(dots.first),
           radius,
-          step.direction,
-          AppTheme.pitchColor(member.notes.first.midi, low: low, high: high),
+          turn,
           fade,
         );
       }
@@ -976,26 +984,103 @@ class StagePainter extends CustomPainter {
     );
   }
 
-  /// The movement a step of a figure asks for, drawn over the note it begins
-  /// on.
+  /// A thread through the notes one movement of the hand is worth, from the
+  /// note the hand is on to the last note the movement plays.
   ///
-  /// A plain arrowhead and nothing else. It is an instruction to the hand,
-  /// not a thing to aim at, and the screen already has enough shapes that
-  /// mean *touch me*: it sits clear above the note, where the ornament's mark
-  /// sits clear below.
+  /// The mark alone was not enough: *"hangi nota hangi yön hepsi karışıyor."*
+  /// A direction on its own says what to do but not to what, and a figure is
+  /// a dozen notes falling among a dozen others. The thread says *these*, and
+  /// the mark at its foot says which way — one object rather than two.
+  ///
+  /// It shortens from the bottom as the notes go by, so what is left on the
+  /// screen is what is left to play.
+  void _paintFigureRibbons(Canvas canvas, StageGeometry g) {
+    if (chart.figures.isEmpty) return;
+    final (low, high) = chart.pitchRange;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = g.noteWidth * _ribbonWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    for (final steps in chart.figures.values) {
+      for (final step in steps) {
+        final path = Path();
+        var points = 0;
+        for (final tap in [step.from, ...step.taps]) {
+          final at = StageGeometry.progressFor(tap.beat - beat, windowInBeats);
+          if (at < 0 || at > 1) continue;
+          final where = g.positionAtPosition(tap.noteAcross.first, at);
+          if (points == 0) {
+            path.moveTo(where.dx, where.dy);
+          } else {
+            path.lineTo(where.dx, where.dy);
+          }
+          points += 1;
+        }
+        if (points < 2) continue;
+        canvas.drawPath(
+          path,
+          paint
+            ..color = AppTheme.pitchColor(
+              step.from.notes.first.midi,
+              low: low,
+              high: high,
+            ).withValues(alpha: _ribbonInk),
+        );
+      }
+    }
+  }
+
+  /// How thick the thread is, as a share of a note's width.
+  static const double _ribbonWidth = 0.16;
+
+  /// And how present. Faint: it is the background of the gesture, not the
+  /// gesture.
+  static const double _ribbonInk = 0.30;
+
+  /// The movement the hand has to make from this note, drawn over it.
+  ///
+  /// Two chevrons, the way every fast-forward button in the world is drawn.
+  /// It was one plain arrowhead, which at this size is a triangle — and four
+  /// triangles pointing four ways, scattered over falling notes, is what the
+  /// player was looking at when they said nothing could be told apart. A
+  /// chevron pair has a direction you can read without deciding which way is
+  /// which, and nothing else on the screen has that shape: bars and threads
+  /// are strokes, notes and sparks are round.
+  ///
+  /// It sits **beside** the note, on the outer side of the screen. Above was
+  /// the obvious place and it is the one place there is never room: a figure
+  /// is by definition notes packed close together, so a mark over one of them
+  /// lands on the one before. Sideways there is half a screen of nothing.
   void _paintStepArrow(
     Canvas canvas,
     StageGeometry g,
-    double across,
+    double lo,
+    double hi,
     double progress,
     double radius,
     Swipe direction,
-    Color colour,
     double fade,
   ) {
-    final note = g.positionAtPosition(across, progress);
-    final at = Offset(note.dx, note.dy - radius * _arrowLift);
-    final size = radius * _arrowSize;
+    final loX = g.xAtPosition(lo);
+    final hiX = g.xAtPosition(hi);
+    final span = radius * (_arrowApart + _arrowSize + _arrowStroke);
+    double beside(double side) =>
+        (side > 0 ? hiX : loX) + side * radius * _arrowAside;
+
+    // Outward if it fits — the outer edge of the screen is the emptiest part
+    // of it — and inward if it does not. A note at the far edge of its hand's
+    // zone has no room outside it, and a mark squeezed against the edge lands
+    // back on the note it was moved off.
+    var side = (loX + hiX) / 2 < g.size.width / 2 ? -1.0 : 1.0;
+    if (beside(side) case final x when x < span || x > g.size.width - span) {
+      side = -side;
+    }
+    final at = Offset(
+      beside(side).clamp(span, g.size.width - span),
+      g.yAt(progress),
+    );
 
     // Along the way it points, and across it.
     final (ax, ay) = switch (direction) {
@@ -1004,27 +1089,59 @@ class StagePainter extends CustomPainter {
       Swipe.up => (0.0, -1.0),
       Swipe.down => (0.0, 1.0),
     };
+    final (px, py) = (-ay, ax);
 
-    final tip = Offset(at.dx + ax * size, at.dy + ay * size);
-    final back = Offset(at.dx - ax * size * 0.5, at.dy - ay * size * 0.5);
-    // The two barbs sit either side of the shaft, which is the other axis.
-    final wing = Offset(ay * size * 0.7, ax * size * 0.7);
+    final reach = radius * _arrowSize;
+    final wing = radius * _arrowWing;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * _arrowStroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      // White, alone among the marks on this screen. Everything else is
+      // coloured by pitch because everything else *is* music; this is the
+      // one shape that is an instruction to a hand, and the thread already
+      // carries the colour that says which notes it belongs to. It also has
+      // to stay readable lying over a bright note, which a note-coloured
+      // mark on a note cannot.
+      ..color = Colors.white.withValues(alpha: 0.95 * fade);
 
-    canvas.drawPath(
-      Path()
-        ..moveTo(tip.dx, tip.dy)
-        ..lineTo(back.dx + wing.dx, back.dy + wing.dy)
-        ..lineTo(back.dx - wing.dx, back.dy - wing.dy)
-        ..close(),
-      Paint()..color = colour.withValues(alpha: 0.9 * fade),
-    );
+    // Under it, the same shape in the dark. The notes are packed close and
+    // two hands' worth of them are on the screen at once, so a mark will
+    // sometimes land on one however it is placed; an outline keeps it
+    // readable when it does.
+    final behind = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * _arrowStroke * 2.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = const Color(0xFF05040E).withValues(alpha: 0.8 * fade);
+
+    for (final along in [-radius * _arrowApart, radius * _arrowApart]) {
+      final from = Offset(at.dx + ax * along, at.dy + ay * along);
+      final tip = Offset(from.dx + ax * reach, from.dy + ay * reach);
+      final back = Offset(from.dx - ax * reach, from.dy - ay * reach);
+      final chevron = Path()
+        ..moveTo(back.dx + px * wing, back.dy + py * wing)
+        ..lineTo(tip.dx, tip.dy)
+        ..lineTo(back.dx - px * wing, back.dy - py * wing);
+      canvas.drawPath(chevron, behind);
+      canvas.drawPath(chevron, paint);
+    }
   }
 
-  /// How far above its note the arrow sits, in note radii.
-  static const double _arrowLift = 1.9;
+  /// How far to the side of its note the mark sits, in note radii.
+  static const double _arrowAside = 2.6;
 
-  /// And how big it is drawn.
-  static const double _arrowSize = 0.7;
+  /// How far one chevron reaches the way it points, in note radii.
+  static const double _arrowSize = 0.5;
+
+  /// How far its arms open across that, and how far apart the two sit.
+  static const double _arrowWing = 0.62;
+  static const double _arrowApart = 0.55;
+
+  /// How thick the stroke is.
+  static const double _arrowStroke = 0.26;
 
   /// The tie from the little note up into the one it leans on.
   ///

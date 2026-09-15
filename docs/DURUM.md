@@ -3,10 +3,11 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v118):** hızlı seriler artık tek tek basmak yerine el
-hareketiyle çalınıyor, ve bir hareket **bir saniyelik müzik** ediyor (3 nota
-değil) — Für Elise'in girişi tek dokunuş + tek kaydırma. Ayrıntısı "Figür"
-bölümünde. Ondan önce: ekrandaki her şey artık perdeye göre renkleniyor —
+**Son güncelleme (v119):** hızlı seriler artık tek tek basmak yerine el
+hareketiyle çalınıyor, bir hareket **bir saniyelik müzik** ediyor (3 nota
+değil), ve ekranda bir hareketin notalarını bir **iplik** bağlıyor, yönü de
+elin üstünde olduğu notanın yanındaki beyaz **çift chevron** söylüyor.
+Ayrıntısı "Figür" bölümünde. Ondan önce: ekrandaki her şey artık perdeye göre renkleniyor —
 notalar, çizginin altındaki çarpma ışığı, süsleme işareti ve akor bandı.
 Akor büyüklüğünü renkle söyleyen son yer de kalktı. Süsleme işareti de
 artık çizgide patlıyor, ve basılı tutmalı notanın kuyruğu erken kaybolmak
@@ -111,7 +112,7 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
 
-## Figür: hareketle çalınan hızlı seriler (v117, v118)
+## Figür: hareketle çalınan hızlı seriler (v117-v119)
 
 Oyuncu Für Elise'i oynarken: *"arka arkaya gelen hızlı notalara sürekli
 basmaya çalışmak oyun zevkini ciddi azaltıyor. Bu seriler başladığında ilk
@@ -177,8 +178,34 @@ Kapsam (hamle = dokunuş + hareket):
 | Passacaglia | 12 | 25 | 214/1971 | %9 az | 1.01 s |
 | Kanon, Gnossienne, Prelüd, Neşeye Övgü, Vals, Rising Sun | — | | | değişmez | |
 
-Ekranda adımın ilk notasının **üstünde** bir ok var (süsleme işareti altta;
-ikisi karışmasın diye). Ok notanın kendi renginde.
+### Ekranda: iplik + chevron (v119)
+
+Oyuncu: *"koyduğun işaretlerden bir şey anlaşılmıyor, hangi nota hangi yön
+hepsi karışıyor."* Üç ayrı hata vardı, üçü de ayrı ayrı düzeltildi
+(`build/screens/figur-giris.png`, `figur-kalabalik.png`):
+
+1. **Hangi notalar?** Tek başına bir yön işareti ne yapılacağını söylüyor ama
+   neye yapılacağını söylemiyor. Artık bir hareketin çaldığı notaları ince
+   bir **iplik** birbirine bağlıyor (`_paintFigureRibbons`), ilk notanın
+   renginde, notaların altında. Notalar geçtikçe alttan kısalıyor: ekranda
+   kalan, çalınacak olan.
+2. **Hangi nota?** İşaret adımın **ilk notasının** üstündeydi — oysa el,
+   hareketi yapacağı anda o notanın değil **bir öncekinin** üstünde. Artık
+   işaret elin üstünde olduğu notada: ilk hareket için figüre giriş
+   dokunuşunda, sonrakiler için bir önceki hareketin son notasında
+   (`Tap.figureTurn`).
+3. **Hangi yön?** Tek bir üçgen, dört yöne dönmüş hâlde, düşen notaların
+   arasında okunmuyordu. Artık **çift chevron** (`»`, `«`, `^^`, `vv`) —
+   dünyadaki her ileri sarma tuşunun şekli — ve **beyaz**: ekrandaki tek
+   "elin yapacağı şey" işareti, gerisi müzik olduğu için perde renginde.
+   Arkasında koyu bir kontur var, parlak bir notanın üstüne düşerse diye.
+
+**Nereye konacağı ölçüldü.** Üstü denendi ve çalışmıyor: figür demek zaten
+sık notalar demek, üstteki boşluk bir sonraki notanın. Yana konuyor — ekranın
+dış kenarı en boş yeri — ve sığmıyorsa içeri dönüyor. Konum **dokunuşun
+tamamına** göre: Entertainer'da 21.25'teki akorun notaları 0.734 ve 0.866'da,
+ilk notaya göre yerleştirince işaret tam ikincisinin üstüne düşüyordu.
+`test/stage_painter_test.dart` bunu kilitliyor.
 
 ### Parmak, içinde nota kalmış figürü yakalar (v118)
 

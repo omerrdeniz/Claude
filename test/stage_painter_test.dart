@@ -157,14 +157,19 @@ class _Recorder implements Canvas {
     rectShaded.add(paint.shader != null);
   }
 
-  /// The stroked paths — what the ornament's tie is drawn as, and nothing
-  /// else on the playfield.
+  /// The stroked paths — the ornament's tie, the thread through a figure's
+  /// notes, and the chevrons that say which way the hand goes.
   final List<Rect> strokedPaths = [];
+
+  /// The colour each was drawn in, in the same order: it is what tells the
+  /// white marks from the coloured threads under them.
+  final List<Color> strokedColours = [];
 
   @override
   void drawPath(Path path, Paint paint) {
     if (paint.style == PaintingStyle.stroke) {
       strokedPaths.add(path.getBounds().shift(_shift));
+      strokedColours.add(paint.color);
     }
   }
 
@@ -1275,6 +1280,21 @@ void main() {
       // A run: the rondo's chromatic descent, sixty-two notes no hand can
       // tap, with the ribbon threading them into one slide.
       'hizli-akis': await savePng(shipped('fur-elise'), 156.0, 'hizli-akis'),
+      // A figure: the rondo's opening, threaded into one movement of the
+      // hand, with the chevrons beside the note that movement starts from.
+      'figur-giris': await savePng(
+        shipped('fur-elise'),
+        0,
+        'figur-giris',
+        difficulty: Difficulty.normal,
+      ),
+      // And where the screen is busiest: two hands, four movements at once.
+      'figur-kalabalik': await savePng(
+        shipped('passacaglia-halvorsen'),
+        5.75,
+        'figur-kalabalik',
+        difficulty: Difficulty.normal,
+      ),
       // The bead a run is followed by: hollow when nobody is on it, lit when
       // a finger is.
       'kosu-boncugu': await savePng(
@@ -1320,5 +1340,92 @@ void main() {
         reason: '${entry.key} looks blank',
       );
     }
+  });
+
+  group('a figure says which notes and which way', () {
+    /// Everything the painter stroked in white: the chevrons and nothing
+    /// else — the threads are coloured by pitch.
+    List<Rect> marksOf(_Recorder canvas) => [
+      for (var i = 0; i < canvas.strokedPaths.length; i++)
+        if (canvas.strokedColours[i].r > 0.9 &&
+            canvas.strokedColours[i].g > 0.9 &&
+            canvas.strokedColours[i].b > 0.9)
+          canvas.strokedPaths[i],
+    ];
+
+    _Recorder frameOf(Song song, double beat, {double window = 4}) {
+      final canvas = _Recorder();
+      StagePainter(
+        chart: Chart.build(song, difficulty: Difficulty.normal),
+        beat: beat,
+        windowInBeats: window,
+        litHands: const {},
+        heldNotes: const {},
+        runBeads: const [],
+        sparks: const [],
+        heat: 0,
+        ground: AppTheme.defaultGround,
+      ).paint(canvas, phone);
+      return canvas;
+    }
+
+    test('the mark stands clear of every note of the touch it is beside', () {
+      // The Entertainer plays a chord here whose notes are a seventh apart,
+      // and the mark was placed from the first of them — which put it exactly
+      // on the second: *"hangi nota hangi yön hepsi karışıyor."*
+      const at = 21.25;
+      final chart = Chart.build(
+        shipped('entertainer'),
+        difficulty: Difficulty.normal,
+      );
+      final turn = chart.taps.firstWhere(
+        (t) => t.figureTurn != null && (t.beat - at).abs() < 0.01,
+      );
+      expect(turn.noteAcross, hasLength(greaterThan(1)), reason: 'a chord');
+
+      const g = StageGeometry(size: phone);
+      // The touch is on the line in this frame; another figure has a mark
+      // further up the screen, which is nothing to do with this one.
+      final y = g.yAt(StageGeometry.progressFor(turn.beat - at, 4));
+      final marks = [
+        for (final mark in marksOf(frameOf(shipped('entertainer'), at)))
+          if ((mark.center.dy - y).abs() < g.noteRadius * 3) mark,
+      ];
+      expect(marks, hasLength(2), reason: 'two chevrons');
+      for (final across in turn.noteAcross) {
+        final x = g.xAtPosition(across);
+        for (final mark in marks) {
+          expect(
+            mark.left > x + g.noteRadius || mark.right < x - g.noteRadius,
+            isTrue,
+            reason: 'the mark lies over the note at $across',
+          );
+        }
+      }
+    });
+
+    test('a thread runs from the note the hand is on to the last it plays', () {
+      // Für Elise's opening is one movement and eight notes. The thread is
+      // what says *those* eight: a direction on its own says what to do but
+      // not to what.
+      final chart = Chart.build(
+        shipped('fur-elise'),
+        difficulty: Difficulty.normal,
+      );
+      final step = chart.figures.values.first.single;
+      const g = StageGeometry(size: phone);
+      double yOf(double beat) => g.yAt(StageGeometry.progressFor(beat, 4));
+
+      final canvas = frameOf(shipped('fur-elise'), 0);
+      expect(
+        canvas.strokedPaths.any(
+          (bounds) =>
+              (bounds.bottom - yOf(step.from.beat)).abs() < 1 &&
+              (bounds.top - yOf(step.taps.last.beat)).abs() < 1,
+        ),
+        isTrue,
+        reason: 'no thread from the catch to the end of the movement',
+      );
+    });
   });
 }
