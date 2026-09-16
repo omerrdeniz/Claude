@@ -617,67 +617,73 @@ void main() {
     });
 
     test('but a short flurry is not one', () {
-      // Four notes was the first line and it caught the rondo's four-note
+      // Four touches was the first line and it caught the rondo's four-note
       // groups, which are a breath apart and perfectly tappable: *"bizim
       // amacımız bir el çok defa arka arkaya tıklama yapıyorsa bu mekaniği
-      // eklemekti."* What tires a hand is being kept at it, so the line is a
-      // length of time.
+      // eklemekti."* The player's own words are a count, and this is the
+      // whole entry rule — the same one everywhere, with nothing in it that
+      // knows which piece it is looking at.
       for (final song in shippedSongs) {
-        final secondsPerBeat = 60 / song.bpm;
         for (final d in Difficulty.values) {
           final chart = Chart.build(song, difficulty: d);
           for (final entry in chart.figures.entries) {
-            final steps = entry.value;
-            final caught = chart.taps.singleWhere(
-              (t) => t.figureId == entry.key && t.figureStep == -1,
-            );
-            final taps = [caught, for (final s in steps) ...s.taps];
-            var widest = 0.0;
-            for (var i = 1; i < taps.length; i++) {
-              final gap = (taps[i].beat - taps[i - 1].beat) * secondsPerBeat;
-              if (gap > widest) widest = gap;
-            }
-            final seconds =
-                (steps.last.taps.last.beat - caught.beat) * secondsPerBeat;
+            final touches =
+                1 +
+                entry.value.fold<int>(0, (a, s) => a + s.taps.length);
             expect(
-              seconds,
-              greaterThanOrEqualTo(
-                widest <= Chart.figureGapSeconds
-                    ? Chart.figureLeastSeconds
-                    : Chart.figureSlowLeastSeconds,
-              ),
-              reason: '${song.title}/${d.name} at ${caught.beat}',
+              touches,
+              greaterThanOrEqualTo(Chart.figureLeastTouches),
+              reason: '${song.title}/${d.name}',
             );
           }
         }
       }
     });
 
-    test('and a merely brisk stretch has to go on much longer', () {
+    test('and the canon is in, at the same line as everything else', () {
       // *"Canon in D 42. saniyede başlayan bir sağ el serisi var. Defalarca
       // arka arkaya basıyoruz ve bu kısımda bahsettiğiniz mekanik yok."* It
-      // is 0.273 s a note — two hundredths the wrong side of the fast line —
-      // and it keeps it up from 43 to 61 seconds and again from 113 to 148.
-      // Bach's prelude is the same pace and stops for breath every six
-      // notes, so it still has none; the test below holds that.
+      // was 0.273 s a note against a line drawn at 0.21, so it fell outside
+      // by two hundredths of a second. The line moved; nothing about the
+      // canon was written into it.
       final song = shipped('canon-in-d');
       final secondsPerBeat = 60 / song.bpm;
       final chart = Chart.build(song, difficulty: Difficulty.normal);
-      expect(chart.figures, hasLength(2));
-      for (final entry in chart.figures.entries) {
-        final caught = chart.taps.singleWhere(
-          (t) => t.figureId == entry.key && t.figureStep == -1,
-        );
-        final seconds =
-            (entry.value.last.taps.last.beat - caught.beat) * secondsPerBeat;
-        expect(seconds, greaterThan(15), reason: 'at ${caught.beat}');
-      }
+      final spans = [
+        for (final entry in chart.figures.entries)
+          (
+            chart.taps
+                    .singleWhere(
+                      (t) => t.figureId == entry.key && t.figureStep == -1,
+                    )
+                    .beat *
+                secondsPerBeat,
+            entry.value.last.taps.last.beat * secondsPerBeat,
+          ),
+      ]..sort((a, b) => a.$1.compareTo(b.$1));
+      // The two the player pointed at: three quarters of a minute of right
+      // hand, unbroken, at a fifth of a second and a bit a note.
+      expect(spans, hasLength(3));
+      expect(spans[0].$1, closeTo(43, 1));
+      expect(spans[0].$2, closeTo(61, 1));
+      expect(spans[1].$1, closeTo(113, 1));
+      expect(spans[1].$2, closeTo(148, 1));
     });
 
     test('and the unhurried pieces have none', () {
-      for (final id in ['ode-to-joy', 'gnossienne-1', 'prelude-in-c']) {
+      for (final id in ['ode-to-joy', 'gnossienne-1', 'house-of-the-rising-sun']) {
         expect(Chart.build(shipped(id)).figures, isEmpty, reason: id);
       }
+    });
+
+    test('and a piece that stops for breath keeps its taps', () {
+      // Bach's prelude is the same pace as the canon — a quarter of a second
+      // a note — but it is sixty-four identical six-note bars with a breath
+      // between each, and six is under the line. The same rule lets the canon
+      // in and leaves the prelude alone; neither is named in it.
+      final chart = Chart.build(shipped('prelude-in-c'));
+      final inFigures = chart.taps.where((t) => t.figureId != null).length;
+      expect(inFigures / chart.taps.length, lessThan(0.1));
     });
 
     test('a figure is entered by tapping its first note', () {

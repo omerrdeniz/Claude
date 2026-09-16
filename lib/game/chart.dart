@@ -461,8 +461,8 @@ class Chart {
   /// Cut the relentless stretches into figures, and those into steps.
   ///
   /// A figure is a stretch of one hand's touches, each within
-  /// [figureGapSeconds] of the last, lasting at least [figureLeastSeconds].
-  /// Notes already in a run are left out:
+  /// [figureGapSeconds] of the last, and at least [figureLeastTouches] of
+  /// them. Notes already in a run are left out:
   /// a run cannot be tapped at all and has its own answer, and two mechanics
   /// on one note is one too many.
   static Map<int, List<FigureStep>> _findFigures(
@@ -482,21 +482,14 @@ class Chart {
     var nextId = 1;
     for (final line in byHand.values) {
       var start = 0;
-      var widest = 0.0;
       for (var i = 1; i <= line.length; i++) {
         final gap = i < line.length
             ? (line[i].beat - line[i - 1].beat) * secondsPerBeat
             : double.infinity;
-        if (gap > onsetTolerance * secondsPerBeat &&
-            gap <= figureSlowGapSeconds) {
-          if (gap > widest) widest = gap;
+        if (gap > onsetTolerance * secondsPerBeat && gap <= figureGapSeconds) {
           continue;
         }
-        final seconds = (line[i - 1].beat - line[start].beat) * secondsPerBeat;
-        final enough = widest <= figureGapSeconds
-            ? figureLeastSeconds
-            : figureSlowLeastSeconds;
-        if (seconds >= enough) {
+        if (i - start >= figureLeastTouches) {
           final id = nextId++;
           figures[id] = _cutIntoSteps(
             line.sublist(start, i),
@@ -505,7 +498,6 @@ class Chart {
           );
         }
         start = i;
-        widest = 0;
       }
     }
     return figures;
@@ -597,56 +589,40 @@ class Chart {
     return steps;
   }
 
-  /// The most two touches may be apart and still be the *fast* kind of
-  /// stretch, in seconds — the kind that only has to go on for
-  /// [figureLeastSeconds] to count.
-  ///
-  /// Slower than this and up to [figureSlowGapSeconds] the music is only
-  /// brisk, and a brisk stretch has to go on much longer before it is worth a
-  /// gesture. See [figureSlowLeastSeconds].
-  ///
   /// The most two touches of a figure may be apart, in seconds.
   ///
-  /// A fifth of a second and a shade over. Not a claim about what a hand
-  /// cannot do — see [runGapSeconds] for that line, which is lower — but
-  /// about where doing it stops being play and starts being work. The number
-  /// comes from the two passages the player named: the Rondo's opening and
-  /// the Entertainer, both a fifth of a second a note.
-  static const double figureGapSeconds = 0.21;
-
-  /// The most two touches of a figure may be apart at all, in seconds.
+  /// A fifth of a second and a bit over a quarter. Not a claim about what a
+  /// hand cannot do — see [runGapSeconds] for that line, which is lower — but
+  /// about where doing it stops being play and starts being work.
   ///
-  /// The canon's right hand runs a fifth of a second and a bit — 0.273 —
-  /// from 43 to 61 seconds and again from 113 to 148, and the player asked
-  /// why it was not a figure: it was two hundredths of a second the wrong
-  /// side of [figureGapSeconds]. But so is Bach's prelude, at 0.25, and the
-  /// prelude is sixty-four identical six-note bars with a breath between
-  /// each — turning every bar of it into a touch and a gesture is not what
-  /// anyone asked for. What tells them apart is not the pace, it is how long
-  /// the hand is held at it: the canon goes sixty-six and then a hundred and
-  /// twenty-eight notes without a break.
-  static const double figureSlowGapSeconds = 0.28;
+  /// It was 0.21, from the two passages the player first named: the Rondo's
+  /// opening and the Entertainer, both a fifth of a second a note. The canon's
+  /// right hand is 0.273 and was left outside by two hundredths of a second,
+  /// which the player found and asked about. It is in now.
+  static const double figureGapSeconds = 0.28;
 
-  /// How long a merely brisk stretch has to go on before it counts, in
-  /// seconds.
+  /// How many touches in a row it takes to be worth a gesture rather than
+  /// taps.
   ///
-  /// More than three times [figureLeastSeconds]. At this pace a hand is not
-  /// being overrun, it is being worn down, and that takes a while.
-  static const double figureSlowLeastSeconds = 4.0;
-
-  /// How long a hand has to be kept at it before the gesture is worth having,
-  /// in seconds.
+  /// *"Bir el çok defa arka arkaya tıklama yapıyorsa"* — the player's own
+  /// words, and they are a count. Four was the first line and it was too low:
+  /// the Rondo is full of four-note groups with a breath between them, and
+  /// turning each into a touch and a gesture is not relief, it is a second
+  /// thing to get right.
   ///
-  /// Four notes was the first line and it was too low: Für Elise is full of
-  /// four-note groups a breath apart, and turning each of them into a touch
-  /// and a movement is not relief, it is a second thing to get right — *"bizim
-  /// amacımız bir el çok defa arka arkaya tıklama yapıyorsa bu mekaniği
-  /// eklemekti."* Four notes is also not a fixed amount of work: at the widest
-  /// gap a figure allows it is six tenths of a second, and at the tightest it
-  /// is a fifth. What tires a hand is being kept at it, so the line is a
-  /// length of time — and at [figureGapSeconds] a second and a half is seven
-  /// notes or more without a break.
-  static const double figureLeastSeconds = 1.2;
+  /// This is the whole entry rule, and it is the same rule everywhere:
+  /// *"Bir kural koyuyorsak tüm oyunda aynı kural olmalı."* It was briefly
+  /// two rules — a short line for fast music and a long one for merely brisk
+  /// music — which came to the same answers but read as two numbers picked to
+  /// suit two songs. Seven in a row is one number, and because
+  /// [figureGapSeconds] caps how far apart they may be, seven of them are
+  /// between nine tenths of a second and two seconds however the piece is
+  /// written.
+  ///
+  /// Seconds still decide how *often* the hand is asked to move once it is
+  /// inside a figure — see [figureStepSeconds]. That is a different question:
+  /// there the answer is a rhythm, here it is a count.
+  static const int figureLeastTouches = 7;
 
   /// How much music one movement of the hand is worth, in seconds.
   ///
