@@ -631,15 +631,46 @@ void main() {
             final caught = chart.taps.singleWhere(
               (t) => t.figureId == entry.key && t.figureStep == -1,
             );
+            final taps = [caught, for (final s in steps) ...s.taps];
+            var widest = 0.0;
+            for (var i = 1; i < taps.length; i++) {
+              final gap = (taps[i].beat - taps[i - 1].beat) * secondsPerBeat;
+              if (gap > widest) widest = gap;
+            }
             final seconds =
                 (steps.last.taps.last.beat - caught.beat) * secondsPerBeat;
             expect(
               seconds,
-              greaterThanOrEqualTo(Chart.figureLeastSeconds),
+              greaterThanOrEqualTo(
+                widest <= Chart.figureGapSeconds
+                    ? Chart.figureLeastSeconds
+                    : Chart.figureSlowLeastSeconds,
+              ),
               reason: '${song.title}/${d.name} at ${caught.beat}',
             );
           }
         }
+      }
+    });
+
+    test('and a merely brisk stretch has to go on much longer', () {
+      // *"Canon in D 42. saniyede başlayan bir sağ el serisi var. Defalarca
+      // arka arkaya basıyoruz ve bu kısımda bahsettiğiniz mekanik yok."* It
+      // is 0.273 s a note — two hundredths the wrong side of the fast line —
+      // and it keeps it up from 43 to 61 seconds and again from 113 to 148.
+      // Bach's prelude is the same pace and stops for breath every six
+      // notes, so it still has none; the test below holds that.
+      final song = shipped('canon-in-d');
+      final secondsPerBeat = 60 / song.bpm;
+      final chart = Chart.build(song, difficulty: Difficulty.normal);
+      expect(chart.figures, hasLength(2));
+      for (final entry in chart.figures.entries) {
+        final caught = chart.taps.singleWhere(
+          (t) => t.figureId == entry.key && t.figureStep == -1,
+        );
+        final seconds =
+            (entry.value.last.taps.last.beat - caught.beat) * secondsPerBeat;
+        expect(seconds, greaterThan(15), reason: 'at ${caught.beat}');
       }
     });
 

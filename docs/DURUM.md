@@ -3,12 +3,13 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v121):** hızlı seriler artık tek tek basmak yerine el
+**Son güncelleme (v122):** hızlı seriler artık tek tek basmak yerine el
 hareketiyle çalınıyor, ve hareketi yakalamak dört ayrı düzeltmeyle
 kolaylaştı (yanlış yönden sonra düzeltme, hareketi önceden yapma, yavaş
-kaydırma, ekranda duran parmak). Mekanik yalnızca bir el **kesintisiz 1.2
-saniye**
-(en az 7 nota) çalıştırıldığında devreye giriyor; bir hareket **bir saniyelik
+kaydırma, ekranda duran parmak). Eşik iki kademeli: **hızlıysa** (≤0.21 s
+aralık) kesintisiz **1.2 saniye**, sadece **çevikse** (≤0.28 s) kesintisiz
+**4 saniye** — Kanon'un 43-61 ve 113-148 saniyeleri böyle girdi, Bach'ın
+Prelüd'ü böyle dışarıda kaldı. bir hareket **bir saniyelik
 müzik** ediyor ve aynı yön iki kez istenmiyor, yani uzun bölümler hep aynı
 şekilde ikiye bölünüyor. Ekranda bir hareketin notalarını bir **iplik**
 bağlıyor, yönü de elin üstünde olduğu notanın yanındaki beyaz **çift
@@ -117,7 +118,7 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
 
-## Figür: hareketle çalınan hızlı seriler (v117-v121)
+## Figür: hareketle çalınan hızlı seriler (v117-v122)
 
 Oyuncu Für Elise'i oynarken: *"arka arkaya gelen hızlı notalara sürekli
 basmaya çalışmak oyun zevkini ciddi azaltıyor. Bu seriler başladığında ilk
@@ -135,9 +136,9 @@ bir soru ama oyun için asıl soru *"bu yapmaya değer mi"*. Ölçü doğruydu,
 soru yanlıştı — v115 turunda "0.208 hızlı değil" diye kapatmıştım.
 
 - **Figür ≠ koşu.** Koşu tapılamaz (70 ms), boncukla taşınıyor. Figür sadece
-  bitmek bilmiyor: 0.21 saniyeye kadar aralık, **kesintisiz en az 1.2 saniye**
-  (`figureLeastSeconds`, v120 — aşağıya bakın), **ve zaten koşuda olan notalar
-  dışarıda** (bir notaya iki mekanik fazla).
+  bitmek bilmiyor: aralık 0.21 s'ye kadarsa **kesintisiz 1.2 saniye**,
+  0.28 s'ye kadarsa **kesintisiz 4 saniye** (v120, v122 — aşağıya bakın),
+  **ve zaten koşuda olan notalar dışarıda** (bir notaya iki mekanik fazla).
 - **İlk nota dokunuşla çalınır** — figüre *girilir*, ve oyunun en eski kuralı
   ilk sesi oyuncunun parmağının çıkarmasını istiyor.
 - **Gerisi adımlar hâlinde**, her adımın bir yönü var
@@ -223,6 +224,51 @@ Kapsam (hamle = dokunuş + hareket):
 | Passacaglia (kolay) | 1 | 14 | 97/405 | %20 az | 97 | 1.14 s |
 | Passacaglia | 6 | 29 | 184/1971 | %8 az | 11 | 1.01 s |
 | Kanon, Gnossienne, Prelüd, Neşeye Övgü, Nokturn, Vals, Rising Sun | — | | | değişmez | | |
+
+### İki kademeli eşik: hızlı mı, yoksa uzun mu? (v122)
+
+Oyuncu: *"Canon in D 42. saniyede başlayan bir sağ el serisi var. Defalarca
+arka arkaya basıyoruz ve bu kısımda bahsettiğiniz mekanik yok. Neden yok?"*
+
+**Ölçüm:** Kanon'un o serisi **0.273 saniye** aralıklı. Eşik 0.21'di — yani
+iki yüzde saniye dışarıda kalmış.
+
+Ama eşiği 0.28'e çekmek tek başına yanlış cevap. Ölçüldü: 0.28'de **Bach'ın
+Prelüd'ü de giriyor** — ve Prelüd, **64 tane birbirinin aynı 6 notalık
+ölçü**, her birinin arasında nefes var. Her ölçüsünü dokunuş + hareket
+yapmak kimsenin istediği şey değil (546 notanın 413'ü, %76'sı).
+
+İkisini ayıran şey **hız değil, ne kadar süre öyle kalındığı**:
+
+| | aralık | kesintisiz |
+|---|---|---|
+| Kanon 43-61s | 0.273 s | **66 nota** |
+| Kanon 113-148s | 0.273 s | **128 nota** |
+| Prelüd (her ölçü) | 0.250 s | 6 nota |
+
+Yani kural iki kademeli oldu:
+
+- **Hızlı** (≤ `figureGapSeconds` = 0.21 s): **1.2 saniye** yeter. El basmaya
+  yetişemiyor.
+- **Çevik** (≤ `figureSlowGapSeconds` = 0.28 s): **4 saniye**
+  (`figureSlowLeastSeconds`) sürmesi gerekiyor. Burada el yetişemediği için
+  değil, **yıprandığı** için yardım alıyor — ve yıpranmak zaman ister.
+
+Sonuç: Für Elise, Entertainer, Halvorsen **hiç değişmedi**; Prelüd,
+Gnossienne, Neşeye Övgü, Rising Sun hâlâ tertemiz; Kanon'a tam da oyuncunun
+işaret ettiği iki uzun bölüm geldi.
+
+| parça | figür | adım | nota | hamle | en yavaş aralık |
+|---|---|---|---|---|---|
+| Halvorsen | 31 | 104 | 652/940 | %55 az | 0.200 s |
+| Für Elise | 18 | 62 | 308/924 | %25 az | 0.208 s |
+| Entertainer | 34 | 53 | 296/1372 | %15 az | 0.208 s |
+| Passacaglia | 12 | 83 | 444/1971 | %18 az | 0.271 s |
+| Passacaglia (kolay) | 1 | 14 | 97/405 | %20 az | 0.163 s |
+| **Kanon** | **2** | **48** | **194/818** | **%18 az** | **0.273 s** |
+| Vals | 4 | 14 | 72/579 | %9 az | 0.250 s |
+| Nokturn | 1 | 12 | 61/796 | %6 az | 0.227 s |
+| Prelüd, Gnossienne, Neşeye Övgü, Rising Sun | — | | | yok | |
 
 ### Yakalamayı kolaylaştıran dört düzeltme (v121)
 

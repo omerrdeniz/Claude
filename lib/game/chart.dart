@@ -482,15 +482,21 @@ class Chart {
     var nextId = 1;
     for (final line in byHand.values) {
       var start = 0;
+      var widest = 0.0;
       for (var i = 1; i <= line.length; i++) {
         final gap = i < line.length
             ? (line[i].beat - line[i - 1].beat) * secondsPerBeat
             : double.infinity;
-        if (gap > onsetTolerance * secondsPerBeat && gap <= figureGapSeconds) {
+        if (gap > onsetTolerance * secondsPerBeat &&
+            gap <= figureSlowGapSeconds) {
+          if (gap > widest) widest = gap;
           continue;
         }
-        if ((line[i - 1].beat - line[start].beat) * secondsPerBeat >=
-            figureLeastSeconds) {
+        final seconds = (line[i - 1].beat - line[start].beat) * secondsPerBeat;
+        final enough = widest <= figureGapSeconds
+            ? figureLeastSeconds
+            : figureSlowLeastSeconds;
+        if (seconds >= enough) {
           final id = nextId++;
           figures[id] = _cutIntoSteps(
             line.sublist(start, i),
@@ -499,6 +505,7 @@ class Chart {
           );
         }
         start = i;
+        widest = 0;
       }
     }
     return figures;
@@ -590,6 +597,14 @@ class Chart {
     return steps;
   }
 
+  /// The most two touches may be apart and still be the *fast* kind of
+  /// stretch, in seconds — the kind that only has to go on for
+  /// [figureLeastSeconds] to count.
+  ///
+  /// Slower than this and up to [figureSlowGapSeconds] the music is only
+  /// brisk, and a brisk stretch has to go on much longer before it is worth a
+  /// gesture. See [figureSlowLeastSeconds].
+  ///
   /// The most two touches of a figure may be apart, in seconds.
   ///
   /// A fifth of a second and a shade over. Not a claim about what a hand
@@ -598,6 +613,26 @@ class Chart {
   /// comes from the two passages the player named: the Rondo's opening and
   /// the Entertainer, both a fifth of a second a note.
   static const double figureGapSeconds = 0.21;
+
+  /// The most two touches of a figure may be apart at all, in seconds.
+  ///
+  /// The canon's right hand runs a fifth of a second and a bit — 0.273 —
+  /// from 43 to 61 seconds and again from 113 to 148, and the player asked
+  /// why it was not a figure: it was two hundredths of a second the wrong
+  /// side of [figureGapSeconds]. But so is Bach's prelude, at 0.25, and the
+  /// prelude is sixty-four identical six-note bars with a breath between
+  /// each — turning every bar of it into a touch and a gesture is not what
+  /// anyone asked for. What tells them apart is not the pace, it is how long
+  /// the hand is held at it: the canon goes sixty-six and then a hundred and
+  /// twenty-eight notes without a break.
+  static const double figureSlowGapSeconds = 0.28;
+
+  /// How long a merely brisk stretch has to go on before it counts, in
+  /// seconds.
+  ///
+  /// More than three times [figureLeastSeconds]. At this pace a hand is not
+  /// being overrun, it is being worn down, and that takes a while.
+  static const double figureSlowLeastSeconds = 4.0;
 
   /// How long a hand has to be kept at it before the gesture is worth having,
   /// in seconds.
