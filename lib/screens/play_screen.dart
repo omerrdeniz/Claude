@@ -172,14 +172,19 @@ class _PlayScreenState extends State<PlayScreen>
   /// where the run now thinks the finger is.
   void _onDrag(int pointer, Offset position, Size size) {
     final across = (position.dx / size.width).clamp(0.0, 1.0);
+    final down = (position.dy / size.height).clamp(0.0, 1.0);
 
-    final figureId = _figureByPointer[pointer];
+    // A figure is caught here as well as on the way down. A finger that came
+    // down before the figure opened — held on from the last one, or left over
+    // from a long note — was bound to nothing for as long as it stayed put,
+    // and moved it as correctly as it liked to no effect.
+    var figureId = _figureByPointer[pointer];
+    if (figureId == null) {
+      figureId = _session.beginFigure(across, down);
+      if (figureId != null) _figureByPointer[pointer] = figureId;
+    }
     if (figureId != null) {
-      _session.moveFigure(
-        figureId,
-        across,
-        (position.dy / size.height).clamp(0.0, 1.0),
-      );
+      _session.moveFigure(figureId, across, down);
     }
 
     final dragId = _dragByPointer[pointer];

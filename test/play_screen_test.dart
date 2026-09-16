@@ -28,6 +28,67 @@ void main() {
     }
   }
 
+  group('a figure can be caught by a finger already on the screen', () {
+    // Eight notes a fifth of a second apart in the right hand: one figure,
+    // which opens four tenths of a second before its second note.
+    final relentless = Song(
+      id: 't',
+      title: 'T',
+      composer: '',
+      bpm: 120,
+      notes: [
+        for (var i = 0; i < 8; i++)
+          Note(beat: i * 0.4, midi: 72 + i, duration: 0.3, hand: Hand.right),
+      ],
+    );
+
+    /// Put a finger down long before the figure opens, hold it there until
+    /// the figure is under way, and then — or not — slide it to the right.
+    Future<int> scoreAfter(WidgetTester tester, {required bool slide}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PlayScreen(
+            key: ValueKey(slide),
+            song: relentless,
+            settings: const PlaySettings(),
+          ),
+        ),
+      );
+      final stage = tester.getRect(find.byType(PlayScreen));
+      final at = Offset(
+        stage.left + stage.width * 0.75,
+        stage.top + stage.height * 0.5,
+      );
+      final finger = await tester.startGesture(at);
+      // The lead-in is one and nine tenths of a second; the figure opens a
+      // fifth of a second after that.
+      await play(tester, const Duration(milliseconds: 1950), frames: 40);
+      if (slide) {
+        for (var i = 0; i < 5; i++) {
+          await finger.moveBy(Offset(stage.width * 0.02, 0));
+          await tester.pump(const Duration(milliseconds: 8));
+        }
+      }
+      await play(tester, const Duration(milliseconds: 1200), frames: 30);
+      await finger.up();
+      await tester.pump();
+      return scoreOf(tester);
+    }
+
+    testWidgets('and a finger that stays put still plays nothing', (
+      tester,
+    ) async {
+      expect(await scoreAfter(tester, slide: false), 0);
+    });
+
+    testWidgets('but one that moves catches it', (tester) async {
+      // The figure is only caught on the way down, so a finger held on from
+      // the last one — or left over from a long note — was bound to nothing,
+      // and moved as correctly as it liked to no effect.
+      expect(await scoreAfter(tester, slide: true), greaterThan(0));
+    });
+  });
+
   group('an ornament is earned by staying on it', () {
     // One ornamented note with the hand free afterwards, so the whole of the
     // hold is the player's to give.

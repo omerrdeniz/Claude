@@ -3,8 +3,11 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v120):** hızlı seriler artık tek tek basmak yerine el
-hareketiyle çalınıyor. Mekanik yalnızca bir el **kesintisiz 1.2 saniye**
+**Son güncelleme (v121):** hızlı seriler artık tek tek basmak yerine el
+hareketiyle çalınıyor, ve hareketi yakalamak dört ayrı düzeltmeyle
+kolaylaştı (yanlış yönden sonra düzeltme, hareketi önceden yapma, yavaş
+kaydırma, ekranda duran parmak). Mekanik yalnızca bir el **kesintisiz 1.2
+saniye**
 (en az 7 nota) çalıştırıldığında devreye giriyor; bir hareket **bir saniyelik
 müzik** ediyor ve aynı yön iki kez istenmiyor, yani uzun bölümler hep aynı
 şekilde ikiye bölünüyor. Ekranda bir hareketin notalarını bir **iplik**
@@ -114,7 +117,7 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
 
-## Figür: hareketle çalınan hızlı seriler (v117-v120)
+## Figür: hareketle çalınan hızlı seriler (v117-v121)
 
 Oyuncu Für Elise'i oynarken: *"arka arkaya gelen hızlı notalara sürekli
 basmaya çalışmak oyun zevkini ciddi azaltıyor. Bu seriler başladığında ilk
@@ -220,6 +223,33 @@ Kapsam (hamle = dokunuş + hareket):
 | Passacaglia (kolay) | 1 | 14 | 97/405 | %20 az | 97 | 1.14 s |
 | Passacaglia | 6 | 29 | 184/1971 | %8 az | 11 | 1.01 s |
 | Kanon, Gnossienne, Prelüd, Neşeye Övgü, Nokturn, Vals, Rising Sun | — | | | değişmez | | |
+
+### Yakalamayı kolaylaştıran dört düzeltme (v121)
+
+Oyuncu: *"Bazen tutturuyorum bazen tutturamıyorum."* Önce bütçe ölçüldü:
+notalar 0.208 saniye arayla, geç kalma payı 0.21 saniye, yani **her hareket
+için ~0.42 saniye**. Dar ama imkânsız değil. İmkânsız kılan dört şey vardı,
+dördü de kodda bulundu ve düzeltildi. Her biri, düzeltmeden önce **düşen**
+bir testle kilitlendi.
+
+1. **Yanlış yöne kaydırınca düzeltme yutuluyordu.** Kaydırma, izdeki en eski
+   noktadan ölçülüyor ve iz tanınan hareketten sonra temizlenmiyordu. Sola
+   kaydırıp hemen sağa düzeltmek için önce solu geri alıp üstüne bir de eşiği
+   geçmek gerekiyordu. Artık **bir hareket okunur okunmaz iz sıfırlanıyor** —
+   doğru da olsa yanlış da olsa.
+2. **Sıradaki hareket önceden yapılamıyordu.** `armedStep` tek bir sayıydı ve
+   yalnızca *ilk bekleyen* adım silahlanabiliyordu; önceki adım çalarken
+   yapılan kaydırma çöpe gidiyordu. Artık `armed` bir **küme** ve el, ilk
+   bekleyen adıma **ya da bir sonrakine** kaydırabiliyor. El müziğin önünde
+   olabilir.
+3. **Yavaş kaydırma hiç sayılmıyordu.** Mesafe bir pencere içinde ölçülüyor;
+   pencereden yavaş bir el hiçbir anda eşiği geçemiyordu. `swipeSeconds`
+   0.30 → **0.50**. Pencereyi uzatmak ancak (1) sayesinde güvenli.
+4. **Parmak zaten ekrandaysa figüre bağlanmıyordu.** `beginFigure` yalnızca
+   parmağın indiği anda çağrılıyordu; bir önceki figürden ya da tutmalı bir
+   notadan parmağı kaldırmadıysan yeni figüre hiç bağlanmıyordun. Artık
+   **kaydırırken de** bağlanma deneniyor (`play_screen._onDrag`).
+   `test/play_screen_test.dart` bunu gerçek bir parmakla doğruluyor.
 
 ### Ekranda: iplik + chevron (v119)
 

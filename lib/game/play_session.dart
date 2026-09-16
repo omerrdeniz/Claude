@@ -145,9 +145,14 @@ class _OnFigure {
   /// Where the finger has been lately, newest last, as (beat, across, down).
   final List<(double, double, double)> trail = [];
 
-  /// The step the last movement armed, if any. A step plays its notes only
-  /// when the hand has asked for it.
-  int? armedStep;
+  /// The steps the hand has asked for. A step plays its notes only when it is
+  /// in here.
+  ///
+  /// More than one because the hand is allowed to be ahead of the music: a
+  /// movement made while the step before it is still sounding used to be
+  /// thrown away, and the player had to wait for silence and then move inside
+  /// two tenths of a second. Asking early is asking.
+  final Set<int> armed = {};
 }
 
 /// The bead a run is currently on: the note due now, sitting on the hit line.
@@ -822,13 +827,28 @@ class PlaySession {
     final swipe = _swipeOf(dx, dy);
     if (swipe == null) return;
 
-    // The next step still waiting for a hand. Arming reaches forward only:
-    // one movement is worth one step, and never the one just played.
+    // A movement, right or wrong, is over: the next one is measured from
+    // here. Without this the trail still held the far end of the last
+    // movement, so a hand that went the wrong way and corrected itself had to
+    // undo the mistake *and* clear the threshold again before the correction
+    // counted — which is most of what "sometimes it takes and sometimes it
+    // doesn't" was.
+    on.trail
+      ..clear()
+      ..add((_beat, across, down));
+
+    // The two steps still waiting for a hand: the one being played and the
+    // one after it. Arming reaches forward only, and never back to the step
+    // just played.
     final steps = chart.figures[on.figureId]!;
-    for (var i = 0; i < steps.length; i++) {
+    var looked = 0;
+    for (var i = 0; i < steps.length && looked < 2; i++) {
       if (!steps[i].taps.any(_isPending)) continue;
-      if (steps[i].direction == swipe) on.armedStep = i;
-      return;
+      looked += 1;
+      if (steps[i].direction == swipe) {
+        on.armed.add(i);
+        return;
+      }
     }
   }
 
@@ -894,10 +914,9 @@ class PlaySession {
   void _playFigures() {
     if (_figures.isEmpty) return;
     for (final on in _figures.values) {
-      final armed = on.armedStep;
-      if (armed == null) continue;
+      if (on.armed.isEmpty) continue;
       final steps = chart.figures[on.figureId]!;
-      for (final tap in steps[armed].taps) {
+      for (final tap in [for (final i in on.armed) ...steps[i].taps]) {
         final errorMs = (_judgedBeat - tap.beat) / beatsPerSecond * 1000;
         if (errorMs < 0) continue; // not due yet
         if (!_isPending(tap)) continue;
@@ -931,7 +950,14 @@ class PlaySession {
   static const double swipeDistance = 0.055;
 
   /// How long a movement may take and still be one movement, in seconds.
-  static const double swipeSeconds = 0.30;
+  ///
+  /// Half a second, up from three tenths. At three tenths a slide made at a
+  /// comfortable pace never counted at all: the distance is measured over
+  /// this window, so a hand that took longer than it to cross the threshold
+  /// never had enough of the movement inside the window at once. A longer
+  /// window is only safe because the trail is cleared the moment a movement
+  /// is read — see [moveFigure].
+  static const double swipeSeconds = 0.50;
 
   /// How long before its first note a figure may be caught, in seconds.
   static const double figureLeadSeconds = 0.4;

@@ -694,10 +694,16 @@ void main() {
       return (session, id!, steps);
     }
 
-    /// Move the finger [by] in one direction, in several samples, as a hand
-    /// does.
-    void swipe(PlaySession session, int id, Swipe way) {
-      var x = right, y = 0.5;
+    /// Move the finger in one direction from where it is, in several samples,
+    /// as a hand does. Gives back where it ended up, because a hand does not
+    /// teleport back to the middle between movements.
+    (double, double) swipeFrom(
+      PlaySession session,
+      int id,
+      Swipe way,
+      (double, double) at,
+    ) {
+      var (x, y) = at;
       for (var i = 0; i < 5; i++) {
         switch (way) {
           case Swipe.right:
@@ -711,7 +717,11 @@ void main() {
         }
         session.moveFigure(id, x, y);
       }
+      return (x, y);
     }
+
+    void swipe(PlaySession session, int id, Swipe way) =>
+        swipeFrom(session, id, way, (right, 0.5));
 
     test('there is a figure to catch, and only where one is', () {
       final session = sessionFor(relentless(), difficulty: Difficulty.normal);
@@ -828,6 +838,65 @@ void main() {
       for (final tap in second.first.taps) {
         expect(heard, contains(tap.notes.first.midi));
       }
+    });
+
+    test('a movement the wrong way does not spoil the next one', () {
+      // The trail used to keep the far end of the wrong movement, so the
+      // correction had to undo it *and* clear the threshold again before it
+      // counted. Most of *"bazen tutturuyorum bazen tutturamıyorum."*
+      final (session, id, steps) = caught();
+      final wrong = steps.first.direction == Swipe.right
+          ? Swipe.left
+          : Swipe.right;
+      final at = swipeFrom(session, id, wrong, (right, 0.5));
+      swipeFrom(session, id, steps.first.direction, at);
+      for (var beat = 0.0; beat <= 3.0; beat += 0.02) {
+        seek(session, beat);
+      }
+      expect(
+        engine.struck.map((s) => s.$1),
+        containsAll([for (final t in steps.first.taps) t.notes.first.midi]),
+      );
+    });
+
+    test('and a movement made early is not thrown away', () {
+      // Both movements before either has sounded. The hand is allowed to be
+      // ahead of the music: waiting for the last note of a movement and then
+      // finding the next direction inside two tenths of a second is not a
+      // thing a hand does.
+      final (session, id, steps) = caught();
+      expect(steps, hasLength(2));
+      final at = swipeFrom(session, id, steps.first.direction, (right, 0.5));
+      swipeFrom(session, id, steps[1].direction, at);
+      for (var beat = 0.0; beat <= 3.0; beat += 0.02) {
+        seek(session, beat);
+      }
+      final heard = engine.struck.map((s) => s.$1).toSet();
+      for (final tap in steps[1].taps) {
+        expect(heard, contains(tap.notes.first.midi));
+      }
+    });
+
+    test('a movement at a comfortable pace counts too', () {
+      // Six tenths of a second to cross, which is a slide rather than a
+      // flick. The distance is measured over a window, so a hand slower than
+      // the window never had enough of the movement inside it at once and the
+      // slide counted for nothing at all.
+      final (session, id, steps) = caught();
+      final way = steps.first.direction == Swipe.right ? 1 : -1;
+      var x = right;
+      for (var i = 0; i < 12; i++) {
+        seek(session, i * 0.1);
+        x += way * 0.007;
+        session.moveFigure(id, x, 0.5);
+      }
+      for (var beat = 1.1; beat <= 3.0; beat += 0.02) {
+        seek(session, beat);
+      }
+      expect(
+        engine.struck.map((s) => s.$1),
+        contains(steps.first.taps.last.notes.first.midi),
+      );
     });
 
     test('lifting the finger ends it', () {
