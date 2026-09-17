@@ -2,7 +2,7 @@
 # Installs what this project needs before a Claude Code on the web session
 # starts. The container is new every time and its image carries no Flutter, so
 # without this every session begins by installing it by hand. See
-# docs/DURUM.md, "Ortam kurulumu".
+# piano-flow/docs/DURUM.md, "Ortam kurulumu".
 set -euo pipefail
 
 # Only the remote container needs this; a local checkout has its own Flutter.
@@ -28,7 +28,9 @@ git config --global --get-all safe.directory | grep -qxF "$FLUTTER_DIR" ||
 flutter --version
 flutter config --no-analytics > /dev/null 2>&1 || true
 
-cd "${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+# The repo root holds several projects; the Flutter one lives in piano-flow/.
+REPO_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+cd "$REPO_ROOT/piano-flow"
 flutter pub get
 
 # Leave Flutter on the PATH for the rest of the session.

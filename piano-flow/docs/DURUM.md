@@ -1853,10 +1853,10 @@ Konteynerde Flutter **kurulu gelmiyor** — imajda Node, Ruby, Java, Gradle ve
 Playwright var, Flutter ve Dart yok — ve kap her oturumda sıfırdan geliyor.
 Artık bunu **oturum açılışında bir kanca yapıyor**:
 
-- `.claude/hooks/session-start.sh` — klon (3.35.1), `safe.directory`, ilk
+- `.claude/hooks/session-start.sh` (depo kökünde, bu klasörde değil) — klon (3.35.1), `safe.directory`, ilk
   çalıştırmayla Dart SDK'nın açılması, `flutter pub get`, ve PATH'in
   `$CLAUDE_ENV_FILE` üzerinden oturumun geri kalanına bırakılması.
-- `.claude/settings.json` — kancayı `SessionStart`'a bağlıyor, 900 sn zaman
+- `.claude/settings.json` (depo kökünde) — kancayı `SessionStart`'a bağlıyor, 900 sn zaman
   aşımıyla (klon 832 MB, SDK açılımıyla birlikte birkaç dakika).
 
 Kanca **senkron**: kurduğu şey oturumun ilk komutunun ihtiyaç duyduğu şey.
