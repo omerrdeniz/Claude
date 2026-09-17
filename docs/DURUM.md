@@ -3,9 +3,11 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v124):** notaların yatay yeri artık elin *asıl* perde
-aralığına göre; parçanın iki kez uğradığı uçlar genişliği yemiyor
-(aşağıda "Notaların yatay yeri"). Ondan önce: hızlı seriler artık tek tek basmak yerine el
+**Son güncelleme (v125):** notaların yatay yeri artık elin *asıl* perde
+aralığına göre — parçanın iki kez uğradığı uçlar genişliği yemiyor — ve bir
+elin bölgesi ekranın 0.33'ünden 0.37'sine çıktı. Bir elin orta %80'lik
+notası ekranın %21'i yerine %33'ünü kaplıyor (aşağıda "Notaların yatay
+yeri"). Ondan önce: hızlı seriler artık tek tek basmak yerine el
 hareketiyle çalınıyor, ve hareketi yakalamak dört ayrı düzeltmeyle
 kolaylaştı (yanlış yönden sonra düzeltme, hareketi önceden yapma, yavaş
 kaydırma, ekranda duran parmak). Giriş kuralı **tek ve her parçada aynı**:
@@ -118,7 +120,7 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
 
-## Notaların yatay yeri: ender notalar genişliği yemesin (v124)
+## Notaların yatay yeri: ender notalar genişliği yemesin (v124-v125)
 
 Oyuncu: *"Notaların yatay dağılımını daha iyi yapmalıyız. Şu anda notalar hep
 belirli yerlerde toplanıyor."*
@@ -139,10 +141,23 @@ notalar da iki uçtaki **%5'lik** şeritlere (`pitchEdgeShare`) yayılıyor.
 keserdi. Resim bunu asla söylememeli. (Test: kütüphanedeki her elde tiz nota
 her zaman daha sağda.)
 
-| | zirve kova | ölü kova |
-|---|---|---|
-| eski | %26 | 2.7/10 |
-| **yeni** | **%24** | **1.6/10** |
+**Sonra oyuncu daha fazlasını istedi** (*"biraz daha yayılmasını sağlayabilir
+miyiz"*) ve v125'te iki şey daha yapıldı:
+
+- **Kırpma %5'ten %10'a** çıktı. Ölçüldü (bir elin orta %80'lik notasının
+  ekranın ne kadarını kapladığı): %5 → 24, **%10 → 30**, %15 → 31 ama ender
+  notalar uçlara yığılmaya başlıyor (Für Elise'in sağ bölgesinin son onda
+  biri, notalarının %6'sından %30'una çıkıyor). %10 durulacak yer.
+- **Bölgeler genişledi.** Ekranın üçte biri boşluktu. Kenar payı 0.09 → 0.07,
+  ortadaki boşluk 0.16 → 0.12; bir elin bölgesi **0.33 → 0.37** oldu, yani
+  sekizde bir daha geniş. Kenar payı hâlâ bir nota yarıçapından büyük ve
+  ortadaki boşluk hâlâ bir notadan geniş, çizgisi de ortasında.
+
+| | zirve kova | ölü kova | orta %80 ekranın |
+|---|---|---|---|
+| v123 | %26 | 2.7/10 | %21'i |
+| v124 | %24 | 1.6/10 | %24'ü |
+| **v125** | **%23** | **2.0/10** | **%33'ü** |
 
 Tek tek en kötüler (sağ el, bölge onda birlik kovalara bölünmüş):
 
@@ -159,8 +174,10 @@ bir perdede çalıyor; orası da öyle kalır.
 
 **Yan etki:** notalar birbirinden uzaklaştığı için `dragReach` (parmağın
 erişimi, ekran mesafesi) artık daha az yarım ses kaplıyor. Kütüphanede
-Kanon'da **5 omuz** notası koşulardan düştü (1582 → 1577); koşu sayısı
-değişmedi (182).
+Kanon'da **12 omuz** notası koşulardan düştü (1582 → 1570); koşu sayısı
+değişmedi (182). `dragReach` bir parmağın ekranda ne kadar yol gidebileceği
+hakkında, perde hakkında değil — notalar açıldıkça daha az nota kapsaması
+doğru davranış.
 
 ## Figür: hareketle çalınan hızlı seriler (v117-v123)
 

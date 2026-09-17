@@ -386,16 +386,21 @@ void main() {
     ).paint(recorder, phone);
 
     final line = g.hitLineY;
+    // Rounded to a hundredth of a pixel: a note is drawn as a body and a rim
+    // over it, and the two reach the same place by slightly different
+    // arithmetic — the same position to the eye, two doubles to a set.
+    double place(Rect rect) => (rect.center.dx * 100).roundToDouble() / 100;
+
     final plumes = {
       for (final rect in recorder.rects)
-        if (rect.top >= line - 0.5) rect.center.dx,
+        if (rect.top >= line - 0.5) place(rect),
     }.toList()..sort();
     expect(plumes, hasLength(tap.notes.length));
 
     // The notes of that chord: bars still on their way down.
     final heads = {
       for (final rect in recorder.rects)
-        if (rect.bottom < line - 1) rect.center.dx,
+        if (rect.bottom < line - 1) place(rect),
     };
     expect(heads, hasLength(tap.notes.length));
 

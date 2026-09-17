@@ -332,11 +332,18 @@ class Chart {
   ///
   /// The outer edges stop short of the screen by more than a note's radius:
   /// a note placed hard against the edge has its glow clipped and sits under
-  /// the hand holding the phone.
-  static const double leftZoneStart = 0.09;
-  static const double leftZoneEnd = 0.42;
-  static const double rightZoneStart = 0.58;
-  static const double rightZoneEnd = 0.91;
+  /// the hand holding the phone. The gap down the middle is wider than that
+  /// again, so the two hands read as two places.
+  ///
+  /// Both were cut back once the player asked for more room across
+  /// (*"biraz daha yayılmasını sağlayabilir miyiz"*): a third of the screen
+  /// was margin, and a hand had a third to play in. A hand now has 0.37 of
+  /// it — an eighth more — with the middle gap still wider than a note and
+  /// the divide drawn down it.
+  static const double leftZoneStart = 0.07;
+  static const double leftZoneEnd = 0.44;
+  static const double rightZoneStart = 0.56;
+  static const double rightZoneEnd = 0.93;
 
   /// Which hand a touch at [across] belongs to.
   static Hand handAt(double across) => across < 0.5 ? Hand.left : Hand.right;
@@ -344,10 +351,15 @@ class Chart {
   /// The share of a hand's notes at each end of its range that count as rare
   /// rather than as the range itself.
   ///
-  /// A fiftieth. Small enough that it only ever discounts notes a piece
-  /// visits a handful of times, which is exactly what stretches a range
-  /// without filling it.
-  static const double pitchTailShare = 0.05;
+  /// A tenth. Small enough that it only ever discounts notes a piece visits
+  /// rarely, which is exactly what stretches a range without filling it.
+  ///
+  /// Measured over the library, by how much of the screen the middle four
+  /// fifths of a hand's notes cover: a twentieth gave 24%, a tenth 30%, and
+  /// three twentieths 31% but with the rare notes visibly piling into the end
+  /// strips — the last tenth of the Rondo's right-hand zone went from six per
+  /// cent of its notes to thirty.
+  static const double pitchTailShare = 0.10;
 
   /// The share of a hand's zone kept at each end for those rare notes.
   ///
