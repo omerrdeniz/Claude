@@ -77,7 +77,12 @@ göster. (3) Plan: adımlar ve her adım için "bittiğini nasıl
 anlayacağız" ve o adımın denetim maddeleri (B5'teki beş
 sorudan türetilmiş, somut). Ben onaylamadan uygulamaya geçme.
 Tek adımlık işte (tek araç çağrısıyla biten iş) üçünü tek
-cümlede geç.
+cümlede geç. Planın teknik kısmı (adımların ayrıntısı, denetim
+maddeleri, kaynak ve motor bilgileri) projede bir plan dosyasına
+yazılır (Docs/); bana gelen mesaj yalnız şunları taşır: ne
+yapılacak (iki üç cümle), bittiğini nasıl anlayacağız (bir
+cümle), en fazla bir karar (üç seçenek, önerinle), tek soru.
+Dosyadaki denetim maddeleri B5'te kullanılır.
 
 **B3. Alt ajan sorusu.** Planla aynı mesajda "Bu işin bir
 parçasını alt ajana vermek zaman, emek ya da kalite kazandırır
@@ -136,3 +141,4 @@ atlama. Kabul ettiğim çerçeveyi plana yaz ve ona sadık kal.
 - B1: 2026-09-15: kısa mesajlarda kuralları gevşettim; araç çalıştırma gerekçesi görünür değildi.
 - B5: 2026-09-15: hareket kodu derlenince "bitti" dedim; denetimde iki hata çıktı.
 - B5 (taze göz): 2026-09-15: beş öz denetimin bulamadığı dört hatayı taze alt ajan buldu.
+- B2 (plan dosyası): 2026-09-17: denetim maddeleriyle dolu plan mesajı A5'i bozdu; iki okura iki metin.
