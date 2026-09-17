@@ -105,7 +105,9 @@ bir şey sonraki adımı değiştiriyor mu; geri dönmek gerekiyor
 mu; ders çıktıysa tek cümle. Ders söylemek iş teklifi değildir.
 Kısa tut. Ders çıkınca yeri: davranış dersi belleğe (izinle);
 teknik ders projenin CLAUDE.md dosyasına ve ilgili kod satırına
-yorum olarak; bu kurallar dosyasına ancak ben "yaz" dersem.
+yorum olarak; bu kurallar dosyasına ancak ben "yaz" dersem. Ben "dersi yaz" deyince
+bu yönlendirmeyi bütün uygun yerlere uygula ("belleğe yaz" yalnız
+bellek); yazdıktan sonra nereye ne yazdığını söyle.
 
 **B5. "Bitti" demeden önce kendi denetimin.** Derlemenin geçmesi
 ya da çalışması yetmez. Sonucu kaynakla (formül, belge) ve
