@@ -232,6 +232,45 @@ void main() {
       );
     });
 
+    test('and no two neighbours are squashed onto the same spot', () {
+      // The canon at 1:18 came out as four notes stacked against the
+      // right-hand edge. Its right hand runs 55 to 86 and the passage lives
+      // near the top, where the rare notes had been given a fixed strip of
+      // the zone however many semitones had to fit in it — three of them a
+      // hundredth of the screen apart, where the same three lower down were
+      // a twentieth. A semitone is now never drawn less than a fifth as wide
+      // as the widest semitone of its own hand.
+      var tightest = 1.0;
+      var where = '';
+      for (final song in shippedSongs) {
+        for (final d in Difficulty.values) {
+          final chart = Chart.build(song, difficulty: d);
+          for (final hand in Hand.values) {
+            final at = <int, double>{};
+            for (final tap in chart.taps) {
+              if (tap.hand != hand) continue;
+              for (var i = 0; i < tap.notes.length; i++) {
+                at[tap.notes[i].midi] = tap.noteAcross[i];
+              }
+            }
+            final pitches = at.keys.toList()..sort();
+            var tight = double.infinity, wide = 0.0;
+            for (var i = 1; i < pitches.length; i++) {
+              if (pitches[i] - pitches[i - 1] != 1) continue;
+              final gap = at[pitches[i]]! - at[pitches[i - 1]]!;
+              if (gap < tight) tight = gap;
+              if (gap > wide) wide = gap;
+            }
+            if (wide > 0 && tight.isFinite && tight / wide < tightest) {
+              tightest = tight / wide;
+              where = '${song.title} ${hand.name} on ${d.label}';
+            }
+          }
+        }
+      }
+      expect(tightest, greaterThan(0.2), reason: where);
+    });
+
     test('and higher is still always further right', () {
       // The rare notes are given the strips at either end rather than being
       // pinned to the edge, because a run climbing out of the common range

@@ -3,11 +3,12 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v125):** notaların yatay yeri artık elin *asıl* perde
+**Son güncelleme (v126):** notaların yatay yeri artık elin *asıl* perde
 aralığına göre — parçanın iki kez uğradığı uçlar genişliği yemiyor — ve bir
 elin bölgesi ekranın 0.33'ünden 0.37'sine çıktı. Bir elin orta %80'lik
-notası ekranın %21'i yerine %33'ünü kaplıyor (aşağıda "Notaların yatay
-yeri"). Ondan önce: hızlı seriler artık tek tek basmak yerine el
+notası ekranın %21'i yerine %27'sini kaplıyor, ve bir yarım ses hiçbir
+zaman kendi elindeki en geniş yarım sesin beşte birinden dar çizilmiyor
+(aşağıda "Notaların yatay yeri"). Ondan önce: hızlı seriler artık tek tek basmak yerine el
 hareketiyle çalınıyor, ve hareketi yakalamak dört ayrı düzeltmeyle
 kolaylaştı (yanlış yönden sonra düzeltme, hareketi önceden yapma, yavaş
 kaydırma, ekranda duran parmak). Giriş kuralı **tek ve her parçada aynı**:
@@ -120,7 +121,7 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
 
-## Notaların yatay yeri: ender notalar genişliği yemesin (v124-v125)
+## Notaların yatay yeri: ender notalar genişliği yemesin (v124-v126)
 
 Oyuncu: *"Notaların yatay dağılımını daha iyi yapmalıyız. Şu anda notalar hep
 belirli yerlerde toplanıyor."*
@@ -153,11 +154,53 @@ miyiz"*) ve v125'te iki şey daha yapıldı:
   sekizde bir daha geniş. Kenar payı hâlâ bir nota yarıçapından büyük ve
   ortadaki boşluk hâlâ bir notadan geniş, çizgisi de ortasında.
 
+### v125 fazla kaçtı: sabit şerit tabansızdı (v126)
+
+Oyuncu Kanon'un **1:18**'inden bir ekran görüntüsü gönderdi ve sordu: *"Bu
+kısım olmuş mu sence?"* Olmamıştı, ve sebebi v125'in kendisiydi.
+
+Ender notalar bölgenin **sabit %5'lik** şeridine sığdırılıyordu — o şeride kaç
+yarım ses düştüğüne bakılmadan. Kanon'un sağ eli 55..86, asıl aralığı (o
+zamanki %10 kırpmayla) 64..78; yani **sekiz yarım ses bölgenin yirmide
+birine** katlanıyordu. Ve 1:18'deki pasaj tam orada çalıyor:
+
+| perde | v125'teki yeri | v126 |
+|---|---|---|
+| 78 | 0.912 | 0.849 |
+| 79 | 0.914 | 0.863 |
+| 81 | 0.918 | 0.893 |
+| **78→81 arası** | **0.006** | **0.044** |
+
+Aynı elde 69→71 arası 0.038'di. Yani üç yarım ses, iki yarım sesin altıda
+biri kadar yer kaplıyordu — ekranda dört nota sağ kenara istiflenmiş
+görünüyordu.
+
+**Düzeltme iki parçalı, çünkü iki ayrı başarısızlık biçimi var:**
+
+- **Taban:** asıl aralığın dışındaki bir yarım ses, içerideki bir yarım sesin
+  **yarısı** kadar yer alıyor (`pitchTailWeight`). Oran, sabit şeritte olmayan
+  bir taban getiriyor.
+- **Tavan:** tek başına oran da yetmiyor — otuz yarım ses dışarıdaysa
+  "yarımşar adım" yine bölgenin yarısını yer. O yüzden her uç en çok
+  `pitchEdgeShare = 0.15` alabiliyor.
+- Kırpma **%10'dan %5'e** döndü: bir elin notalarının onda biri ender değil.
+
+Ölçüm — bir elde en sıkışık yarım sesin en geniş olana oranı:
+
+| | oran | orta %80 ekranın |
+|---|---|---|
+| v125 | **0.040** (25 kat) | %33'ü |
+| **v126** | **0.227** (4.4 kat) | %27'si |
+
+Yayılmadan biraz veriyoruz, ama v125'teki %33 notaların beşte birini
+ezerek alınmıştı. `test/chart_test.dart` tabanı kilitliyor (v125'te düşüyor).
+
 | | zirve kova | ölü kova | orta %80 ekranın |
 |---|---|---|---|
 | v123 | %26 | 2.7/10 | %21'i |
 | v124 | %24 | 1.6/10 | %24'ü |
-| **v125** | **%23** | **2.0/10** | **%33'ü** |
+| v125 | %23 | 2.0/10 | %33'ü ama taban yok |
+| **v126** | **%25** | **2.2/10** | **%27'si** |
 
 Tek tek en kötüler (sağ el, bölge onda birlik kovalara bölünmüş):
 
@@ -174,7 +217,7 @@ bir perdede çalıyor; orası da öyle kalır.
 
 **Yan etki:** notalar birbirinden uzaklaştığı için `dragReach` (parmağın
 erişimi, ekran mesafesi) artık daha az yarım ses kaplıyor. Kütüphanede
-Kanon'da **12 omuz** notası koşulardan düştü (1582 → 1570); koşu sayısı
+Kanon'da **6 omuz** notası koşulardan düştü (1582 → 1576); koşu sayısı
 değişmedi (182). `dragReach` bir parmağın ekranda ne kadar yol gidebileceği
 hakkında, perde hakkında değil — notalar açıldıkça daha az nota kapsaması
 doğru davranış.

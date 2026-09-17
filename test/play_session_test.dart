@@ -1083,8 +1083,13 @@ void main() {
       final drag = session.beginDrag(places[2]);
       expect(drag, isNotNull, reason: 'there is a run to be reaching for');
 
+      // And then follows the bead, which is what a run asks for once it has
+      // been caught — the reach is a distance across the screen, not a number
+      // of notes, so a finger that never moves is left behind by a run that
+      // travels.
       for (var beat = 1.1; beat <= 1.7; beat += 0.02) {
-        session.drag(drag!, places[2]);
+        final bead = session.runBeads;
+        session.drag(drag!, bead.isEmpty ? places[2] : bead.first.across);
         seek(session, beat);
       }
       expect(engine.struck.map((s) => s.$1), containsAll([76, 77, 79]));

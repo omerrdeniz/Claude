@@ -351,23 +351,37 @@ class Chart {
   /// The share of a hand's notes at each end of its range that count as rare
   /// rather than as the range itself.
   ///
-  /// A tenth. Small enough that it only ever discounts notes a piece visits
-  /// rarely, which is exactly what stretches a range without filling it.
+  /// A twentieth. Small enough that it only ever discounts notes a piece
+  /// visits rarely, which is exactly what stretches a range without filling
+  /// it.
   ///
-  /// Measured over the library, by how much of the screen the middle four
-  /// fifths of a hand's notes cover: a twentieth gave 24%, a tenth 30%, and
-  /// three twentieths 31% but with the rare notes visibly piling into the end
-  /// strips — the last tenth of the Rondo's right-hand zone went from six per
-  /// cent of its notes to thirty.
-  static const double pitchTailShare = 0.10;
+  /// It was a tenth for one version and that was too much: a tenth of the
+  /// canon's right hand is everything above its 78th semitone, and the
+  /// passage at 1:18 is played there — three semitones of it came out a fifth
+  /// as far apart as the same three lower down. A tenth of a hand's notes is
+  /// not rare; a twentieth is.
+  static const double pitchTailShare = 0.05;
 
-  /// The share of a hand's zone kept at each end for those rare notes.
+  /// The most of a hand's zone either end may take for its rare notes.
   ///
-  /// A tenth each, so the common range gets the middle four fifths. They are
-  /// not simply pinned to the edge: a run climbing out of the common range
-  /// would stop moving across the screen half way up, which the picture must
-  /// never say.
-  static const double pitchEdgeShare = 0.05;
+  /// A seventh or so. [pitchTailWeight] alone has no ceiling: half a step a
+  /// semitone is still most of the zone when the outlier is thirty semitones
+  /// out, which is the very thing the trimming exists to stop. So the two
+  /// work together — half a step each, up to this much.
+  static const double pitchEdgeShare = 0.15;
+
+  /// What a semitone outside the common range is worth, against one inside.
+  ///
+  /// Half. It is a floor as much as a discount: whatever a piece's range, no
+  /// two neighbouring notes are ever drawn closer together than half the
+  /// widest pair, so a passage that lives at the top of a hand's range still
+  /// moves across the screen as it climbs.
+  ///
+  /// The rare notes used to get a fixed share of the zone instead, which had
+  /// no floor at all — the canon folded eight semitones into a twentieth of
+  /// the zone, and the passage at 1:18 came out as four notes stacked on the
+  /// right-hand edge a hundredth of the screen apart.
+  static const double pitchTailWeight = 0.5;
 
   static Chart build(Song song, {Difficulty difficulty = Difficulty.normal}) {
     final onsetTolerance = onsetToleranceAt(song.bpm);
@@ -403,24 +417,44 @@ class Chart {
     /// Where a pitch sits within its hand's zone, 0 at the left of it and 1
     /// at the right.
     ///
-    /// The common range gets the middle [1 - 2 * pitchEdgeShare] of the zone
-    /// and the rare notes beyond it share the strips at either end. Still one
-    /// note one place, and still higher further right — what changes is that
-    /// the width goes to the notes that use it.
+    /// A semitone inside the common range is worth a whole step across; one
+    /// outside is worth [pitchTailWeight] of a step. So the width still goes
+    /// to the notes that use it, and the rare ones are still spread out
+    /// rather than pinned — but the strip they get is as wide as they need
+    /// rather than a fixed share of the zone.
+    ///
+    /// A fixed share is what it was, and the canon caught it: its right hand
+    /// runs 55 to 86 with a common range of 64 to 78, so eight semitones were
+    /// folded into a twentieth of the zone. The passage at 1:18 lives in
+    /// those eight, and it came out as four notes stacked on the right-hand
+    /// edge, moving a hundredth of the screen where the same interval lower
+    /// down moves five times that.
     double placeOf(double pitch, int low, int common, int high, int far) {
-      if (pitch < common) {
-        return common <= low
-            ? 0.0
-            : pitchEdgeShare * (pitch - low) / (common - low);
+      final core = (high - common).toDouble();
+      final total =
+          (common - low) * pitchTailWeight +
+          core +
+          (far - high) * pitchTailWeight;
+      if (total <= 0) return 0.5;
+      // What each end would take at half a step a semitone, and the most it
+      // is allowed whatever it asks for.
+      final under = ((common - low) * pitchTailWeight / total).clamp(
+        0.0,
+        pitchEdgeShare,
+      );
+      final over = ((far - high) * pitchTailWeight / total).clamp(
+        0.0,
+        pitchEdgeShare,
+      );
+      if (pitch <= common) {
+        return common <= low ? 0.0 : under * (pitch - low) / (common - low);
       }
-      if (pitch > high) {
+      if (pitch >= high) {
         return far <= high
             ? 1.0
-            : 1 - pitchEdgeShare + pitchEdgeShare * (pitch - high) / (far - high);
+            : 1 - over + over * (pitch - high) / (far - high);
       }
-      if (high <= common) return 0.5;
-      return pitchEdgeShare +
-          (1 - 2 * pitchEdgeShare) * (pitch - common) / (high - common);
+      return under + (1 - under - over) * (pitch - common) / core;
     }
 
     double acrossOf(Hand hand, double pitch) {
