@@ -207,6 +207,59 @@ void main() {
       );
     });
 
+    test('a note a piece visits twice does not squash everything else', () {
+      // *"Notalar hep belirli yerlerde toplanıyor."* The Rondo's right hand
+      // runs to a top C it plays four times in nine hundred notes; read
+      // strictly, that note owns the right-hand edge of its zone and nine
+      // notes in ten crowd into the left half of it.
+      final chart = Chart.build(
+        songOf([
+          for (var i = 0; i < 60; i++) note(i * 1.0, 60 + i % 12),
+          note(60, 100), // once, right at the top
+        ]),
+        difficulty: Difficulty.normal,
+      );
+      final common =
+          chart.taps
+              .where((t) => t.notes.first.midi < 100)
+              .map((t) => t.across)
+              .toList()
+            ..sort();
+      expect(
+        common.last - common.first,
+        greaterThan((Chart.rightZoneEnd - Chart.rightZoneStart) * 0.7),
+        reason: 'the width goes to the notes that are actually played',
+      );
+    });
+
+    test('and higher is still always further right', () {
+      // The rare notes are given the strips at either end rather than being
+      // pinned to the edge, because a run climbing out of the common range
+      // would otherwise stop moving across the screen half way up.
+      for (final song in shippedSongs) {
+        for (final d in Difficulty.values) {
+          final chart = Chart.build(song, difficulty: d);
+          final placeOf = <Hand, Map<int, double>>{};
+          for (final tap in chart.taps) {
+            for (var i = 0; i < tap.notes.length; i++) {
+              (placeOf[tap.hand] ??= {})[tap.notes[i].midi] = tap.noteAcross[i];
+            }
+          }
+          for (final entry in placeOf.entries) {
+            final pitches = entry.value.keys.toList()..sort();
+            for (var i = 1; i < pitches.length; i++) {
+              expect(
+                entry.value[pitches[i]]!,
+                greaterThanOrEqualTo(entry.value[pitches[i - 1]]!),
+                reason: '${song.title}/${d.name}: ${pitches[i]} is not right '
+                    'of ${pitches[i - 1]}',
+              );
+            }
+          }
+        }
+      }
+    });
+
     test('notes stay on the screen', () {
       for (final difficulty in Difficulty.values) {
         for (final song in shippedSongs) {
@@ -501,8 +554,12 @@ void main() {
       final song = shipped('canon-in-d');
       final bps = song.bpm / 60;
       final chart = Chart.build(song);
+      // Any of the series will do; a shoulder comes along only when it is
+      // within a finger's reach across the screen, so the two at the top of
+      // the piece's range — where the notes are furthest apart — take one
+      // instead of two.
       final run = chart.runs.values.firstWhere(
-        (r) => r.first.beat / bps > 148 && r.first.beat / bps < 149,
+        (r) => r.first.beat / bps > 150 && r.first.beat / bps < 151,
       );
       expect(run, hasLength(5), reason: 'three, with a shoulder either side');
 

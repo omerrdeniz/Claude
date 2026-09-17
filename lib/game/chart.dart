@@ -341,6 +341,22 @@ class Chart {
   /// Which hand a touch at [across] belongs to.
   static Hand handAt(double across) => across < 0.5 ? Hand.left : Hand.right;
 
+  /// The share of a hand's notes at each end of its range that count as rare
+  /// rather than as the range itself.
+  ///
+  /// A fiftieth. Small enough that it only ever discounts notes a piece
+  /// visits a handful of times, which is exactly what stretches a range
+  /// without filling it.
+  static const double pitchTailShare = 0.05;
+
+  /// The share of a hand's zone kept at each end for those rare notes.
+  ///
+  /// A tenth each, so the common range gets the middle four fifths. They are
+  /// not simply pinned to the edge: a run climbing out of the common range
+  /// would stop moving across the screen half way up, which the picture must
+  /// never say.
+  static const double pitchEdgeShare = 0.05;
+
   static Chart build(Song song, {Difficulty difficulty = Difficulty.normal}) {
     final onsetTolerance = onsetToleranceAt(song.bpm);
     final (played, auto) = _divideVoices(song, difficulty);
@@ -348,27 +364,58 @@ class Chart {
 
     // Pitch ranges, per hand when the hands are separated and overall when
     // they are not.
-    final ranges = <Hand, (int, int)>{};
+    //
+    // Four numbers rather than two: the outright lowest and highest, and the
+    // lowest and highest of all but the rarest [pitchTailShare] at each end.
+    // Spreading a hand over its outright range hands the whole width to its
+    // extremes, and a piece has extremes it visits twice — the Rondo's right
+    // hand runs to a top C it plays four times in nine hundred notes, and
+    // stretching to reach it left nine notes in ten crammed into the left
+    // half of the hand's zone: *"notalar hep belirli yerlerde toplanıyor."*
+    final ranges = <Hand, (int, int, int, int)>{};
     for (final hand in Hand.values) {
       final inHand = difficulty.separatesHands
           ? played.where((n) => n.hand == hand)
           : played;
       if (inHand.isEmpty) continue;
-      var low = 127;
-      var high = 0;
-      for (final n in inHand) {
-        if (n.midi < low) low = n.midi;
-        if (n.midi > high) high = n.midi;
+      final sorted = [for (final n in inHand) n.midi]..sort();
+      final tail = (sorted.length * pitchTailShare).floor();
+      ranges[hand] = (
+        sorted.first,
+        sorted[tail],
+        sorted[sorted.length - 1 - tail],
+        sorted.last,
+      );
+    }
+
+    /// Where a pitch sits within its hand's zone, 0 at the left of it and 1
+    /// at the right.
+    ///
+    /// The common range gets the middle [1 - 2 * pitchEdgeShare] of the zone
+    /// and the rare notes beyond it share the strips at either end. Still one
+    /// note one place, and still higher further right — what changes is that
+    /// the width goes to the notes that use it.
+    double placeOf(double pitch, int low, int common, int high, int far) {
+      if (pitch < common) {
+        return common <= low
+            ? 0.0
+            : pitchEdgeShare * (pitch - low) / (common - low);
       }
-      ranges[hand] = (low, high);
+      if (pitch > high) {
+        return far <= high
+            ? 1.0
+            : 1 - pitchEdgeShare + pitchEdgeShare * (pitch - high) / (far - high);
+      }
+      if (high <= common) return 0.5;
+      return pitchEdgeShare +
+          (1 - 2 * pitchEdgeShare) * (pitch - common) / (high - common);
     }
 
     double acrossOf(Hand hand, double pitch) {
       final range = ranges[hand];
       if (range == null) return 0.5;
-      final (low, high) = range;
-      final span = (high - low).toDouble();
-      final position = span <= 0 ? 0.5 : ((pitch - low) / span).clamp(0.0, 1.0);
+      final (low, common, high, far) = range;
+      final position = placeOf(pitch, low, common, high, far).clamp(0.0, 1.0);
       if (!difficulty.separatesHands) {
         return leftZoneStart + position * (rightZoneEnd - leftZoneStart);
       }

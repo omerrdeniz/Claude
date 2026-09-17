@@ -3,7 +3,9 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v123):** hızlı seriler artık tek tek basmak yerine el
+**Son güncelleme (v124):** notaların yatay yeri artık elin *asıl* perde
+aralığına göre; parçanın iki kez uğradığı uçlar genişliği yemiyor
+(aşağıda "Notaların yatay yeri"). Ondan önce: hızlı seriler artık tek tek basmak yerine el
 hareketiyle çalınıyor, ve hareketi yakalamak dört ayrı düzeltmeyle
 kolaylaştı (yanlış yönden sonra düzeltme, hareketi önceden yapma, yavaş
 kaydırma, ekranda duran parmak). Giriş kuralı **tek ve her parçada aynı**:
@@ -115,6 +117,50 @@ ikinci tuşun sağ-sol neresinde duruyorsa biz de öyle gösterelim."*
   temizliyor. Hangi kuyruğun süslemeli bir dokunuşta bittiğini nota
   listesinden `Tap.drawnEndOrnamented` söylüyor. Diğer bütün kuyruklar
   eskisi gibi.
+
+## Notaların yatay yeri: ender notalar genişliği yemesin (v124)
+
+Oyuncu: *"Notaların yatay dağılımını daha iyi yapmalıyız. Şu anda notalar hep
+belirli yerlerde toplanıyor."*
+
+**Sebep ölçüldü.** Bir el, o eldeki **en pes ile en tiz** nota arasına
+yayılıyordu. Ama bir parçanın iki kez uğradığı uçları vardır: Für Elise'in
+sağ eli 924 notanın 4'ünde tepe Do'ya çıkıyor. Bu tek nota bölgenin sağ
+kenarını alıyor ve geri kalan her şey sola sıkışıyordu — sağ elin
+bölgesini ona bölüp saydığımızda notaların **%90'ı sol yarıda**, sağdaki
+%40'lık şerit ise notaların **%6'sını** tutuyordu.
+
+**Kural:** aralık artık uçlardaki **%5** (`pitchTailShare`) sayılmadan
+ölçülüyor; bu "asıl aralık" bölgenin **ortadaki %90'ını** alıyor, kalan ender
+notalar da iki uçtaki **%5'lik** şeritlere (`pitchEdgeShare`) yayılıyor.
+
+İki şeridi kenara **çivilemiyoruz**, oraya yayıyoruz — çünkü asıl aralığın
+üstüne çıkan bir koşu, çivilenseydi ekranda yarı yolda durup ilerlemeyi
+keserdi. Resim bunu asla söylememeli. (Test: kütüphanedeki her elde tiz nota
+her zaman daha sağda.)
+
+| | zirve kova | ölü kova |
+|---|---|---|
+| eski | %26 | 2.7/10 |
+| **yeni** | **%24** | **1.6/10** |
+
+Tek tek en kötüler (sağ el, bölge onda birlik kovalara bölünmüş):
+
+| | eski | yeni |
+|---|---|---|
+| Für Elise | `4·13·14·32·27·5·2·2·1·1` | `17·2·12·12·11·17·19·4·1·6` |
+| Nokturn | `0·0·5·17·22·27·8·5·8·8` | `8·14·21·11·17·7·5·1·4·11` |
+
+**Kalan toplanma müziğin kendisi ve öyle kalmalı.** Neşeye Övgü'nün sağ eli
+6 ayrı perde çalıyor; 6 perde 6 sütun demek, aralarında boşlukla. Bir notayı
+perdesinin söylediği yerden kaydırmak, oyuncunun öğrendiği tek şeyi —
+"bu nota hep şurada" — bozar. Gnossienne'in sağ eli notalarının %36'sını tek
+bir perdede çalıyor; orası da öyle kalır.
+
+**Yan etki:** notalar birbirinden uzaklaştığı için `dragReach` (parmağın
+erişimi, ekran mesafesi) artık daha az yarım ses kaplıyor. Kütüphanede
+Kanon'da **5 omuz** notası koşulardan düştü (1582 → 1577); koşu sayısı
+değişmedi (182).
 
 ## Figür: hareketle çalınan hızlı seriler (v117-v123)
 
