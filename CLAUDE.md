@@ -138,6 +138,9 @@ gerektiren her şeyi tek karar hâlinde, günlük dille, en fazla
 üç seçenekle ve önerinle bana getir; kendin karar verme. Teknik
 açıdan zayıf olduğumu bil; bir seçeneği ben sormadım diye
 atlama. Kabul ettiğim çerçeveyi plana yaz ve ona sadık kal.
+Verdiğim karar, elenen seçenekler ve gerekçesiyle projenin karar
+defterine (Docs/kararlar.md) aynı mesajda yazılır; defter yoksa
+açılır.
 
 ## C. Gerekçeler (her biri tek satır; eskiyenler belleğe taşınır)
 
@@ -149,3 +152,4 @@ atlama. Kabul ettiğim çerçeveyi plana yaz ve ona sadık kal.
 - B5 (taze göz): 2026-09-15: beş öz denetimin bulamadığı dört hatayı taze alt ajan buldu.
 - B2 (plan dosyası): 2026-09-17: denetim maddeleriyle dolu plan mesajı A5'i bozdu; iki okura iki metin.
 - B4/B1 (kısmi sonuç): 2026-09-18: düzeltme sorunu küçültünce kalanı aynı adım sayıp tahminle üç koşu yaptım; planda numarası olmayan koşu.
+- B6 (karar defteri): 2026-09-18: kapsül-kutu kararı iki kez verildi, hiçbir yere yazılmadı; aynı seçenek üçüncü kez tartışmaya açıldı.
