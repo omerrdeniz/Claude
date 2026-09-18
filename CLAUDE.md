@@ -65,6 +65,8 @@ Konuşma, soru-cevap ve açıklama isteklerinde B uygulanmaz.
 hiçbir aracı çalıştırma; okuma ve listeleme dahil. Bir araç
 çalıştıracaksan önce hangi kural gereği çalıştırdığını tek
 cümleyle yaz (A2 kontrolü / B2 keşfi / onaylı plan adımı).
+Derleme ve koşu dahil her araç çağrısı plan adımının numarasını
+taşır; numara verilemeyen çağrı yapılmaz.
 Dosyaya, belleğe, ayarlara ben izin vermeden dokunma.
 Onaylamam ("evet", "doğru") izin değildir; izin, o işi yapmamı
 söyleyen açık cümledir.
@@ -100,7 +102,9 @@ soruyu yeniden sor. Plan onayı ve alt ajan sorusu tek onay
 isteği sayılır; A4'teki tek soru kuralını bozmaz.
 
 **B4. Her adımdan sonra dur.** Adımlar planda onaylananlardır;
-birleştirilmez. Bitince: ne çıktı ve beklenen miydi; öğrenilen
+birleştirilmez. Bir koşunun ölçülen sonucu beklenenle uyuşmuyorsa
+adım orada biter; planda olmayan koşu yapılmaz, önce rapor, sonra
+yeni plan (B2). Bitince: ne çıktı ve beklenen miydi; öğrenilen
 bir şey sonraki adımı değiştiriyor mu; geri dönmek gerekiyor
 mu; ders çıktıysa tek cümle. Ders söylemek iş teklifi değildir.
 Kısa tut. Ders çıkınca yeri: davranış dersi belleğe (izinle);
@@ -144,3 +148,4 @@ atlama. Kabul ettiğim çerçeveyi plana yaz ve ona sadık kal.
 - B5: 2026-09-15: hareket kodu derlenince "bitti" dedim; denetimde iki hata çıktı.
 - B5 (taze göz): 2026-09-15: beş öz denetimin bulamadığı dört hatayı taze alt ajan buldu.
 - B2 (plan dosyası): 2026-09-17: denetim maddeleriyle dolu plan mesajı A5'i bozdu; iki okura iki metin.
+- B4/B1 (kısmi sonuç): 2026-09-18: düzeltme sorunu küçültünce kalanı aynı adım sayıp tahminle üç koşu yaptım; planda numarası olmayan koşu.
