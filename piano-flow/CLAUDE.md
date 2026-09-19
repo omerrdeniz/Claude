@@ -58,6 +58,22 @@ Zamanlama toleransları saniye cinsindendir, vuruş cinsinden değil. Bu hata
 **her ayarı** `PlayScreen`'e geçirmeli. İki kez unutuldu.
 `test/song_list_test.dart` doğruluyor.
 
+## Kontroller sahayı dinlemez, sesi kendileri uyandırır
+
+`PlayScreen`'de dokunuşu dinleyen `Listener` **yalnız oyun sahasını** sarar;
+düğmeler ve paneller `Stack`'te onun üstünde ayrı çocuklardır. İçine alınırsa
+ata dinleyici olayı her hâlükârda alır: duraklat düğmesine basmak bir nota
+çalar ve puan yazar. Üstte kalan süs katmanları `IgnorePointer` ile sarılır —
+`ColoredBox` ve metin (`RenderParagraph.hitTestSelf`) dokunuşu yutar, yani
+ilerleme çubuğu ve başlık yazısı sarılmazsa sahaya giden parmağı engeller.
+
+Bunun karşılığı olarak düğmeler sesi **kendileri** uyandırır: `_audio.nudge()`
+`_togglePause` ve `_restart` başında çağrılır (tarayıcı sesi yalnız bir
+dokunuşun içinden açar). Bu iki satırı kilitleyen test yok; `PlayScreen`
+`PianoAudio`'yu kendi kuruyor.
+
+`test/play_screen_test.dart` → "reaching for a control does not also play a note".
+
 ## Kalibrasyon testlerinde `pumpAndSettle` yok
 
 Ekran durduğu sürece bir ticker çalışır, hiç durulmaz, test zaman aşımına

@@ -252,6 +252,34 @@ void main() {
     );
   });
 
+  testWidgets('reaching for a control does not also play a note', (
+    tester,
+  ) async {
+    // The controls sit on top of the playfield, and the playfield's pointer
+    // listener used to wrap them both: pausing scored a note the player never
+    // meant to play, on whichever beam the button happened to sit over.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PlayScreen(
+          song: shipped('ode-to-joy'),
+          settings: const PlaySettings(),
+        ),
+      ),
+    );
+    await play(tester, const Duration(milliseconds: 1900), frames: 40);
+    expect(scoreOf(tester), 0, reason: 'nothing has been played yet');
+
+    await tester.tap(find.byIcon(Icons.pause));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    expect(
+      scoreOf(tester),
+      0,
+      reason: 'the touch on the button also reached the playfield',
+    );
+  });
+
   testWidgets('pause and resume are offered', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -293,6 +321,53 @@ void main() {
     await tester.tap(find.byIcon(Icons.refresh));
     await tester.pump();
     expect(find.text('0'), findsOneWidget);
+  });
+
+  testWidgets('replaying a finished song starts it again, not later', (
+    tester,
+  ) async {
+    // The ticker stops when the song ends, and a stopped ticker counts from
+    // zero when it starts again. The session was promised a clock that never
+    // goes back, so the screen has to carry the old time across the gap —
+    // without it the replay opens minutes before the first note and the
+    // player watches an empty stage for as long as the song lasted.
+    final short = Song(
+      id: 't',
+      title: 'T',
+      composer: '',
+      bpm: 120,
+      notes: [
+        Note(beat: 0, midi: 72, duration: 0.5, hand: Hand.right),
+        Note(beat: 1, midi: 74, duration: 0.5, hand: Hand.right),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PlayScreen(song: short, settings: const PlaySettings()),
+      ),
+    );
+
+    await play(tester, const Duration(milliseconds: 4200), frames: 84);
+    expect(find.text('Tekrar çal'), findsOneWidget);
+
+    await tester.tap(find.text('Tekrar çal'));
+    await tester.pump();
+
+    // The lead-in, after which the first note is on the line again.
+    await play(tester, const Duration(milliseconds: 1900), frames: 40);
+    final stage = tester.getRect(find.byType(PlayScreen));
+    for (var beam = 0; beam < 4; beam++) {
+      await tester.tapAt(
+        Offset(stage.left + stage.width * (beam + 0.5) / 4, stage.center.dy),
+      );
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    expect(
+      scoreOf(tester),
+      greaterThan(0),
+      reason: 'the replay was not at the start of the song',
+    );
   });
 
   testWidgets('runs a whole song without throwing', (tester) async {
