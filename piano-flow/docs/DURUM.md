@@ -3,7 +3,13 @@
 Bu dosya, sohbet geçmişi olmayan yeni bir oturumun projeyi kaldığı yerden
 sürdürebilmesi için yazıldı.
 
-**Son güncelleme (v126):** notaların yatay yeri artık elin *asıl* perde
+**Son güncelleme (v127):** kod denetimi yapıldı (aşağıda "Kod denetimi")
+ve denetimin bulduğu iki hata düzeltildi: şarkı bitince **Tekrar çal** ölü bir
+ekran veriyordu, ve **kontrol düğmelerine basmak oyun sahasına da dokunup** bir
+nota çalıp puan yazıyordu. Ayrıntısı "Kontroller ve saat"te. Denetimden çıkan
+öbür maddeler açık; listesi "Kod denetimi"nde.
+
+**v126:** notaların yatay yeri artık elin *asıl* perde
 aralığına göre — parçanın iki kez uğradığı uçlar genişliği yemiyor — ve bir
 elin bölgesi ekranın 0.33'ünden 0.37'sine çıktı. Bir elin orta %80'lik
 notası ekranın %21'i yerine %27'sini kaplıyor, ve bir yarım ses hiçbir
@@ -1727,18 +1733,32 @@ doğruluyor, ve diğer bütün şarkıların `startBeat`'inin sıfır kaldığı
 Bu aslında bir çalışma özelliğinin yarısı: "N. ölçüden başla" öğrenen
 herkesin istediği şey. Eksik olan yalnızca arayüzü.
 
-### Vuruş değil saniye — üçüncü kez
+### Vuruş değil saniye — üçüncü kez, sonra beşinci
 
 Bu oyunda üç ayrı eşik vuruş cinsinden yazılmıştı ve üçü de her parçada
-başka bir süre anlamına geliyordu. El vuruş nedir bilmez.
+başka bir süre anlamına geliyordu. El vuruş nedir bilmez. 2026-09 denetimi
+aynı hatanın iki örneğini daha buldu; tablo o yüzden beş satır.
 
 | Eşik | Vuruşken | Şimdi |
 |---|---|---|
 | Basılı tutma (`Tap.holdSeconds`) | 469–1364 ms arası | 0.7 sn |
 | Aynı anda sayılma (`Chart.onsetSeconds`) | 14–33 ms arası | 0.03 sn |
 | Kolay modda seyreltme (`Chart._divideVoices`) | **188–545 ms arası** | **hâlâ vuruş** |
+| Notanın çizgi altında kalması (`Chart.visibleAt`, 0.3 vuruş) | **113–327 ms arası** | **hâlâ vuruş** |
+| Sonuna kadar tutma payı (`PlaySession`, 0.05 vuruş) | **19–55 ms arası** | **hâlâ vuruş** |
 
-Sonuncusu duruyor: "Kolay", Kanon'da 545 ms, Ode to Joy'da 188 ms aralık
+Dördüncüsü iki yönlü bozuyor: yargı penceresi milisaniye (normalde 210 ms,
+geniş toleransta 378 ms). Ode to Joy'da 0.3 vuruş 113 ms, yani nota silindikten
+sonra gelen geç dokunuş hâlâ puan alıyor — oyuncu boşluğa basıp kazanıyor.
+Kanon'da 327 ms, yani nota vurulamaz hâle geldikten sonra 117 ms daha ekranda
+duruyor; `visibleAt`'in kendi yorumunun "daha uzun değil" diye yasakladığı şey.
+Hız ayarı farkı ayrıca büyütüyor: `beatsPerSecond` hızla çarpılıyor, 0.3 sabit.
+
+Beşincisi elin affedilme payı: parmağını notanın yazılı sonundan 40 ms önce
+kaldıran oyuncu 55 bpm'lik parçada affediliyor, 160 bpm'likte "erken bıraktı"
+sayılıyor.
+
+Üçüncüsü duruyor: "Kolay", Kanon'da 545 ms, Ode to Joy'da 188 ms aralık
 bırakıyor — yani en kolay şarkının Kolay modu en zorunkinden üç kat sıkı.
 Aynı düzeltme, aşağıda "Sıradaki iş"te.
 
@@ -2012,10 +2032,175 @@ Başlanmış ama oyuncunun isteğiyle bırakılmış işler. Fikir olarak yenide
   yerden erişilemediği için silindi; gerçekten istenirse `4fa9039^`
   commit'inden çıkarılır.
 
+## Kontroller ve saat (v127)
+
+İki hata, ikisi de ekranın kendi katmanlarından geliyordu.
+
+**Tekrar çal ölü ekran veriyordu.** Şarkı bitince `_onTick` `_ticker.stop()`
+çağırıyor. Flutter'da durdurulmuş bir `Ticker` yeniden başlatılınca `elapsed`
+sıfırdan gelir (`ticker.dart`: `stop()` `_startTime = null`, `_tick`
+`_startTime ??= timeStamp`). `PlaySession`'ın sözleşmesi ise kendi alan
+yorumunda yazılı: **ekran hiç durmayan bir saat verir**; `restart()` de
+`_origin = _wallClock` diyor, yani son verilen değeri. İki dakika koşmuş bir
+oturumda tekrara basınca ilk kareler `beat = -243.8` veriyordu (beklenen -3.8):
+oyuncu şarkı süresi kadar boş sahneye bakıyordu. Oyun ortasındaki yenileme
+doğru çalışıyordu, çünkü orada ticker durmuyor.
+
+Düzeltme **ekranda**, oyunun mantığında değil: `_PlayScreenState._clockBase`
+duruşta geçen zamanı taşıyor, `_onTick` oturuma `_clockBase + elapsed` veriyor,
+`_restart` ticker etkin değilse `_clockBase = _now` koyuyor. Sözleşmeyi bozan
+taraf ekrandı; oturuma dokunmak oradaki testlerin doğru kabul ettiği davranışı
+değiştirmek olurdu. Kilitleyen test: `play_screen_test.dart` → "replaying a
+finished song starts it again, not later".
+
+**Kontrol düğmeleri sahaya da dokunuyordu.** `Listener` bütün `Stack`'i
+sarıyordu; Flutter'da ata `RenderPointerListener` olayı her hâlükârda alır, yani
+duraklat düğmesine basmak `_onTapDown`'u çağırıp bir nota çalıyor ve puanlıyordu
+(ölçüldü: puan 0 → 100). `ScoreHud` bu yüzden zaten `IgnorePointer` ile sarılmış,
+kontroller sarılmamıştı.
+
+Düzeltme: `Listener` artık **yalnız sahayı** sarıyor, kontroller ve paneller
+`Stack`'te onun üstünde ayrı çocuklar. `Stack` çocukları ters sırada sınar ve
+ilk "evet" diyende durur, yani düğmeye giden dokunuş orada biter.
+**Burada beklenmedik kısım:** `ColoredBox` (`basic.dart`, `HitTestBehavior.opaque`)
+ve metin (`RenderParagraph.hitTestSelf => true`) dokunuşu yutuyor. Katmanları
+ayırınca ilerleme çubuğu ve başlık yazısı sahaya giden dokunuşları engelleyecekti;
+ikisi de `IgnorePointer` ile sarıldı. Ders: bir katmanı dinleyiciden çıkarmak
+yetmez, **üstünde kalan süs katmanlarının parmağı geçirdiği ayrıca doğrulanır.**
+
+**Yan etkisi ve onarımı.** Sesi uyandıran `_audio.nudge()` yalnız `_onTapDown`
+içindeydi (defterde: "iOS'ta ses için her `onPointerDown`'da çağrılır"). Düğmeler
+sahadan ayrılınca düğmeye basmak sesi uyandırmaz oldu; çağrı `_togglePause` ve
+`_restart` başına eklendi (ikisi de dokunuşun içinde çalışıyor, tarayıcının şartı
+bu). **Bu iki satır testle korunmuyor:** `PlayScreen` `PianoAudio`'yu kendi
+kuruyor, sahte çıkış verilecek yer yok. Aynı şekilde `IgnorePointer`'lar da test
+dışı — kaldırılsalar hiçbir test kırılmaz.
+
+## Kod denetimi (2026-09-19)
+
+Dokuz bin satır dört alana bölünüp taze gözle okundu: ses, çizim ve ekranlar,
+müzik verisi, oyun mantığı. O gün `flutter analyze` ve `flutter test` tertemizdi
+(514 test) — yani **aşağıdakilerin hiçbirini araçlar göremez**. Maddeler kodda
+tek tek doğrulandı; yalnız ölçüme dayananlar öyle işaretli. İkisi düzeltildi
+(yukarıda), kalanı açık.
+
+### Oyuncunun gördüğü, açık kalanlar
+
+1. **Web'de her nota ~1.5 yarım ses tiz.** `WebPcmOutput.start` aldığı
+   `sampleRate`'i kullanmıyor: `web.AudioContext()` seçeneksiz kuruluyor, yani
+   donanımın hızında (çoğu cihazda 48000) açılıyor, motor 44100 üretiyor.
+   Dosyanın kendi yorumu bunun yapıldığını söylüyor, yapan satır yok. Telefon ile
+   web aynı şarkıyı farklı perdeden çalıyor. `context.sampleRate`'i bir kez
+   loglamak kesinleştirir. İkizi: `PianoAudio` motoru `SynthEngine(sampleRate: 44100)`
+   diye sabit kuruyor, kendi `sampleRate` alanını yok sayıyor — biri birincisini
+   düzeltirse bu ikincisi hatayı sessizce sürdürür.
+2. **Akorlarda ses tavana oturuyor.** `masterGain 0.55 × sampledBoost 2.4 = 1.32`;
+   yumuşatıcı `|x|>1`'de çıkışı sabit tavana pinliyor, yani orada eğri değil düz
+   tepe var. Ölçüldü: Do-Mi-Sol v=0.75 → tepe 1.21, 177 örnek tavanda; beş sesli
+   akor → 2.34, ~50 ms tavanda. Bunu yakalaması gereken test hiçbir koşulda
+   kırılamıyor (`atRail` eşiği 32767, `_makeupGain`'deki 0.97 payı yüzünden tavan
+   31777) ve üstelik sentez yolunu deniyor, kayıt yolunu değil.
+3. **Gecikme telafisi açıkken geç dokunuş sessizlikle karşılanıyor.** `_justMissed`
+   ham saatle siliniyor (`_beat - _reachBeats`), `_nearMiss` yargı saatiyle bakıyor
+   (`_judgedBeat`). Aradaki fark telafi edilen gecikme kadar; gecikme büyükse
+   açıklama bandı tamamen kapanıyor, `tap()` `null` dönüyor. Tek saat kuralının
+   kalan deliği, ve "bazen algılıyor bazen algılamıyor" şikâyetinin aynısı.
+4. **Akorların ışık renkleri notalarla yer değişiyor.** `_spreadPlaces` yerleri
+   sıralıyor, `plume(places[i], spark.midis[i], …)` renkleri eski sırada
+   kullanıyor. Notaların kendi çiziminde bu doğru yapılmış (`_spreadChord` →
+   `movedTo`). Ölçüldü: normal zorlukta 2051 akorun 1145'i sıralı değil.
+5. **Kolay mod ezgiyi alıp bası bırakıyor.** `_divideVoices` tamamen zamansal ve
+   açgözlü, eli hiç sormuyor. Ölçüldü, oyuncunun parmağı altında kalan oran:
+   Entertainer ezgi %56 / bas %97, Passacaglia %40 / %60. `note.dart` "oyuncunun
+   sorumlu olduğu şey ezgidir" diyor.
+6. **Süslemeye basılıyken yenilemek bedava puan ve hayalet ışık veriyor.**
+   `stop()` ve `restart()` `_crushes`'i temizlemiyor; kayıt yeni koşuya taşınıyor
+   ve eski `earnAt` gelince ödeniyor. Ölçüldü: dokunulmayan süsleme 0 → 50.
+7. **Şarkı açılamazsa hiçbir şey olmuyor.** `SongLibrary.load` `try/catch`'siz bir
+   düğme işleyicisinde; varlık eksik veya MIDI bozuksa dokunuş sessizce hiçbir şey
+   yapmıyor, mesaj da yok. Web'de yarım inen varlık tam olarak bu.
+8. **Kısa ekranda her karede hata.** `StageGeometry.noteRadius` →
+   `.clamp(9.0, size.height * 0.048)`: yükseklik 187.5'in altında üst sınır alt
+   sınırın altına düşüyor ve `clamp` `ArgumentError` atıyor. Çalıştırılarak
+   doğrulandı (800×180'de `paint()` içinde patlıyor). Testlerdeki en küçük ekran
+   320×568.
+9. **Kalibrasyon yüksek gecikmeli cihazda tamamlanamıyor.** Kabul penceresi
+   `periodMs / 2 - 20` = 280 ms; ses yolu Bluetooth'ta bunu aşabiliyor (defterin
+   kendi notu), o zaman hiçbir dokunuş sayılmıyor ve ekran "0 / 8"de kalıp
+   **sebebini söylemiyor**.
+
+### Sessiz yanlışlar
+
+10. **Akorun nota sırası tanımsız, el hareketinin yönü ona bağlı.** `_byOnset`
+    yalnız `beat`'e göre `sort` ediyor, Dart'ın `sort`'u kararlı değil; `_cutIntoSteps`
+    yönü `notes.first`'e bakarak hesaplıyor. Ölçüldü: Für Elise kolay modda 144
+    adımın 44'ünde yön müzikten değil sıralamadan çıkıyor.
+11. **Ölçü çizgileri yanlış yerde olabiliyor.** `0x58` dalında payda okunmadan
+    atılıyor ve **son** ölçü işareti kazanıyor (tempo için ilk olay kilitleniyor —
+    iki farklı kural). `passacaglia.mid` 2/2 başlıyor, katalogda `beatsPerBar: 3`
+    yazıyor, çizgiler baştan sona her 3 vuruşta bir çiziliyor. 6/8 için
+    `tool/catalog.dart`'taki `beatsPerQuarter` **elle** yazılıyor ve payda ile
+    uyuştuğunu denetleyen hiçbir şey yok.
+12. **Süslemenin "elini karıştırma" koruması Kolay modda ölü.** `_crushOrnaments`
+    `byHand` ile gruplayarak korunuyor ama `Chart.build` Kolay'da her dokunuşun
+    elini `Hand.right` yapıyor, yani tek kova kalıyor. Aynı körlük `_leansInto`'da.
+13. **"Oyuncu basmadan ses çıkmaz" kuralının ikinci istisnası var.** Kolay modda
+    seyreltilen notalar `autoNotes` olarak çalınıyor; `CLAUDE.md` ise "`fillMissed`
+    **tek** istisnadır" diyor. Ya belge ya kod yanlış — **karar oyuncunun.**
+
+### Gelecekteki hatanın tohumu
+
+14. **İkizlenmiş sayılar.** `hitLineFraction = 0.68` hem `StageGeometry`'de hem
+    `play_screen.dart`'ta elle; `judge.windowMs / 1000 * beatsPerSecond` yedi yerde;
+    `dragLeadMs`'li ifade iki yerde ve bu ikisinin **aynı kalması zorunlu** (13
+    numaralı yakalama/çizme ayrışması oradan çıkıyor); `clockOf` iki ayrı gövde
+    (`song_progress.dart` `floor` + koruma, `settings.dart` `round`, korumasız —
+    59.6 sn biri için 0:59, öbürü için 1:00); solma formülü `stage_painter`'da iki
+    yerde aynı sayılarla.
+15. **Her karede boşa iş.** `groundOf(widget.song)` `build` içinde, yani her karede
+    şarkının bütün notaları taranıyor (ölçüldü: Entertainer 143 µs/kare, hep aynı
+    sonuç); `stage_shader.dart:58` her karede yeni `ui.FragmentShader` üretiyor ve
+    **hiç `dispose` etmiyor**; fırça önbelleği yalnız yarıçap değişince temizleniyor
+    (kütüphaneyi dolaşan oyuncuda üst sınır 15312 giriş, bugün çakışma yok).
+16. **Ölü kod.** `PlaySession.rebindChart` (çağıran yok; çağrılsa `chart.figures[...]!`
+    ticker içinde patlar), `Song.chordsOf` (yalnız testler; `onsetSeconds` 0.03'ü
+    ikinci kez yazıyor), `AppTheme.chordColors/beamColors/colorAcross/beamColor`,
+    `StagePainter.holding` (her karede dolduruluyor, çizimde kullanılmıyor),
+    `PianoAudio.isSupported`, `WebPcmOutput.sampleRate`, `StageShader.ready/tried`,
+    `StageGeometry.xAtPosition`'ın `progress` parametresi, `_paintHandDivide`'ın `g`'si.
+17. **Testlerin kilitlemediği ya da yanlış kilitlediği yerler.** `chart_test.dart`
+    Kolay seyreltmesini ve `visibleAt` kuyruğunu **vuruş cinsinden** ve tek tempoda
+    sabitliyor — eşik saniyeye çevrilince bu testler kırılacak, yani bugünkü hatayı
+    sözleşme yapmışlar. `play_session_test.dart`'ın `errorAt`'i "cevap yok" ile
+    "yakın kaçırma bildirildi"yi aynı `null`'a düşürüyor, 3 numaralı hata 514 yeşil
+    testin arasından bu yüzden geçiyor. `PcmOutput`'un hiç testi yok.
+    `stage_painter_test.dart` ışıkların yalnız yerini kilitliyor, rengini değil ve
+    sıralı bir akor kullanıyor (4 numara).
+
+### Bugün etkisiz, not olarak
+
+Meta olay uzunlukları tam okunmuyor (bozuk dosya yanıltıcı hata verir); running
+status meta/sysex'ten sonra iptal edilmiyor; ikiden fazla nota parçası olan MIDI'de
+biri hariç her şey sağ ele gidiyor (kütüphanedeki 13 dosya 2 parçalı, girilmiyor);
+sıfır uzunluklu şarkıda ilerleme çubuğu `UnsupportedError` atar; Kolay'da koşu
+yakalama `separatesHands` korumasını unutmuş (Kolay'da hiç koşu üretilmiyor);
+uygulama arka plandan dönünce ticker damgası sıçrar ve aradaki notalar kaçmış
+sayılır (bu diffin getirdiği bir şey değil).
+
+### Denetimin kendi dersi
+
+Dört ajanın da bulgularının yarısı ölçümle geldi, okumakla değil: kodun formülünü
+taklit edip gerçek veriyle çalıştırmak, "şu yanlış görünüyor"dan çok daha fazlasını
+buldu. Ve bir ajanın verdiği satır numaraları tutmadığı hâlde iddiasının özü doğru
+çıktı — **bulguyu kaynağında teyit etmeden rapora almayın.**
+
 ## Sıradaki iş
 
 Oyun bir oyun; öğretme aracı değil — tek el modu, ölçüden başlama, hız
 merdiveni gibi öğretim fikirleri **istenmiyor**. Sıra buna göre.
+
+2026-09 denetiminin açık bıraktığı maddeler yukarıda, "Kod denetimi"nde; oradaki
+1-9 arası oyuncunun doğrudan gördüğü şeyler ve bu listeyle birlikte tartılmalı.
 
 Açık kalan, oyuncunun bildirdiği şeyler:
 

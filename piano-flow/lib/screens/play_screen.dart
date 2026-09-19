@@ -76,6 +76,14 @@ class _PlayScreenState extends State<PlayScreen>
   Duration _lastOutcomeAt = Duration.zero;
   Duration _now = Duration.zero;
 
+  /// What the ticker's own elapsed time has to be shifted by.
+  ///
+  /// [PlaySession] is handed a clock that never goes back — pausing and
+  /// restarting are measured against it. A ticker stopped at the end of the
+  /// song counts from zero again when it is started for a replay, so the time
+  /// before the stop is carried across in here.
+  Duration _clockBase = Duration.zero;
+
   @override
   void initState() {
     super.initState();
@@ -122,10 +130,11 @@ class _PlayScreenState extends State<PlayScreen>
   }
 
   void _onTick(Duration elapsed) {
+    final now = _clockBase + elapsed;
     setState(() {
-      final step = (elapsed - _now).inMicroseconds / 1000;
-      _now = elapsed;
-      _session.update(elapsed);
+      final step = (now - _now).inMicroseconds / 1000;
+      _now = now;
+      _session.update(now);
       _sparks.advance(step.clamp(0, 100));
       _fadeBeamGlow();
     });
@@ -241,6 +250,11 @@ class _PlayScreenState extends State<PlayScreen>
   }
 
   void _togglePause() {
+    // The controls no longer reach the playfield, so the wake-up the stage
+    // does on every touch has to happen here too: a browser only lets audio
+    // start from inside a gesture, and resuming is often exactly the moment
+    // the player is waiting to hear something.
+    _audio.nudge();
     setState(() {
       if (_session.isRunning) {
         _session.pause();
@@ -252,6 +266,7 @@ class _PlayScreenState extends State<PlayScreen>
   }
 
   void _restart() {
+    _audio.nudge();
     setState(() {
       _session.restart();
       _lastOutcome = null;
@@ -262,7 +277,13 @@ class _PlayScreenState extends State<PlayScreen>
       _sparks.clear();
       _combo = 0;
     });
-    if (!_ticker.isActive) _ticker.start();
+    if (!_ticker.isActive) {
+      // The ticker stopped when the song ended, so it is about to count from
+      // zero again. Carry the old time over, or the session reads the replay
+      // as happening before the performance it just measured.
+      _clockBase = _now;
+      _ticker.start();
+    }
   }
 
   @override
@@ -280,18 +301,22 @@ class _PlayScreenState extends State<PlayScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
-          return Listener(
-            behavior: HitTestBehavior.opaque,
-            onPointerDown: (event) =>
-                _onTapDown(event.pointer, event.localPosition, size),
-            onPointerMove: (event) =>
-                _onDrag(event.pointer, event.localPosition, size),
-            onPointerUp: (event) => _onTapUp(event.pointer),
-            onPointerCancel: (event) => _onTapUp(event.pointer),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                RepaintBoundary(
+          // The listener wraps the playfield alone, not the whole stack. With
+          // the controls inside it, reaching for pause or restart put a touch
+          // on the stage as well: the game played a note and scored it on
+          // whichever beam the button happened to sit over.
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (event) =>
+                    _onTapDown(event.pointer, event.localPosition, size),
+                onPointerMove: (event) =>
+                    _onDrag(event.pointer, event.localPosition, size),
+                onPointerUp: (event) => _onTapUp(event.pointer),
+                onPointerCancel: (event) => _onTapUp(event.pointer),
+                child: RepaintBoundary(
                   child: CustomPaint(
                     painter: StagePainter(
                       chart: _session.chart,
@@ -312,28 +337,32 @@ class _PlayScreenState extends State<PlayScreen>
                     ),
                   ),
                 ),
-                ScoreHud(
-                  scoreboard: _session.scoreboard,
-                  outcome: _lastOutcome,
-                  // The verdict fades on its own so it never covers the next
-                  // note the player has to read.
-                  outcomeAge: (_now - _lastOutcomeAt).inMilliseconds / 700,
-                  comboAge: (_now - _comboAt).inMilliseconds / 260,
-                  hitLineFraction: 0.68,
-                ),
-                SongProgressBar(
+              ),
+              // Everything above the stage that is there to be read rather
+              // than touched lets a finger through to it.
+              ScoreHud(
+                scoreboard: _session.scoreboard,
+                outcome: _lastOutcome,
+                // The verdict fades on its own so it never covers the next
+                // note the player has to read.
+                outcomeAge: (_now - _lastOutcomeAt).inMilliseconds / 700,
+                comboAge: (_now - _comboAt).inMilliseconds / 260,
+                hitLineFraction: 0.68,
+              ),
+              IgnorePointer(
+                child: SongProgressBar(
                   through: _session.songSeconds / _session.songLengthSeconds,
                 ),
-                _controls(),
-                if (_session.isFinished)
-                  ResultPanel(
-                    scoreboard: _session.scoreboard,
-                    songTitle: widget.song.title,
-                    onReplay: _restart,
-                    onBack: () => Navigator.of(context).maybePop(),
-                  ),
-              ],
-            ),
+              ),
+              _controls(),
+              if (_session.isFinished)
+                ResultPanel(
+                  scoreboard: _session.scoreboard,
+                  songTitle: widget.song.title,
+                  onReplay: _restart,
+                  onBack: () => Navigator.of(context).maybePop(),
+                ),
+            ],
           );
         },
       ),
@@ -348,28 +377,30 @@ class _PlayScreenState extends State<PlayScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.song.title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
+              child: IgnorePointer(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.song.title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${widget.song.composer} · '
-                    '${widget.settings.difficulty.label} · '
-                    '${clockOf(_session.songSeconds)} / '
-                    '${clockOf(_session.songLengthSeconds)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textMuted,
+                    Text(
+                      '${widget.song.composer} · '
+                      '${widget.settings.difficulty.label} · '
+                      '${clockOf(_session.songSeconds)} / '
+                      '${clockOf(_session.songLengthSeconds)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             IconButton(
